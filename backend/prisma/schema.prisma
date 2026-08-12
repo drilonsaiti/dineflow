@@ -1,0 +1,301 @@
+// Prisma schema — source of truth for the data model (section 11).
+// Postgres, hosted on Supabase. RLS policies applied via migration SQL
+// in prisma/migrations/*_enable_rls/migration.sql (backstop, see ARCHITECTURE.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Identity ----------
+
+// Mirrors Supabase auth.users by id.
+// We don't manage passwords/sessions here — Supabase Auth does that.
+// This row exists so we can attach app-level data (memberships)
+// to a stable user id.
+
+model User {
+  id           String             @id @db.Uuid // Supabase auth.users.id
+  email        String             @unique
+  fullName     String?
+  createdAt    DateTime           @default(now())
+  memberships  VenueMembership[]
+  statusEvents OrderStatusEvent[] @relation("ChangedBy")
+}
+
+enum VenueRole {
+  OWNER
+  MANAGER
+  STAFF
+  KITCHEN
+  BAR
+}
+
+// Join between User and Venue with a role.
+// One person can belong to multiple venues.
+
+model VenueMembership {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  venueId   String    @db.Uuid
+  role      VenueRole
+  createdAt DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, venueId])
+  @@index([venueId])
+}
+
+// ---------- Tenant root ----------
+
+enum PlanTier {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+model Venue {
+  id                   String             @id @default(uuid()) @db.Uuid
+  slug                 String             @unique
+  name                 String
+  type                 String?
+  logoUrl              String?
+  brandColor           String?
+  currency             String             @default("USD")
+  timezone             String             @default("UTC")
+  plan                 PlanTier           @default(FREE)
+  subscriptionStatus   SubscriptionStatus @default(TRIALING)
+  maxTables            Int                @default(10)
+  analyticsHistoryDays Int                @default(30)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  memberships VenueMembership[]
+  categories  MenuCategory[]
+  menuItems   MenuItem[]
+  tags        Tag[]
+  areas       Area[]
+  tables      Table[]
+  orders      Order[]
+}
+
+// ---------- Menu ----------
+
+model MenuCategory {
+  id           String   @id @default(uuid()) @db.Uuid
+  venueId      String   @db.Uuid
+  name         String
+  description  String?
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  venue Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  items MenuItem[]
+
+  @@index([venueId])
+}
+
+// Extensible tag system for allergens/dietary labels.
+
+model Tag {
+  id      String @id @default(uuid()) @db.Uuid
+  venueId String @db.Uuid
+  label   String
+  kind    String @default("dietary")
+
+  venue Venue         @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  items MenuItemTag[]
+
+  @@unique([venueId, label])
+  @@index([venueId])
+}
+
+model MenuItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  venueId      String   @db.Uuid
+  categoryId   String   @db.Uuid
+  name         String
+  description  String?
+  photoUrl     String?
+  priceCents   Int
+  isAvailable  Boolean  @default(true)
+  displayOrder Int      @default(0)
+  dineInOnly   Boolean  @default(false)
+  takeawayOnly Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  venue          Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  category       MenuCategory    @relation(fields: [categoryId], references: [id])
+  tags           MenuItemTag[]
+  modifierGroups ModifierGroup[]
+  orderItems     OrderItem[]
+
+  @@index([venueId])
+  @@index([categoryId])
+}
+
+model MenuItemTag {
+  menuItemId String @db.Uuid
+  tagId      String @db.Uuid
+
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([menuItemId, tagId])
+}
+
+// e.g. "Size" or "Add-ons"
+
+model ModifierGroup {
+  id           String  @id @default(uuid()) @db.Uuid
+  menuItemId   String  @db.Uuid
+  name         String
+  isRequired   Boolean @default(false)
+  minSelect    Int     @default(0)
+  maxSelect    Int     @default(1)
+  displayOrder Int     @default(0)
+
+  menuItem MenuItem         @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  options  ModifierOption[]
+
+  @@index([menuItemId])
+}
+
+// e.g. "Large" (+$1.50), "Extra cheese" (+$1.00)
+
+model ModifierOption {
+  id              String @id @default(uuid()) @db.Uuid
+  modifierGroupId String @db.Uuid
+  name            String
+  priceDeltaCents Int    @default(0)
+  displayOrder    Int    @default(0)
+
+  group      ModifierGroup       @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade)
+  selections OrderItemModifier[]
+
+  @@index([modifierGroupId])
+}
+
+// ---------- Tables ----------
+
+model Area {
+  id      String @id @default(uuid()) @db.Uuid
+  venueId String @db.Uuid
+  name    String
+
+  venue  Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  tables Table[]
+
+  @@index([venueId])
+}
+
+model Table {
+  id      String  @id @default(uuid()) @db.Uuid
+  venueId String  @db.Uuid
+  areaId  String? @db.Uuid
+  label   String
+
+  // Opaque, unguessable public token used in the public URL.
+  // UUID is used so it cannot be a sequential/guessable identifier.
+  token String @unique @default(uuid()) @db.Uuid
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  venue  Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  area   Area?   @relation(fields: [areaId], references: [id])
+  orders Order[]
+
+  @@index([venueId])
+}
+
+// ---------- Orders ----------
+
+enum OrderStatus {
+  RECEIVED
+  VIEWED
+  PREPARING
+  READY
+  SERVED
+  CANCELLED
+}
+
+model Order {
+  id           String      @id @default(uuid()) @db.Uuid
+  venueId      String      @db.Uuid
+  tableId      String      @db.Uuid
+  dailyNumber  Int
+  status       OrderStatus @default(RECEIVED)
+  customerName String?
+  note         String?
+  totalCents   Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  venue        Venue              @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table        Table              @relation(fields: [tableId], references: [id])
+  items        OrderItem[]
+  statusEvents OrderStatusEvent[]
+
+  @@unique([venueId, dailyNumber, createdAt])
+  @@index([venueId, status])
+  @@index([tableId])
+}
+
+model OrderItem {
+  id             String  @id @default(uuid()) @db.Uuid
+  orderId        String  @db.Uuid
+  menuItemId     String  @db.Uuid
+  quantity       Int     @default(1)
+  note           String?
+  unitPriceCents Int
+  lineTotalCents Int
+
+  order     Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem  MenuItem            @relation(fields: [menuItemId], references: [id])
+  modifiers OrderItemModifier[]
+
+  @@index([orderId])
+}
+
+model OrderItemModifier {
+  id               String @id @default(uuid()) @db.Uuid
+  orderItemId      String @db.Uuid
+  modifierOptionId String @db.Uuid
+  priceDeltaCents  Int
+
+  orderItem      OrderItem      @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  modifierOption ModifierOption @relation(fields: [modifierOptionId], references: [id])
+
+  @@index([orderItemId])
+}
+
+// One row per status transition.
+// Powers "avg time to Ready" analytics and staff attribution.
+
+model OrderStatusEvent {
+  id              String      @id @default(uuid()) @db.Uuid
+  orderId         String      @db.Uuid
+  status          OrderStatus
+  changedAt       DateTime    @default(now())
+  changedByUserId String?     @db.Uuid
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedBy User? @relation("ChangedBy", fields: [changedByUserId], references: [id])
+
+  @@index([orderId])
+}
