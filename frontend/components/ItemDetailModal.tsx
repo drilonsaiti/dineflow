@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useCart } from './CartContext';
+import { useEffect, useMemo, useRef, useState } from 'react';import { useCart } from './CartContext';
 import { formatCents } from '@/lib/money';
 import {PublicMenuItem} from "@/types/menu";
 
@@ -19,6 +18,42 @@ export function ItemDetailModal({
     const [quantity, setQuantity] = useState(1);
     const [note, setNote] = useState('');
     const [validationError, setValidationError] = useState<string | null>(null);
+
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+    // Focus the close button on open (a screen reader user landing here needs
+    // an announced, actionable first stop), trap Tab within the dialog, and
+    // close on Escape — standard modal a11y that a full-screen "sheet" on
+    // mobile still benefits from for keyboard/switch-device users.
+    useEffect(() => {
+        closeButtonRef.current?.focus();
+
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === 'Escape') {
+                onClose();
+                return;
+            }
+            if (e.key !== 'Tab' || !dialogRef.current) return;
+            const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+                'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+            );
+            if (focusable.length === 0) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const modifierDelta = useMemo(() => {
         return item.modifierGroups.reduce((sum, group) => {
@@ -78,8 +113,16 @@ export function ItemDetailModal({
     }
 
     return (
-        <div className="fixed inset-0 z-30 flex flex-col bg-white sm:items-center sm:justify-center sm:bg-black/50">
-            <div className="flex h-full w-full flex-col overflow-y-auto bg-white sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl">
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="item-detail-title"
+            className="fixed inset-0 z-30 flex flex-col bg-white sm:items-center sm:justify-center sm:bg-black/50"
+        >
+            <div
+                ref={dialogRef}
+                className="flex h-full w-full flex-col overflow-y-auto bg-white sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl"
+            >
                 <div className="relative">
                     {item.photoUrl ? (
                         <img src={item.photoUrl} alt={item.name} className="h-56 w-full object-cover" />
@@ -87,16 +130,17 @@ export function ItemDetailModal({
                         <div className="h-40 w-full bg-gray-100" />
                     )}
                     <button
+                        ref={closeButtonRef}
                         onClick={onClose}
                         className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-lg shadow"
-                        aria-label="Close"
+                        aria-label="Close item details"
                     >
                         ✕
                     </button>
                 </div>
 
                 <div className="flex-1 px-5 py-4">
-                    <h2 className="text-xl font-semibold">{item.name}</h2>
+                    <h2 id="item-detail-title" className="text-xl font-semibold">{item.name}</h2>
                     {item.description && <p className="mt-1 text-gray-600">{item.description}</p>}
 
                     {item.tags.length > 0 && (

@@ -1,6 +1,7 @@
 // Prisma schema — source of truth for the data model (section 11).
 // Postgres, hosted on Supabase. RLS policies applied via migration SQL
 // in prisma/migrations/*_enable_rls/migration.sql (backstop, see ARCHITECTURE.md).
+// Run with: npx prisma db seed  (config lives in package.json's "prisma" key below)
 
 generator client {
   provider = "prisma-client-js"
@@ -68,20 +69,22 @@ enum SubscriptionStatus {
 }
 
 model Venue {
-  id                   String             @id @default(uuid()) @db.Uuid
-  slug                 String             @unique
-  name                 String
-  type                 String?
-  logoUrl              String?
-  brandColor           String?
-  currency             String             @default("USD")
-  timezone             String             @default("UTC")
-  plan                 PlanTier           @default(FREE)
-  subscriptionStatus   SubscriptionStatus @default(TRIALING)
-  maxTables            Int                @default(10)
-  analyticsHistoryDays Int                @default(30)
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  id                        String             @id @default(uuid()) @db.Uuid
+  slug                      String             @unique
+  name                      String
+  type                      String?
+  logoUrl                   String?
+  brandColor                String?
+  currency                  String             @default("USD")
+  timezone                  String             @default("UTC")
+  plan                      PlanTier           @default(FREE)
+  subscriptionStatus        SubscriptionStatus @default(TRIALING)
+  staffAlertWebhookUrl      String?
+  lateOrderThresholdMinutes Int                @default(10)
+  maxTables                 Int                @default(10)
+  analyticsHistoryDays      Int                @default(30)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
 
   memberships VenueMembership[]
   categories  MenuCategory[]
@@ -235,16 +238,17 @@ enum OrderStatus {
 }
 
 model Order {
-  id           String      @id @default(uuid()) @db.Uuid
-  venueId      String      @db.Uuid
-  tableId      String      @db.Uuid
-  dailyNumber  Int
-  status       OrderStatus @default(RECEIVED)
-  customerName String?
-  note         String?
-  totalCents   Int         @default(0)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id            String      @id @default(uuid()) @db.Uuid
+  venueId       String      @db.Uuid
+  tableId       String      @db.Uuid
+  dailyNumber   Int
+  status        OrderStatus @default(RECEIVED)
+  customerName  String?
+  customerPhone String? // optional at order time (section 15) — enables SMS-when-Ready later without a schema change
+  note          String?
+  totalCents    Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   venue        Venue              @relation(fields: [venueId], references: [id], onDelete: Cascade)
   table        Table              @relation(fields: [tableId], references: [id])
@@ -297,5 +301,43 @@ model OrderStatusEvent {
   order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
   changedBy User? @relation("ChangedBy", fields: [changedByUserId], references: [id])
 
+  @@index([orderId])
+}
+
+model DailyOrderCounter {
+  venueId   String
+  day       DateTime // truncated to midnight
+  lastValue Int      @default(0)
+
+  @@id([venueId, day])
+}
+
+enum NotificationKind {
+  CUSTOMER_ORDER_READY
+  STAFF_ORDER_LATE
+}
+
+enum NotificationChannel {
+  SMS
+  WEBHOOK
+  EMAIL
+}
+
+// Audit trail of notification attempts (section 15) — exists so a real
+// provider integration has somewhere to record success/failure, and so
+// "did the customer actually get texted" is answerable later without
+// depending on the SMS provider's own dashboard.
+model NotificationLog {
+  id        String              @id @default(uuid())
+  venueId   String
+  orderId   String?
+  kind      NotificationKind
+  channel   NotificationChannel
+  recipient String // phone number, webhook URL, or email — whichever channel
+  status    String // "sent" | "failed" | "skipped_not_configured" | "skipped_no_provider"
+  detail    String? // provider error message, if any
+  createdAt DateTime            @default(now())
+
+  @@index([venueId])
   @@index([orderId])
 }

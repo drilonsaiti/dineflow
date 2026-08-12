@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCents } from '@/lib/money';
 import { pushRound } from '@/lib/cart';
@@ -8,14 +8,15 @@ import {useCart} from "@/components/CartContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
-export default function CartPage({ params }: { params: { venueSlug: string; token: string } }) {
-    const { token, venueSlug } = params;
+export default function CartPage({ params }: { params: Promise<{ venueSlug: string; token: string }> }) {
+    const { token, venueSlug } = use(params);
     const { lines, updateQuantity, updateNote, removeLine, clear, subtotalCents, removeMenuItemIds } = useCart();
     const [customerName, setCustomerName] = useState('');
     const [orderNote, setOrderNote] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+    const [customerPhone, setCustomerPhone] = useState('');
 
     async function placeOrder() {
         setSubmitting(true);
@@ -27,6 +28,7 @@ export default function CartPage({ params }: { params: { venueSlug: string; toke
                 body: JSON.stringify({
                     tableToken: token,
                     customerName: customerName || undefined,
+                    customerPhone: customerPhone || undefined,
                     note: orderNote || undefined,
                     items: lines.map((l) => ({
                         menuItemId: l.menuItemId,
@@ -76,7 +78,7 @@ export default function CartPage({ params }: { params: { venueSlug: string; toke
         <div className="px-4 py-4">
             <h1 className="text-xl font-semibold">Your order</h1>
 
-            <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+            <div className="mt-4 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
                 {lines.map((line) => (
                     <div key={line.lineId} className="p-4">
                         <div className="flex items-start justify-between gap-3">
@@ -135,6 +137,18 @@ export default function CartPage({ params }: { params: { venueSlug: string; toke
                         placeholder="So staff can call you by name"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
+                    />
+                </div>
+                <div>
+                    <label className="text-sm font-medium">
+                        Phone number <span className="text-gray-400 font-normal">(optional — get a text when it's ready)</span>
+                    </label>
+                    <input
+                        type="tel"
+                        className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                        placeholder="+1 555 123 4567"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
                     />
                 </div>
                 <div>

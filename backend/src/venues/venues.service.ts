@@ -57,4 +57,8 @@ export class VenuesService {
     if (!venue) throw new NotFoundException('Venue not found');
     return venue;
   }
+
+  async updateSettings(venueId: string, dto: { staffAlertWebhookUrl?: string; lateOrderThresholdMinutes?: number }) {
+    return this.prisma.venue.update({ where: { id: venueId }, data: dto });
+  }
 }

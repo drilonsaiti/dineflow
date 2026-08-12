@@ -9,6 +9,7 @@ import { PlaceOrderDto } from './dto/place-order.dto';
 import { assertValidTransition } from './order-status.machine';
 import { OrdersGateway } from './orders.gateway';
 import { TablesService } from '../tables/tables.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
@@ -16,6 +17,7 @@ export class OrdersService {
       private readonly prisma: PrismaService,
       private readonly gateway: OrdersGateway,
       private readonly tablesService: TablesService,
+      private readonly notifications: NotificationsService,
   ) {}
 
   // ---------- Customer-facing (public, no auth — section 3/11) ----------
@@ -89,20 +91,31 @@ export class OrdersService {
         };
       });
 
-      // Per-venue-per-day ticket number (section 8) — count today's orders
-      // for this venue inside the same transaction to avoid race duplicates.
+      // Per-venue-per-day ticket number (section 8), race-safe (section 18:
+      // "two customers at the same table order in quick succession"). A
+      // plain COUNT()+1 can hand out the same number to two concurrent
+      // requests; an upsert + FOR UPDATE-style atomic increment cannot,
+      // because Postgres serializes writers to the same counter row.
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-      const todaysCount = await tx.order.count({
-        where: { venueId: table.venueId, createdAt: { gte: startOfDay } },
+
+      await tx.$executeRaw`
+        INSERT INTO "DailyOrderCounter" ("venueId", "day", "lastValue")
+        VALUES (${table.venueId}, ${startOfDay}, 1)
+          ON CONFLICT ("venueId", "day")
+        DO UPDATE SET "lastValue" = "DailyOrderCounter"."lastValue" + 1
+      `;
+      const counterRow = await tx.dailyOrderCounter.findUniqueOrThrow({
+        where: { venueId_day: { venueId: table.venueId, day: startOfDay } },
       });
 
       const order = await tx.order.create({
         data: {
           venueId: table.venueId,
           tableId: table.id,
-          dailyNumber: todaysCount + 1,
+          dailyNumber: counterRow.lastValue,
           customerName: dto.customerName,
+          customerPhone: dto.customerPhone,
           note: dto.note,
           totalCents,
           status: OrderStatus.RECEIVED,
@@ -121,7 +134,15 @@ export class OrdersService {
   async getForCustomer(orderId: string, tableToken: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { items: { include: { menuItem: true, modifiers: true } }, table: true },
+      include: {
+        items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+        table: true,
+        statusEvents: {
+          orderBy: { changedAt: 'desc' },
+          take: 1,
+          include: { changedBy: { select: { id: true, email: true, fullName: true } } },
+        },
+      },
     });
     if (!order || order.table.token !== tableToken) {
       throw new NotFoundException('Order not found.');
@@ -141,7 +162,15 @@ export class OrdersService {
           // category -> station mapping; left as a straightforward extension
           // point once categories carry a `station` field.
         },
-        include: { items: { include: { menuItem: true, modifiers: true } }, table: true },
+        include: {
+          items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+          table: true,
+          statusEvents: {
+            orderBy: { changedAt: 'desc' },
+            take: 1,
+            include: { changedBy: { select: { id: true, email: true, fullName: true } } },
+          },
+        },
         orderBy: { createdAt: 'asc' },
       }),
     );
@@ -171,10 +200,25 @@ export class OrdersService {
           status: toStatus,
           statusEvents: { create: { status: toStatus, changedByUserId: staffUserId } },
         },
-        include: { items: { include: { menuItem: true, modifiers: true } }, table: true },
+        include: {
+          items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+          table: true,
+          statusEvents: {
+            orderBy: { changedAt: 'desc' },
+            take: 1,
+            include: { changedBy: { select: { id: true, email: true, fullName: true } } },
+          },
+        },
       });
 
       this.gateway.emitOrderEvent(venueId, 'order_updated', updated);
+
+      if (toStatus === OrderStatus.READY) {
+        // Fire-and-forget on purpose — a failed/slow SMS provider should
+        // never block or fail the actual status transition staff care
+        // about; NotificationLog captures the outcome for later review.
+        this.notifications.notifyCustomerOrderReady(venueId, orderId).catch(() => {});
+      }
       return updated;
     });
   }

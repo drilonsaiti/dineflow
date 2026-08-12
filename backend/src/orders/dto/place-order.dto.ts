@@ -52,4 +52,8 @@ export class PlaceOrderDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  customerPhone?: string;
 }

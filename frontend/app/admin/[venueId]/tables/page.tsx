@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use,useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import {Area, TableRow} from "@/types/table";
 
 interface Props {
-    params: {
+    params: Promise<{
         venueId: string;
-    };
+    }>;
 }
 
 export default function TablesAdminPage({ params }: Props) {
-    const { venueId } = params;
+    const { venueId } = use(params);
 
     const [tables, setTables] = useState<TableRow[]>([]);
     const [areas, setAreas] = useState<Area[]>([]);
@@ -287,8 +287,8 @@ export default function TablesAdminPage({ params }: Props) {
                         key={table.id}
                         className={`rounded-xl border p-4 ${
                             table.isActive
-                                ? 'border-gray-200 bg-white'
-                                : 'border-gray-200 bg-gray-50 opacity-60'
+                                ? 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
+                                : 'border-gray-200 bg-gray-50 opacity-60 dark:border-gray-800 dark:bg-gray-900'
                         }`}
                     >
                         <div className="flex items-start justify-between gap-4">

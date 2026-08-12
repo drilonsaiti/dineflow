@@ -1,8 +1,9 @@
 'use client';
-
-import { useState } from 'react';
-import { api, MenuItem, ModifierGroup } from '@/lib/api';
+import { useState,useRef } from 'react';
+import { api } from '@/lib/api';
 import { centsToInput, inputToCents } from '@/lib/money';
+import {MenuItem} from "@/types/menu";
+import {ModifierGroup} from "@/types/modifier";
 
 type Props = {
     venueId: string;
@@ -27,6 +28,9 @@ export function ItemForm({ venueId, categoryId, existing, onDone }: Props) {
         existing?.modifierGroups.map((g) => ({ ...g })) ?? [],
     );
     const [submitting, setSubmitting] = useState(false);
+    const [photoUrl, setPhotoUrl] = useState(existing?.photoUrl ?? '');
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     function addGroup() {
         setGroups([
@@ -74,6 +78,7 @@ export function ItemForm({ venueId, categoryId, existing, onDone }: Props) {
                 categoryId,
                 name,
                 description: description || undefined,
+                photoUrl: photoUrl || undefined,
                 priceCents: inputToCents(price),
                 modifierGroups: groups.map((g) => ({
                     name: g.name,
@@ -92,6 +97,28 @@ export function ItemForm({ venueId, categoryId, existing, onDone }: Props) {
             onDone();
         } finally {
             setSubmitting(false);
+        }
+    }
+
+    async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const token = await (await import('@/lib/supabase')).getAccessToken();
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/venues/${venueId}/uploads/image`,
+                { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData },
+            );
+            if (!res.ok) throw new Error((await res.json()).message ?? 'Upload failed');
+            const { url } = await res.json();
+            setPhotoUrl(url);
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setUploading(false);
         }
     }
 
@@ -128,6 +155,32 @@ export function ItemForm({ venueId, categoryId, existing, onDone }: Props) {
                 />
             </div>
 
+            <div>
+                <label className="block text-xs font-medium text-gray-500">Photo</label>
+                <div className="mt-1 flex items-center gap-3">
+                    {photoUrl ? (
+                        <img src={photoUrl} alt="" className="h-16 w-16 rounded-md object-cover" />
+                    ) : (
+                        <div className="h-16 w-16 rounded-md bg-gray-200" />
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm disabled:opacity-50"
+                    >
+                        {uploading ? 'Uploading…' : photoUrl ? 'Replace photo' : 'Upload photo'}
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleFileSelected}
+                    />
+                </div>
+            </div>
+
             <div className="space-y-3">
                 <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-gray-500">Modifier groups (size, add-ons…)</p>
@@ -137,7 +190,7 @@ export function ItemForm({ venueId, categoryId, existing, onDone }: Props) {
                 </div>
 
                 {groups.map((group, gi) => (
-                    <div key={gi} className="rounded-md border border-gray-200 bg-white p-3 space-y-2">
+                    <div key={gi} className="rounded-md border border-gray-200 bg-white p-3 space-y-2 dark:border-gray-800 dark:bg-gray-900">
                         <div className="flex items-center gap-2">
                             <input
                                 className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"

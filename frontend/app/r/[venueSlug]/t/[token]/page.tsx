@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use,useEffect, useState } from 'react';
 import { formatCents } from '@/lib/money';
 import { ItemDetailModal } from '@/components/ItemDetailModal';
 import {PublicMenu, PublicMenuItem} from "@/types/menu";
@@ -10,14 +10,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 
 interface MenuPageProps {
-    params: {
+    params: Promise<{
         venueSlug: string;
         token: string;
-    };
+    }>;
 }
 
 export default function MenuPage({ params }: MenuPageProps) {
-    const { venueSlug } = params;
+    const { venueSlug } = use(params);
 
     const [menu, setMenu] = useState<PublicMenu | null>(null);
     const [activeItem, setActiveItem] = useState<PublicMenuItem | null>(null);
@@ -115,7 +115,7 @@ export default function MenuPage({ params }: MenuPageProps) {
                         className={`flex min-h-[44px] shrink-0 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                             activeCategory === category.id
                                 ? 'bg-brand text-white'
-                                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-100'
+                                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900'
                         }`}
                     >
                         {category.name}
@@ -152,7 +152,7 @@ export default function MenuPage({ params }: MenuPageProps) {
                                         }
                                     }}
                                     disabled={!item.isAvailable}
-                                    className={`flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition ${
+                                    className={`flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition dark:border-gray-800 dark:bg-gray-900 ${
                                         item.isAvailable
                                             ? 'active:scale-[0.99] hover:border-gray-300'
                                             : 'cursor-not-allowed opacity-50'

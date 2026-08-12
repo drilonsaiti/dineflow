@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import {TableRow} from "@/types/table";
 
@@ -8,8 +8,8 @@ import {TableRow} from "@/types/table";
 // server-generated PDF — every browser can already turn this into a PDF via
 // "Save as PDF" in the print dialog, so it satisfies the "download/print as
 // PDF" requirement (section 6) without a heavier server-side PDF pipeline.
-export default function PrintTablesPage({ params }: { params: { venueId: string } }) {
-    const { venueId } = params;
+export default function PrintTablesPage({ params }: { params: Promise<{ venueId: string }> }) {
+    const { venueId } = use(params);
     const [tables, setTables] = useState<TableRow[]>([]);
 
     useEffect(() => {

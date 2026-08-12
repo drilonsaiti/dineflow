@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use,useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import {MenuCategory} from "@/types/menu";
 import {CategoryForm} from "@/components/CategoryForm";
 import {ItemForm} from "@/components/ItemForm";
 
-export default function MenuAdminPage({ params }: { params: { venueId: string } }) {
-    const { venueId } = params;
+export default function MenuAdminPage({ params }: { params: Promise<{ venueId: string }> }) {
+    const { venueId } = use(params);
     const [categories, setCategories] = useState<MenuCategory[]>([]);
     const [loading, setLoading] = useState(true);
     const [addingItemTo, setAddingItemTo] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function MenuAdminPage({ params }: { params: { venueId: string } 
 
             <div className="space-y-6">
                 {categories.map((category) => (
-                    <div key={category.id} className="rounded-xl border border-gray-200 bg-white p-5">
+                    <div key={category.id} className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-medium">{category.name}</h2>
                             <div className="flex gap-3 text-sm">

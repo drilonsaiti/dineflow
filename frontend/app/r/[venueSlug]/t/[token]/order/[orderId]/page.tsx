@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatCents } from '@/lib/money';
 
@@ -37,9 +37,9 @@ interface OrderData {
 export default function OrderTrackingPage({
                                               params,
                                           }: {
-    params: { venueSlug: string; token: string; orderId: string };
+    params: Promise<{ venueSlug: string; token: string; orderId: string }>;
 }) {
-    const { venueSlug, token, orderId } = params;
+    const { venueSlug, token, orderId } = use(params);
     const [order, setOrder] = useState<OrderData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -94,7 +94,12 @@ export default function OrderTrackingPage({
                     This order was cancelled. Ask staff if you have questions.
                 </div>
             ) : (
-                <div className="mt-8 flex items-center justify-between">
+                <div
+                    className="mt-8 flex items-center justify-between"
+                    role="status"
+                    aria-live="polite"
+                    aria-label={`Order status: ${STATUS_LABELS[order.status]}`}
+                >
                     {STATUS_STEPS.map((step, i) => (
                         <div key={step} className="flex flex-1 flex-col items-center">
                             <div
@@ -115,7 +120,7 @@ export default function OrderTrackingPage({
                 </div>
             )}
 
-            <div className="mt-8 rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+            <div className="mt-8 rounded-xl border border-gray-200 bg-white divide-y divide-gray-100 dark:border-gray-800 dark:bg-gray-900">
                 {order.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3">
                         <div>

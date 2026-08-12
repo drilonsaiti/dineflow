@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { passportJwtSecret } from 'jwks-rsa';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface SupabaseJwtPayload {
-  sub: string; // Supabase auth.users.id
+  sub: string;
   email: string;
-  role?: string;
   [key: string]: unknown;
 }
 
@@ -17,37 +17,39 @@ export interface AuthenticatedUser {
 }
 
 /**
- * Verifies the Supabase-issued JWT's signature against Supabase's own JWT
- * secret (not a secret we mint). This is the single gate every authenticated
- * request passes through before any controller/service code runs — see
- * ARCHITECTURE.md section 2, step 1.
- *
- * We do NOT reimplement sign-up/login/magic-link here — Supabase Auth owns
- * that flow entirely on the frontend; this strategy only ever *verifies*.
+ * Verifies the Supabase-issued JWT against Supabase's published JWKS
+ * (asymmetric ES256/RS256 — the current default signing scheme for new
+ * Supabase projects, superseding the old shared-secret HS256 approach).
+ * Keys are fetched by `kid` from `${SUPABASE_URL}/auth/v1/.well-known/jwks.json`
+ * and cached, so there's no static secret to rotate or leak on our side.
  */
 @Injectable()
 export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jwt') {
   constructor(
-    config: ConfigService,
-    private readonly prisma: PrismaService,
+      config: ConfigService,
+      private readonly prisma: PrismaService,
   ) {
+    const supabaseUrl = config.getOrThrow<string>('SUPABASE_URL');
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.getOrThrow<string>('SUPABASE_JWT_SECRET'),
-      algorithms: ['HS256'],
+      algorithms: ['ES256', 'RS256'],
+      secretOrKeyProvider: passportJwtSecret({
+        cache: true,
+        rateLimit: true,
+        jwksRequestsPerMinute: 5,
+        jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
+      }),
     });
   }
 
   async validate(payload: SupabaseJwtPayload): Promise<AuthenticatedUser> {
-    // Upsert a local shadow row so we have a stable FK target for
-    // VenueMembership / OrderStatusEvent.changedBy without owning auth data.
     await this.prisma.user.upsert({
       where: { id: payload.sub },
       update: { email: payload.email },
       create: { id: payload.sub, email: payload.email },
     });
-
     return { id: payload.sub, email: payload.email };
   }
 }
