@@ -23,9 +23,12 @@ export default function LoginPage() {
 
     return (
         <div className="mx-auto max-w-sm p-8">
-            <h1 className="text-xl font-semibold">Staff / owner login</h1>
+            <h1 className="text-xl">Sign in or create your account</h1>
+            <p className="mt-1 text-sm text-muted">
+                Enter your email — we'll send a link. First time here? That same link creates your account.
+            </p>
             {sent ? (
-                <p className="mt-4 text-sm text-gray-600">
+                <p className="mt-4 text-sm text-body">
                     Check your email for a magic link to sign in.
                 </p>
             ) : (
@@ -34,14 +37,14 @@ export default function LoginPage() {
                         type="email"
                         required
                         placeholder="you@venue.com"
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        className="input"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                     />
-                    <button className="w-full rounded-md bg-brand px-4 py-2 text-sm font-medium text-white">
+                    <button className="btn-primary w-full">
                         Send magic link
                     </button>
-                    {error && <p className="text-sm text-red-500">{error}</p>}
+                    {error && <p className="text-sm text-error">{error}</p>}
                 </form>
             )}
         </div>

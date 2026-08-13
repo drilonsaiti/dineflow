@@ -6,6 +6,8 @@ import Link from 'next/link';
 
 import { formatCents } from '@/lib/money';
 import { CartProvider, useCart } from '@/components/CartContext';
+import {HeaderCartLink} from "@/components/HeadCartLink";
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -98,26 +100,22 @@ export default function TableLayout({
                     } as React.CSSProperties
                 }
             >
-                <header className="sticky top-0 z-10 bg-brand px-4 py-3 text-white shadow-sm">
-                    <div className="mx-auto flex max-w-2xl items-center gap-3">
+                <header className="sticky top-0 z-10 flex items-center justify-between bg-brand px-4 py-3 text-white shadow-sm">
+                    <Link href={`/r/${venueSlug}/t/${token}`} className="flex min-w-0 items-center gap-3">
                         {info.venue.logoUrl && (
-                            <img
-                                src={info.venue.logoUrl}
-                                alt={info.venue.name}
-                                className="h-8 w-8 rounded-full object-cover"
-                            />
+                            <img src={info.venue.logoUrl} alt={info.venue.name} className="h-8 w-8 rounded-full object-cover" />
                         )}
-
-                        <div>
-                            <p className="text-sm font-semibold leading-tight">
-                                {info.venue.name}
-                            </p>
-
-                            <p className="text-xs leading-tight opacity-90">
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold leading-tight">{info.venue.name}</p>
+                            <p className="truncate text-xs opacity-90 leading-tight">
                                 Ordering for {info.table.label}
                                 {info.area ? ` · ${info.area.name}` : ''}
                             </p>
                         </div>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        <ThemeToggle />
+                        <HeaderCartLink venueSlug={venueSlug} token={token} />
                     </div>
                 </header>
 

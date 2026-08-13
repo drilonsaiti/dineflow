@@ -23,17 +23,14 @@ export default function AdminHomePage() {
         });
     }, [router]);
 
-    if (venues === null) return <div className="p-8 text-gray-400">Loading…</div>;
+    if (venues === null) return <div className="p-8 text-muted-soft">Loading…</div>;
 
     if (venues.length === 0) {
         return (
             <div className="mx-auto max-w-md p-8 text-center">
-                <h1 className="text-xl font-semibold">No venues yet</h1>
-                <p className="mt-2 text-gray-500">Create your first venue to get started.</p>
-                <Link
-                    href="/admin/onboarding"
-                    className="mt-4 inline-block min-h-[44px] rounded-md bg-brand px-4 py-2 font-medium text-white"
-                >
+                <h1 className="text-xl">No venues yet</h1>
+                <p className="mt-2 text-muted">Create your first venue to get started.</p>
+                <Link href="/admin/onboarding" className="btn-primary mt-4">
                     Create a venue
                 </Link>
             </div>
@@ -42,20 +39,20 @@ export default function AdminHomePage() {
 
     return (
         <div className="mx-auto max-w-md p-8">
-            <h1 className="text-xl font-semibold">Your venues</h1>
+            <h1 className="text-xl">Your venues</h1>
             <ul className="mt-4 space-y-2">
                 {venues.map((v) => (
                     <li key={v.id}>
                         <Link
                             href={`/admin/${v.id}/dashboard`}
-                            className="block rounded-md border border-gray-200 px-4 py-3 hover:border-brand dark:border-gray-800"
+                            className="block rounded-md border border-hairline px-4 py-3 hover:border-ink dark:border-gray-800 dark:hover:border-gray-400"
                         >
                             {v.name}
                         </Link>
                     </li>
                 ))}
             </ul>
-            <Link href="/admin/onboarding" className="mt-4 inline-block text-sm text-brand underline">
+            <Link href="/admin/onboarding" className="mt-4 inline-block text-sm font-medium text-ink underline dark:text-white">
                 + Add another venue
             </Link>
         </div>

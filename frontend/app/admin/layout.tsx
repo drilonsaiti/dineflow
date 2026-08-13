@@ -37,11 +37,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
     if (isLoginPage) return <>{children}</>;
     if (!checked) {
-        return <div className="flex min-h-screen items-center justify-center text-gray-400">Loading…</div>;
+        return <div className="flex min-h-screen items-center justify-center text-muted-soft dark:bg-surface-dark">Loading…</div>;
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="min-h-screen bg-surface-soft dark:bg-surface-dark">
             <AdminNav />
             {children}
         </div>

@@ -1,15 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+    @apply bg-canvas text-body font-sans dark:bg-surface-dark dark:text-gray-100;
 }
 
-/* Visible keyboard focus ring everywhere — needed once default browser
-   outlines get overridden by custom button/input styling throughout the
-   admin and customer screens. */
+h1, h2, h3 {
+    @apply font-display font-semibold text-ink dark:text-white;
+    letter-spacing: -0.02em;
+}
+
 :focus-visible {
-    outline: 2px solid var(--brand-color, #111827);
+    outline: 2px solid theme('colors.primary');
     outline-offset: 2px;
+}
+
+@layer components {
+    .btn-primary {
+        @apply inline-flex min-h-[44px] items-center justify-center rounded-md bg-primary px-5 py-2.5
+        text-sm font-semibold text-white transition-colors active:bg-primary-active disabled:opacity-50;
+    }
+    .btn-secondary {
+        @apply inline-flex min-h-[44px] items-center justify-center rounded-md border border-hairline bg-canvas px-5 py-2.5
+        text-sm font-semibold text-ink dark:border-gray-700 dark:bg-transparent dark:text-white;
+    }
+    .btn-accent {
+        @apply inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-5 py-2.5
+        text-sm font-semibold text-white transition-colors active:bg-accent-active disabled:opacity-50;
+    }
+
+    .btn-ghost {
+        @apply inline-flex min-h-[36px] items-center justify-center rounded-md px-3 text-sm font-medium text-ink
+        transition-colors hover:bg-surface-card dark:text-white dark:hover:bg-surface-dark-elevated;
+    }
+    .btn-ghost-danger {
+        @apply inline-flex min-h-[36px] items-center justify-center rounded-md px-3 text-sm font-medium text-error
+        transition-colors hover:bg-error/10;
+    }
+    .card {
+        @apply rounded-lg border border-hairline bg-canvas p-6 shadow-card dark:border-gray-800 dark:bg-surface-dark-elevated;
+    }
+    .card-soft {
+        @apply rounded-lg bg-surface-card p-6 dark:bg-surface-dark-elevated;
+    }
+    .badge-pill {
+        @apply inline-flex items-center rounded-pill bg-surface-card px-3 py-1 text-xs font-medium text-ink dark:bg-gray-800 dark:text-gray-200;
+    }
+    .input {
+        @apply w-full rounded-md border border-hairline bg-canvas px-3.5 py-2.5 text-sm text-ink
+        placeholder:text-muted-soft
+        dark:border-gray-700 dark:bg-surface-dark-elevated dark:text-gray-100 dark:placeholder:text-gray-500;
+    }
 }

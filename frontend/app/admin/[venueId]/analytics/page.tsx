@@ -34,11 +34,11 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
         });
     }, [venueId]);
 
-    if (loading || !summary) return <div className="p-8 text-gray-500">Loading analytics…</div>;
+    if (loading || !summary) return <div className="p-8 text-muted-soft">Loading analytics…</div>;
 
     return (
         <div className="mx-auto max-w-4xl space-y-8 p-6">
-            <h1 className="text-2xl font-semibold">Analytics</h1>
+            <h1 className="text-2xl">Analytics</h1>
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <StatCard label="Orders today" value={summary.ordersToday.toString()} />
@@ -47,29 +47,29 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
                 <StatCard label="Revenue this week" value={formatCents(summary.revenueThisWeekCents)} />
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                <h2 className="text-sm font-medium text-gray-500">Avg. time from Received to Ready</h2>
-                <p className="mt-1 text-3xl font-semibold">
+            <div className="card">
+                <h2 className="text-sm font-medium text-muted">Avg. time from Received to Ready</h2>
+                <p className="mt-1 text-3xl font-semibold text-ink dark:text-white">
                     {avgReady?.avgMinutes != null ? `${avgReady.avgMinutes} min` : '—'}
                 </p>
                 {avgReady && avgReady.sampleSize > 0 && (
-                    <p className="text-xs text-gray-400">based on {avgReady.sampleSize} orders</p>
+                    <p className="text-xs text-muted-soft">based on {avgReady.sampleSize} orders</p>
                 )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                <h2 className="text-sm font-medium text-gray-500">Best-selling items</h2>
+            <div className="card">
+                <h2 className="text-sm font-medium text-muted">Best-selling items</h2>
                 {bestSellers.length === 0 ? (
-                    <p className="mt-2 text-sm text-gray-400">No orders yet.</p>
+                    <p className="mt-2 text-sm text-muted-soft">No orders yet.</p>
                 ) : (
-                    <ul className="mt-3 divide-y divide-gray-100">
+                    <ul className="mt-3 divide-y divide-hairline-soft dark:divide-gray-800">
                         {bestSellers.map((item, i) => (
                             <li key={item.menuItemId} className="flex items-center justify-between py-2">
-                <span className="text-sm">
-                  <span className="text-gray-400 mr-2">#{i + 1}</span>
+                <span className="text-sm text-ink dark:text-gray-100">
+                  <span className="text-muted-soft mr-2">#{i + 1}</span>
                     {item.name}
                 </span>
-                                <span className="text-sm text-gray-500">
+                                <span className="text-sm text-muted">
                   {item.quantitySold} sold · {formatCents(item.revenueCents)}
                 </span>
                             </li>
@@ -78,31 +78,31 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
                 )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                <h2 className="text-sm font-medium text-gray-500">Busiest tables</h2>
+            <div className="card">
+                <h2 className="text-sm font-medium text-muted">Busiest tables</h2>
                 {busiestTables.length === 0 ? (
-                    <p className="mt-2 text-sm text-gray-400">No orders yet.</p>
+                    <p className="mt-2 text-sm text-muted-soft">No orders yet.</p>
                 ) : (
-                    <ul className="mt-3 divide-y divide-gray-100">
+                    <ul className="mt-3 divide-y divide-hairline-soft dark:divide-gray-800">
                         {busiestTables.map((t) => (
-                            <li key={t.tableId} className="flex items-center justify-between py-2 text-sm">
+                            <li key={t.tableId} className="flex items-center justify-between py-2 text-sm text-ink dark:text-gray-100">
                                 <span>{t.label}</span>
-                                <span className="text-gray-500">{t.orderCount} orders</span>
+                                <span className="text-muted">{t.orderCount} orders</span>
                             </li>
                         ))}
                     </ul>
                 )}
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                <h2 className="text-sm font-medium text-gray-500">Orders by hour of day</h2>
+            <div className="card">
+                <h2 className="text-sm font-medium text-muted">Orders by hour of day</h2>
                 <div className="mt-3 h-56">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={busiestHours}>
-                            <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} fontSize={11} />
-                            <YAxis allowDecimals={false} fontSize={11} />
+                            <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} fontSize={11} stroke="currentColor" className="text-muted-soft" />
+                            <YAxis allowDecimals={false} fontSize={11} stroke="currentColor" className="text-muted-soft" />
                             <Tooltip labelFormatter={(h) => `${h}:00`} />
-                            <Bar dataKey="count" fill="var(--brand-color, #111827)" radius={[3, 3, 0, 0]} />
+                            <Bar dataKey="count" fill="#111111" radius={[3, 3, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -113,9 +113,9 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
 
 function StatCard({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-xs font-medium text-gray-500">{label}</p>
-            <p className="mt-1 text-2xl font-semibold">{value}</p>
+        <div className="card !p-4">
+            <p className="text-xs font-medium text-muted">{label}</p>
+            <p className="mt-1 text-2xl font-semibold text-ink dark:text-white">{value}</p>
         </div>
     );
 }

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
 
 interface VenueSummary {
     id: string;
@@ -37,38 +38,42 @@ export function AdminNav() {
             { href: `/admin/${venueId}/tables`, label: 'Tables' },
             { href: `/admin/${venueId}/analytics`, label: 'Analytics' },
             { href: `/admin/${venueId}/settings`, label: 'Settings' },
+            { href: `/admin/${venueId}/staff`, label: 'Staff' },
         ]
         : [];
 
     return (
-        <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <header className="border-b border-hairline bg-canvas dark:border-gray-800 dark:bg-surface-dark">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
                 <div className="flex items-center gap-6">
-                    <Link href="/admin" className="font-semibold">
-                        QR Ordering
+                    <Link href="/admin" className="font-display font-semibold text-ink dark:text-white">
+                        DineFlow
                     </Link>
                     {venues.length > 0 && (
-                        <select
-                            value={venueId ?? ''}
-                            onChange={(e) => e.target.value && router.push(`/admin/${e.target.value}/dashboard`)}
-                            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm dark:border-gray-700 dark:bg-gray-800"
+                        <Select
+                            value={venueId ?? undefined}
+                            onValueChange={(id) => router.push(`/admin/${id}/dashboard`)}
                         >
-                            <option value="" disabled>
-                                Switch venue…
-                            </option>
-                            {venues.map((v) => (
-                                <option key={v.id} value={v.id}>
-                                    {v.name}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="w-44">
+                                <SelectValue placeholder="Switch venue…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {venues.map((v) => (
+                                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
-                    <nav className="flex gap-4 text-sm">
+                    <nav className="flex gap-4 text-sm font-medium">
                         {links.map((l) => (
                             <Link
                                 key={l.href}
                                 href={l.href}
-                                className={pathname?.startsWith(l.href) ? 'font-semibold text-brand' : 'text-gray-500'}
+                                className={
+                                    pathname?.startsWith(l.href)
+                                        ? 'font-semibold text-ink dark:text-white'
+                                        : 'text-muted hover:text-ink dark:hover:text-white'
+                                }
                             >
                                 {l.label}
                             </Link>
@@ -77,7 +82,7 @@ export function AdminNav() {
                 </div>
                 <div className="flex items-center gap-3">
                     <ThemeToggle />
-                    <button onClick={signOut} className="text-sm text-gray-500 hover:underline">
+                    <button onClick={signOut} className="text-sm font-medium text-muted hover:text-ink dark:hover:text-white">
                         Sign out
                     </button>
                 </div>

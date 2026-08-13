@@ -150,14 +150,14 @@ export class AnalyticsService {
 
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const rows = await tx.$queryRaw<{ hour: number; count: bigint }[]>`
-        SELECT EXTRACT(HOUR FROM "createdAt")::int AS hour, COUNT(*)::bigint AS count
-        FROM "Order"
-        WHERE "venueId" = ${venueId}
-          AND "createdAt" >= ${clampedSince}
-          AND "status" != 'CANCELLED'
-        GROUP BY hour
-        ORDER BY hour ASC
-      `;
+                SELECT EXTRACT(HOUR FROM "createdAt")::int AS hour, COUNT(*)::bigint AS count
+                FROM "Order"
+                WHERE "venueId" = ${venueId}::uuid
+                  AND "createdAt" >= ${clampedSince}
+                  AND "status" != 'CANCELLED'
+                GROUP BY hour
+                ORDER BY hour ASC
+            `;
 
             // Fill every hour 0-23 so the frontend can render a full 24-bar chart
             // without gaps for quiet hours.

@@ -19,7 +19,18 @@ export class MenuService {
         return this.prisma.withVenueScope(venueId, (tx) =>
             tx.menuCategory.findMany({
                 where: { venueId },
-                include: { items: { include: ITEM_INCLUDE, orderBy: { displayOrder: 'asc' } } },
+                include: {
+                    items: {
+                        include: {
+                            tags: { include: { tag: true } },
+                            modifierGroups: {
+                                include: { options: true },
+                                orderBy: { displayOrder: 'asc' },
+                            },
+                        },
+                        orderBy: { displayOrder: 'asc' },
+                    },
+                },
                 orderBy: { displayOrder: 'asc' },
             }),
         );

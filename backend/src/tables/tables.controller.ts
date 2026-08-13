@@ -86,9 +86,9 @@ export class TablesController {
         @Param('tableId') tableId: string,
         @Res() res: Response,
     ) {
-        const png = await this.tablesService.getQrPng(scope.venueId, tableId);
-        res.set({ 'Content-Type': 'image/png' });
-        res.send(png);
+        const { buffer, filename } = await this.tablesService.getQrPng(scope.venueId, tableId);
+        res.set({ 'Content-Type': 'image/png', 'Content-Disposition': `attachment; filename="${filename}"` });
+        res.send(buffer);
     }
 
     @Get('tables/:tableId/qr.svg')
@@ -98,8 +98,8 @@ export class TablesController {
         @Param('tableId') tableId: string,
         @Res() res: Response,
     ) {
-        const svg = await this.tablesService.getQrSvg(scope.venueId, tableId);
-        res.set({ 'Content-Type': 'image/svg+xml' });
+        const { svg, filename } = await this.tablesService.getQrSvg(scope.venueId, tableId);
+        res.set({ 'Content-Type': 'image/svg+xml', 'Content-Disposition': `attachment; filename="${filename}"` });
         res.send(svg);
     }
 

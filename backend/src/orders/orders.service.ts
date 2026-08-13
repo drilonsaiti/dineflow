@@ -154,25 +154,22 @@ export class OrdersService {
 
   async listForVenue(venueId: string, station?: string) {
     return this.prisma.withVenueScope(venueId, (tx) =>
-      tx.order.findMany({
-        where: {
-          venueId,
-          status: { notIn: [OrderStatus.SERVED, OrderStatus.CANCELLED] },
-          // Station filtering (section 10) would join through menuItem
-          // category -> station mapping; left as a straightforward extension
-          // point once categories carry a `station` field.
-        },
-        include: {
-          items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
-          table: true,
-          statusEvents: {
-            orderBy: { changedAt: 'desc' },
-            take: 1,
-            include: { changedBy: { select: { id: true, email: true, fullName: true } } },
+        tx.order.findMany({
+          where: {
+            venueId,
+            status: { notIn: [OrderStatus.SERVED, OrderStatus.CANCELLED] },
           },
-        },
-        orderBy: { createdAt: 'asc' },
-      }),
+          include: {
+            items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+            table: true,
+            statusEvents: {
+              orderBy: { changedAt: 'desc' },
+              take: 1,
+              include: { changedBy: { select: { id: true, email: true, fullName: true } } },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        }),
     );
   }
 

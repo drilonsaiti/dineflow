@@ -57,12 +57,12 @@ export default function OnboardingPage() {
         <div className="mx-auto max-w-xl p-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Set up your venue</h1>
+                <h1 className="text-2xl">Set up your venue</h1>
 
                 {venueId && (
                     <Link
                         href={`/admin/${venueId}/dashboard`}
-                        className="text-sm text-gray-500 underline"
+                        className="text-sm text-muted underline"
                     >
                         Skip to dashboard
                     </Link>
@@ -83,8 +83,8 @@ export default function OnboardingPage() {
                         aria-current={step === s ? 'step' : undefined}
                         className={`min-h-[44px] flex-1 rounded-md px-3 text-sm font-medium disabled:opacity-40 ${
                             step === s
-                                ? 'bg-brand text-white'
-                                : 'bg-gray-100 text-gray-600'
+                                ? 'bg-ink text-white dark:bg-white dark:text-ink'
+                                : 'bg-surface-card text-muted dark:bg-surface-dark-elevated'
                         }`}
                     >
                         {i + 1}.{' '}
@@ -102,10 +102,7 @@ export default function OnboardingPage() {
                 {step === 'venue' && (
                     <form onSubmit={createVenue} className="space-y-4">
                         <div>
-                            <label
-                                htmlFor="venue-name"
-                                className="block text-sm font-medium"
-                            >
+                            <label htmlFor="venue-name" className="block text-sm font-medium text-ink dark:text-white">
                                 Venue name
                             </label>
 
@@ -113,7 +110,7 @@ export default function OnboardingPage() {
                                 id="venue-name"
                                 required
                                 autoFocus
-                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="input mt-1"
                                 value={venueName}
                                 onChange={(e) => setVenueName(e.target.value)}
                                 placeholder="Mario's Pizzeria"
@@ -121,19 +118,16 @@ export default function OnboardingPage() {
                         </div>
 
                         <div>
-                            <label
-                                htmlFor="venue-slug"
-                                className="block text-sm font-medium"
-                            >
+                            <label htmlFor="venue-slug" className="block text-sm font-medium text-ink dark:text-white">
                                 URL slug{' '}
-                                <span className="font-normal text-gray-400">
+                                <span className="font-normal text-muted-soft">
                   (optional — auto-generated from name)
                 </span>
                             </label>
 
                             <input
                                 id="venue-slug"
-                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="input mt-1"
                                 value={slug}
                                 onChange={(e) => setSlug(e.target.value)}
                                 placeholder="marios-pizzeria"
@@ -141,19 +135,12 @@ export default function OnboardingPage() {
                         </div>
 
                         {error && (
-                            <p
-                                role="alert"
-                                className="text-sm text-red-500"
-                            >
+                            <p role="alert" className="text-sm text-error">
                                 {error}
                             </p>
                         )}
 
-                        <button
-                            type="submit"
-                            disabled={creating}
-                            className="min-h-[44px] w-full rounded-md bg-brand font-medium text-white disabled:opacity-50"
-                        >
+                        <button type="submit" disabled={creating} className="btn-primary w-full">
                             {creating ? 'Creating…' : 'Create venue'}
                         </button>
                     </form>
@@ -162,15 +149,12 @@ export default function OnboardingPage() {
                 {/* Step 2: Menu */}
                 {step === 'category' && venueId && (
                     <div>
-                        <p className="mb-4 text-sm text-gray-500">
+                        <p className="mb-4 text-sm text-muted">
                             Add your first category and a couple of items. You can add more
                             any time from the Menu page.
                         </p>
 
-                        <Link
-                            href={`/admin/${venueId}/menu`}
-                            className="inline-block min-h-[44px] rounded-md bg-brand px-4 py-2 font-medium text-white"
-                        >
+                        <Link href={`/admin/${venueId}/menu`} className="btn-primary inline-flex">
                             Go build your menu →
                         </Link>
 
@@ -178,7 +162,7 @@ export default function OnboardingPage() {
                             <button
                                 type="button"
                                 onClick={() => setStep('table')}
-                                className="text-sm text-brand underline"
+                                className="text-sm font-medium text-ink underline dark:text-white"
                             >
                                 Next: add tables
                             </button>
@@ -189,21 +173,18 @@ export default function OnboardingPage() {
                 {/* Step 3: Tables */}
                 {step === 'table' && venueId && (
                     <div>
-                        <p className="mb-4 text-sm text-gray-500">
+                        <p className="mb-4 text-sm text-muted">
                             Add your first table and preview its QR code.
                         </p>
 
-                        <Link
-                            href={`/admin/${venueId}/tables`}
-                            className="inline-block min-h-[44px] rounded-md bg-brand px-4 py-2 font-medium text-white"
-                        >
+                        <Link href={`/admin/${venueId}/tables`} className="btn-primary inline-flex">
                             Go add tables →
                         </Link>
 
                         <div className="mt-4">
                             <Link
                                 href={`/admin/${venueId}/dashboard`}
-                                className="text-sm text-brand underline"
+                                className="text-sm font-medium text-ink underline dark:text-white"
                             >
                                 Finish setup → go to dashboard
                             </Link>

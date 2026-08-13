@@ -3,22 +3,8 @@
 import { useEffect, useState } from 'react';
 import { formatElapsed, elapsedMinutes } from '@/lib/elapsed';
 import {StaffOrder} from "@/app/admin/[venueId]/dashboard/page";
+import { NEXT, PREV } from '@/lib/order-transitions';
 
-// Sequential-only transitions, mirroring the backend state machine
-// (order-status.machine.ts) — the "forward" and "back" buttons shown here
-// are always exactly one step, never a jump, so the UI can't submit a
-// transition the server would reject anyway.
-const NEXT: Record<string, string | null> = {
-    RECEIVED: 'VIEWED',
-    VIEWED: 'PREPARING',
-    PREPARING: 'READY',
-    READY: 'SERVED',
-};
-const PREV: Record<string, string | null> = {
-    VIEWED: 'RECEIVED',
-    PREPARING: 'VIEWED',
-    READY: 'PREPARING',
-};
 
 export function OrderCard({
                               order,
@@ -44,22 +30,24 @@ export function OrderCard({
     return (
         <div
             className={`rounded-lg border p-3 ${
-                isLate ? 'border-red-500 bg-red-950/40' : 'border-gray-700 bg-gray-900'
+                isLate
+                    ? 'border-error bg-error/5 dark:bg-error/10'
+                    : 'border-hairline bg-canvas dark:border-gray-700 dark:bg-surface-dark-elevated'
             }`}
         >
             <div className="flex items-center justify-between">
-                <span className="text-lg font-bold">#{order.dailyNumber}</span>
-                <span className={`text-sm font-medium ${isLate ? 'text-red-400' : 'text-gray-400'}`}>
+                <span className="text-lg font-bold text-ink dark:text-white">#{order.dailyNumber}</span>
+                <span className={`text-sm font-medium ${isLate ? 'text-error' : 'text-muted'}`}>
           {formatElapsed(order.createdAt)}
         </span>
             </div>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-body dark:text-gray-300">
                 {order.table.label}
                 {order.customerName ? ` · ${order.customerName}` : ''}
             </p>
 
-            {order.statusEvents[0]?.changedBy && (
-                <p className="text-xs text-gray-500">
+            {order.statusEvents?.[0]?.changedBy && (
+                <p className="text-xs text-muted-soft">
                     last updated by {order.statusEvents[0].changedBy.fullName ?? order.statusEvents[0].changedBy.email}
                 </p>
             )}
@@ -67,14 +55,14 @@ export function OrderCard({
             <ul className="mt-2 space-y-1 text-sm">
                 {order.items.map((item) => (
                     <li key={item.id}>
-                        <span className="font-medium">{item.quantity}× {item.menuItem.name}</span>
+                        <span className="font-medium text-ink dark:text-white">{item.quantity}× {item.menuItem.name}</span>
                         {item.modifiers.length > 0 && (
-                            <span className="text-gray-400">
+                            <span className="text-muted">
                 {' '}
                                 ({item.modifiers.map((m) => m.modifierOption?.name).filter(Boolean).join(', ')})
               </span>
                         )}
-                        {item.note && <div className="text-xs text-amber-400">Note: {item.note}</div>}
+                        {item.note && <div className="text-xs text-warning">Note: {item.note}</div>}
                     </li>
                 ))}
             </ul>
@@ -83,7 +71,7 @@ export function OrderCard({
                 {prev && (
                     <button
                         onClick={() => onAdvance(prev)}
-                        className="min-h-[44px] flex-1 rounded-md border border-gray-600 text-sm font-medium"
+                        className="btn-secondary flex-1 text-sm"
                     >
                         ← Back
                     </button>
@@ -91,7 +79,7 @@ export function OrderCard({
                 {next && (
                     <button
                         onClick={() => onAdvance(next)}
-                        className="min-h-[44px] flex-[2] rounded-md bg-brand text-sm font-semibold"
+                        className="btn-primary flex-[2] text-sm"
                     >
                         {next === 'VIEWED' && 'Mark seen →'}
                         {next === 'PREPARING' && 'Start preparing →'}

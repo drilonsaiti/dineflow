@@ -117,22 +117,22 @@ export function ItemDetailModal({
             role="dialog"
             aria-modal="true"
             aria-labelledby="item-detail-title"
-            className="fixed inset-0 z-30 flex flex-col bg-white sm:items-center sm:justify-center sm:bg-black/50"
+            className="fixed inset-0 z-30 flex flex-col bg-canvas sm:items-center sm:justify-center sm:bg-black/50"
         >
             <div
                 ref={dialogRef}
-                className="flex h-full w-full flex-col overflow-y-auto bg-white sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl"
+                className="flex h-full w-full flex-col overflow-y-auto bg-canvas sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl"
             >
                 <div className="relative">
                     {item.photoUrl ? (
                         <img src={item.photoUrl} alt={item.name} className="h-56 w-full object-cover" />
                     ) : (
-                        <div className="h-40 w-full bg-gray-100" />
+                        <div className="h-40 w-full bg-surface-card" />
                     )}
                     <button
                         ref={closeButtonRef}
                         onClick={onClose}
-                        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-lg shadow"
+                        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-lg shadow-elevated"
                         aria-label="Close item details"
                     >
                         ✕
@@ -140,26 +140,26 @@ export function ItemDetailModal({
                 </div>
 
                 <div className="flex-1 px-5 py-4">
-                    <h2 id="item-detail-title" className="text-xl font-semibold">{item.name}</h2>
-                    {item.description && <p className="mt-1 text-gray-600">{item.description}</p>}
+                    <h2 id="item-detail-title" className="text-xl">{item.name}</h2>
+                    {item.description && <p className="mt-1 text-body">{item.description}</p>}
 
                     {item.tags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                             {item.tags.map(({ tag }) => (
-                                <span key={tag.id} className="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600">
+                                <span key={tag.id} className="badge-pill">
                   {tag.label}
                 </span>
                             ))}
                         </div>
                     )}
 
-                    <p className="mt-3 text-lg font-semibold">{formatCents(item.priceCents, currency)}</p>
+                    <p className="mt-3 text-lg font-semibold text-ink">{formatCents(item.priceCents, currency)}</p>
 
                     {item.modifierGroups.map((group) => (
                         <div key={group.id} className="mt-5">
                             <div className="flex items-baseline justify-between">
-                                <p className="font-medium">{group.name}</p>
-                                <p className="text-xs text-gray-400">
+                                <p className="font-medium text-ink">{group.name}</p>
+                                <p className="text-xs text-muted-soft">
                                     {group.isRequired ? 'Required' : 'Optional'}
                                     {group.maxSelect > 1 ? ` · up to ${group.maxSelect}` : ''}
                                 </p>
@@ -172,11 +172,11 @@ export function ItemDetailModal({
                                             key={option.id}
                                             onClick={() => toggleOption(group.id, option.id, group.maxSelect)}
                                             className={`flex w-full min-h-[44px] items-center justify-between rounded-lg border px-3 py-2 text-left ${
-                                                checked ? 'border-brand bg-brand/5' : 'border-gray-200'
+                                                checked ? 'border-accent bg-accent-soft' : 'border-hairline'
                                             }`}
                                         >
-                                            <span>{option.name}</span>
-                                            <span className="text-sm text-gray-500">
+                                            <span className="text-ink">{option.name}</span>
+                                            <span className="text-sm text-muted">
                         {option.priceDeltaCents > 0
                             ? `+${formatCents(option.priceDeltaCents, currency)}`
                             : option.priceDeltaCents < 0
@@ -191,9 +191,9 @@ export function ItemDetailModal({
                     ))}
 
                     <div className="mt-5">
-                        <label className="text-sm font-medium">Note for the kitchen (optional)</label>
+                        <label className="text-sm font-medium text-ink">Note for the kitchen (optional)</label>
                         <textarea
-                            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                            className="input mt-1"
                             rows={2}
                             placeholder="No onions, extra spicy, etc."
                             value={note}
@@ -201,31 +201,28 @@ export function ItemDetailModal({
                         />
                     </div>
 
-                    {validationError && <p className="mt-3 text-sm text-red-500">{validationError}</p>}
+                    {validationError && <p className="mt-3 text-sm text-error">{validationError}</p>}
                 </div>
 
-                <div className="sticky bottom-0 flex items-center gap-3 border-t border-gray-100 bg-white px-5 py-4">
-                    <div className="flex items-center rounded-full border border-gray-200">
+                <div className="sticky bottom-0 flex items-center gap-3 border-t border-hairline-soft bg-canvas px-5 py-4">
+                    <div className="flex items-center rounded-full border border-hairline">
                         <button
                             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                            className="flex h-11 w-11 items-center justify-center text-lg"
+                            className="flex h-11 w-11 items-center justify-center text-lg text-ink"
                             aria-label="Decrease quantity"
                         >
                             −
                         </button>
-                        <span className="w-6 text-center font-medium">{quantity}</span>
+                        <span className="w-6 text-center font-medium text-ink">{quantity}</span>
                         <button
                             onClick={() => setQuantity((q) => q + 1)}
-                            className="flex h-11 w-11 items-center justify-center text-lg"
+                            className="flex h-11 w-11 items-center justify-center text-lg text-ink"
                             aria-label="Increase quantity"
                         >
                             +
                         </button>
                     </div>
-                    <button
-                        onClick={handleAdd}
-                        className="flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-brand font-medium text-white"
-                    >
+                    <button onClick={handleAdd} className="btn-accent flex-1">
                         Add to cart · {formatCents(unitPriceCents * quantity, currency)}
                     </button>
                 </div>

@@ -4,6 +4,9 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { getSocket, joinVenueRoom } from '@/lib/socket';
 import {OrderCard} from "@/components/OrderCard";
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { isAdjacentTransition } from '@/lib/order-transitions';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
 
 export interface StaffOrder {
     id: string;
@@ -103,66 +106,103 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
         }
     }
 
+    function handleDragEnd(result: DropResult) {
+        const { source, destination, draggableId } = result;
+        if (!destination || source.droppableId === destination.droppableId) return;
+
+        const order = orders.find((o) => o.id === draggableId);
+        if (!order) return;
+
+        const toStatus = destination.droppableId as StaffOrder['status'];
+        if (!isAdjacentTransition(order.status, toStatus)) return; // invalid jump — snap back, no API call
+
+        advance(order, toStatus);
+    }
+
     const visibleOrders = orders.filter((o) => COLUMNS.some((c) => c.status === o.status));
 
     return (
-        <div className="flex h-screen flex-col bg-gray-900 text-white">
+        <div className="flex h-screen flex-col bg-canvas text-ink dark:bg-surface-dark dark:text-white">
             <audio ref={audioRef} src="/new-order.mp3" preload="auto" />
 
-            <header className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-                <h1 className="text-lg font-semibold">Order board</h1>
+            <header className="flex items-center justify-between border-b border-hairline px-4 py-3 dark:border-gray-800">
+                <h1 className="text-lg">Order board</h1>
                 <div className="flex items-center gap-4 text-sm">
-          <span className={`flex items-center gap-1.5 ${connected ? 'text-green-400' : 'text-red-400'}`}>
-            <span className={`h-2 w-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'}`} />
-              {connected ? 'Live' : 'Reconnecting…'}
-          </span>
-                    <select
-                        value={station}
-                        onChange={(e) => setStation(e.target.value)}
-                        className="rounded-md border border-gray-700 bg-gray-800 px-2 py-1.5"
-                    >
-                        <option value="">All stations</option>
-                        <option value="kitchen">Kitchen</option>
-                        <option value="bar">Bar</option>
-                    </select>
+            <span className={`flex items-center gap-1.5 font-medium ${connected ? 'text-success' : 'text-error'}`}>
+                <span className={`h-2 w-2 rounded-full ${connected ? 'bg-success' : 'bg-error'}`} />
+                {connected ? 'Live' : 'Reconnecting…'}
+            </span>
+                    <Select value={station} onValueChange={setStation}>
+                        <SelectTrigger className="w-36">
+                            <SelectValue placeholder="All stations" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">All stations</SelectItem>
+                            <SelectItem value="kitchen">Kitchen</SelectItem>
+                            <SelectItem value="bar">Bar</SelectItem>
+                        </SelectContent>
+                    </Select>
                     <button
                         onClick={() => setSoundOn((s) => !s)}
-                        className="min-h-[44px] rounded-md border border-gray-700 px-3"
+                        className="btn-secondary"
                     >
-                        {soundOn ? '🔔 On' : '🔕 Off'}
+                        {soundOn ? 'Sound on' : 'Sound off'}
                     </button>
                 </div>
             </header>
 
-            <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden p-3">
-                {COLUMNS.map((col) => {
-                    const columnOrders = visibleOrders
-                        .filter((o) => o.status === col.status)
-                        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden p-3">
+                    {COLUMNS.map((col) => {
+                        const columnOrders = visibleOrders
+                            .filter((o) => o.status === col.status)
+                            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-                    return (
-                        <div key={col.status} className="flex flex-col overflow-hidden rounded-xl bg-gray-800">
-                            <div className="flex items-center justify-between border-b border-gray-700 px-3 py-2">
-                                <span className="font-semibold">{col.label}</span>
-                                <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs">{columnOrders.length}</span>
-                            </div>
-                            <div className="flex-1 space-y-2 overflow-y-auto p-2">
-                                {columnOrders.map((order) => (
-                                    <OrderCard
-                                        key={order.id}
-                                        order={order}
-                                        lateThresholdMinutes={LATE_THRESHOLD_MINUTES}
-                                        onAdvance={(to) => advance(order, to)}
-                                    />
-                                ))}
-                                {columnOrders.length === 0 && (
-                                    <p className="p-3 text-center text-sm text-gray-500">No orders</p>
+                        return (
+                            <Droppable droppableId={col.status} key={col.status}>
+                                {(provided, snapshot) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                        className={`flex flex-col overflow-hidden rounded-lg bg-surface-card dark:bg-surface-dark-elevated ${
+                                            snapshot.isDraggingOver ? 'ring-2 ring-ink dark:ring-white' : ''
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between border-b border-hairline px-3 py-2 dark:border-gray-700">
+                                            <span className="text-sm font-semibold text-ink dark:text-white">{col.label}</span>
+                                            <span className="rounded-pill bg-surface-strong px-2 py-0.5 text-xs font-medium text-muted dark:bg-gray-700 dark:text-gray-300">{columnOrders.length}</span>
+                                        </div>
+                                        <div className="flex-1 space-y-2 overflow-y-auto p-2">
+                                            {columnOrders.map((order, index) => (
+                                                <Draggable draggableId={order.id} index={index} key={order.id}>
+                                                    {(dragProvided, dragSnapshot) => (
+                                                        <div
+                                                            ref={dragProvided.innerRef}
+                                                            {...dragProvided.draggableProps}
+                                                            {...dragProvided.dragHandleProps}
+                                                            className={dragSnapshot.isDragging ? 'opacity-80' : ''}
+                                                        >
+                                                            <OrderCard
+                                                                order={order}
+                                                                lateThresholdMinutes={LATE_THRESHOLD_MINUTES}
+                                                                onAdvance={(to) => advance(order, to)}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                            {columnOrders.length === 0 && (
+                                                <p className="p-3 text-center text-sm text-muted-soft">No orders</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
+                            </Droppable>
+                        );
+                    })}
+                </div>
+            </DragDropContext>
         </div>
     );
 }

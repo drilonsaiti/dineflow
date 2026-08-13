@@ -19,12 +19,9 @@ export default function PrintTablesPage({ params }: { params: Promise<{ venueId:
     }, [venueId]);
 
     return (
-        <div className="p-8">
+        <div className="min-h-screen bg-canvas p-8 dark:bg-surface-dark print:bg-white">
             <div className="mb-6 print:hidden">
-                <button
-                    onClick={() => window.print()}
-                    className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white"
-                >
+                <button onClick={() => window.print()} className="btn-primary">
                     Print / Save as PDF
                 </button>
             </div>
@@ -32,12 +29,12 @@ export default function PrintTablesPage({ params }: { params: Promise<{ venueId:
                 {tables.map((table) => (
                     <div
                         key={table.id}
-                        className="flex flex-col items-center break-inside-avoid rounded-lg border border-gray-300 p-6 text-center"
+                        className="flex flex-col items-center break-inside-avoid rounded-lg border border-gray-300 p-6 text-center print:border-gray-300"
                     >
                         <img src={table.qrDataUrl} alt={table.label} className="h-40 w-40" />
-                        <p className="mt-3 text-lg font-semibold">{table.label}</p>
-                        {table.area && <p className="text-sm text-gray-500">{table.area.name}</p>}
-                        <p className="mt-1 text-xs text-gray-400">Scan to order</p>
+                        <p className="mt-3 text-lg font-semibold text-black">{table.label}</p>
+                        {table.area && <p className="text-sm text-gray-600">{table.area.name}</p>}
+                        <p className="mt-1 text-xs text-gray-500">Scan to order</p>
                     </div>
                 ))}
             </div>

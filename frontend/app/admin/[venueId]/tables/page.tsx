@@ -1,9 +1,18 @@
 'use client';
 
-import { use,useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import {Area, TableRow} from "@/types/table";
+import { Area, TableRow } from '@/types/table';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
+import {
+    Select,
+    SelectValue,
+    SelectTrigger,
+    SelectContent,
+    SelectItem,
+} from '@/components/ui/Select';
 
 interface Props {
     params: Promise<{
@@ -18,11 +27,19 @@ export default function TablesAdminPage({ params }: Props) {
     const [areas, setAreas] = useState<Area[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [confirmDeactivate, setConfirmDeactivate] = useState<string | null>(
+        null
+    );
+    const [confirmRegenerate, setConfirmRegenerate] = useState<string | null>(
+        null
+    );
+
     const [newLabel, setNewLabel] = useState('');
     const [newAreaId, setNewAreaId] = useState('');
     const [newAreaName, setNewAreaName] = useState('');
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL;
+    const showToast = useToast();
 
     async function refresh() {
         try {
@@ -36,10 +53,12 @@ export default function TablesAdminPage({ params }: Props) {
             setTables(tablesRes);
             setAreas(areasRes);
         } catch (err: unknown) {
-            const message =
-                err instanceof Error ? err.message : 'Failed to load tables';
-
-            alert(message);
+            showToast(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to load tables',
+                'error'
+            );
         } finally {
             setLoading(false);
         }
@@ -65,11 +84,15 @@ export default function TablesAdminPage({ params }: Props) {
             setNewAreaId('');
 
             await refresh();
-        } catch (err: unknown) {
-            const message =
-                err instanceof Error ? err.message : 'Failed to create table';
 
-            alert(message);
+            showToast('Table created', 'success');
+        } catch (err: unknown) {
+            showToast(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to create table',
+                'error'
+            );
         }
     }
 
@@ -86,34 +109,34 @@ export default function TablesAdminPage({ params }: Props) {
             setNewAreaName('');
 
             await refresh();
-        } catch (err: unknown) {
-            const message =
-                err instanceof Error ? err.message : 'Failed to create area';
 
-            alert(message);
+            showToast('Area created', 'success');
+        } catch (err: unknown) {
+            showToast(
+                err instanceof Error
+                    ? err.message
+                    : 'Failed to create area',
+                'error'
+            );
         }
     }
 
     async function deactivate(tableId: string) {
-        const confirmed = confirm(
-            'Remove this table from the floor? Its QR code stops working; order history is kept.'
-        );
-
-        if (!confirmed) return;
-
         try {
             await api.patch(
                 `/venues/${venueId}/tables/${tableId}/deactivate`
             );
 
             await refresh();
+
+            showToast('Table deactivated', 'success');
         } catch (err: unknown) {
-            const message =
+            showToast(
                 err instanceof Error
                     ? err.message
-                    : 'Failed to deactivate table';
-
-            alert(message);
+                    : 'Failed to deactivate table',
+                'error'
+            );
         }
     }
 
@@ -124,42 +147,40 @@ export default function TablesAdminPage({ params }: Props) {
             );
 
             await refresh();
+
+            showToast('Table reactivated', 'success');
         } catch (err: unknown) {
-            const message =
+            showToast(
                 err instanceof Error
                     ? err.message
-                    : 'Failed to reactivate table';
-
-            alert(message);
+                    : 'Failed to reactivate table',
+                'error'
+            );
         }
     }
 
     async function regenerate(tableId: string) {
-        const confirmed = confirm(
-            "Regenerate this table's QR code? Any previously printed code will stop working."
-        );
-
-        if (!confirmed) return;
-
         try {
             await api.post(
                 `/venues/${venueId}/tables/${tableId}/regenerate-token`
             );
 
             await refresh();
+
+            showToast('QR code regenerated', 'success');
         } catch (err: unknown) {
-            const message =
+            showToast(
                 err instanceof Error
                     ? err.message
-                    : 'Failed to regenerate QR code';
-
-            alert(message);
+                    : 'Failed to regenerate QR code',
+                'error'
+            );
         }
     }
 
     if (loading) {
         return (
-            <div className="p-8 text-gray-500">
+            <div className="p-8 text-muted-soft">
                 Loading tables…
             </div>
         );
@@ -171,15 +192,13 @@ export default function TablesAdminPage({ params }: Props) {
         <div className="mx-auto max-w-4xl space-y-8 p-6">
             {/* Header */}
             <div className="flex items-center justify-between gap-4">
-                <h1 className="text-2xl font-semibold">
-                    Tables & QR codes
-                </h1>
+                <h1 className="text-2xl">Tables & QR codes</h1>
 
                 <div className="flex gap-3">
                     {apiUrl && (
                         <a
                             href={`${apiUrl}/venues/${venueId}/tables/qr-bulk.zip`}
-                            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                            className="btn-secondary"
                         >
                             Download all (.zip)
                         </a>
@@ -187,7 +206,7 @@ export default function TablesAdminPage({ params }: Props) {
 
                     <Link
                         href={`/admin/${venueId}/tables/print`}
-                        className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+                        className="btn-primary"
                     >
                         Printable sheet
                     </Link>
@@ -197,12 +216,12 @@ export default function TablesAdminPage({ params }: Props) {
             {/* Create area */}
             <form
                 onSubmit={createArea}
-                className="flex items-end gap-3 rounded-xl border border-dashed border-gray-300 p-4"
+                className="flex items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700"
             >
                 <div className="flex-1">
                     <label
                         htmlFor="area-name"
-                        className="block text-xs font-medium text-gray-500"
+                        className="block text-xs font-medium text-muted"
                     >
                         New area (optional grouping)
                     </label>
@@ -210,7 +229,7 @@ export default function TablesAdminPage({ params }: Props) {
                     <input
                         id="area-name"
                         type="text"
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        className="input mt-1"
                         value={newAreaName}
                         onChange={(e) => setNewAreaName(e.target.value)}
                         placeholder="Patio, Bar, Indoor…"
@@ -219,7 +238,7 @@ export default function TablesAdminPage({ params }: Props) {
 
                 <button
                     type="submit"
-                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                    className="btn-secondary"
                 >
                     Add area
                 </button>
@@ -228,12 +247,12 @@ export default function TablesAdminPage({ params }: Props) {
             {/* Create table */}
             <form
                 onSubmit={createTable}
-                className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-gray-300 p-4"
+                className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700"
             >
                 <div className="min-w-[160px] flex-1">
                     <label
                         htmlFor="table-label"
-                        className="block text-xs font-medium text-gray-500"
+                        className="block text-xs font-medium text-muted"
                     >
                         Table label
                     </label>
@@ -241,7 +260,7 @@ export default function TablesAdminPage({ params }: Props) {
                     <input
                         id="table-label"
                         type="text"
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        className="input mt-1"
                         value={newLabel}
                         onChange={(e) => setNewLabel(e.target.value)}
                         placeholder="Table 4"
@@ -251,30 +270,35 @@ export default function TablesAdminPage({ params }: Props) {
                 <div className="min-w-[160px]">
                     <label
                         htmlFor="table-area"
-                        className="block text-xs font-medium text-gray-500"
+                        className="block text-xs font-medium text-muted"
                     >
                         Area (optional)
                     </label>
 
-                    <select
-                        id="table-area"
-                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    <Select
                         value={newAreaId}
-                        onChange={(e) => setNewAreaId(e.target.value)}
+                        onValueChange={setNewAreaId}
                     >
-                        <option value="">No area</option>
+                        <SelectTrigger className="mt-1">
+                            <SelectValue placeholder="No area" />
+                        </SelectTrigger>
 
-                        {areas.map((area) => (
-                            <option key={area.id} value={area.id}>
-                                {area.name}
-                            </option>
-                        ))}
-                    </select>
+                        <SelectContent>
+                            {areas.map((area) => (
+                                <SelectItem
+                                    key={area.id}
+                                    value={area.id}
+                                >
+                                    {area.name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
 
                 <button
                     type="submit"
-                    className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                    className="btn-primary"
                 >
                     Add table
                 </button>
@@ -285,26 +309,26 @@ export default function TablesAdminPage({ params }: Props) {
                 {tables.map((table) => (
                     <div
                         key={table.id}
-                        className={`rounded-xl border p-4 ${
+                        className={`rounded-xl border p-4 dark:border-gray-800 dark:bg-surface-dark-elevated ${
                             table.isActive
-                                ? 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900'
-                                : 'border-gray-200 bg-gray-50 opacity-60 dark:border-gray-800 dark:bg-gray-900'
+                                ? 'border-hairline bg-canvas'
+                                : 'border-hairline bg-surface-card opacity-60'
                         }`}
                     >
                         <div className="flex items-start justify-between gap-4">
                             <div>
-                                <p className="font-medium">
+                                <p className="font-medium text-ink dark:text-white">
                                     {table.label}
                                 </p>
 
                                 {table.area && (
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-muted">
                                         {table.area.name}
                                     </p>
                                 )}
 
                                 {!table.isActive && (
-                                    <p className="text-xs text-red-500">
+                                    <p className="text-xs text-error">
                                         Inactive
                                     </p>
                                 )}
@@ -324,7 +348,7 @@ export default function TablesAdminPage({ params }: Props) {
                                 <>
                                     <a
                                         href={`${apiUrl}/venues/${venueId}/tables/${table.id}/qr.png`}
-                                        className="text-brand hover:underline"
+                                        className="font-medium text-ink hover:underline dark:text-white"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
@@ -333,7 +357,7 @@ export default function TablesAdminPage({ params }: Props) {
 
                                     <a
                                         href={`${apiUrl}/venues/${venueId}/tables/${table.id}/qr.svg`}
-                                        className="text-brand hover:underline"
+                                        className="font-medium text-ink hover:underline dark:text-white"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                     >
@@ -344,8 +368,10 @@ export default function TablesAdminPage({ params }: Props) {
 
                             <button
                                 type="button"
-                                className="text-brand hover:underline"
-                                onClick={() => regenerate(table.id)}
+                                className="font-medium text-ink hover:underline dark:text-white"
+                                onClick={() =>
+                                    setConfirmRegenerate(table.id)
+                                }
                             >
                                 Regenerate
                             </button>
@@ -353,16 +379,20 @@ export default function TablesAdminPage({ params }: Props) {
                             {table.isActive ? (
                                 <button
                                     type="button"
-                                    className="text-red-600 hover:underline"
-                                    onClick={() => deactivate(table.id)}
+                                    className="font-medium text-error hover:underline"
+                                    onClick={() =>
+                                        setConfirmDeactivate(table.id)
+                                    }
                                 >
                                     Deactivate
                                 </button>
                             ) : (
                                 <button
                                     type="button"
-                                    className="text-green-600 hover:underline"
-                                    onClick={() => reactivate(table.id)}
+                                    className="font-medium text-success hover:underline"
+                                    onClick={() =>
+                                        reactivate(table.id)
+                                    }
                                 >
                                     Reactivate
                                 </button>
@@ -372,11 +402,55 @@ export default function TablesAdminPage({ params }: Props) {
                 ))}
 
                 {tables.length === 0 && (
-                    <p className="text-gray-500">
+                    <p className="text-muted">
                         No tables yet — add one above.
                     </p>
                 )}
             </div>
+
+            {/* Deactivate confirmation */}
+            <ConfirmDialog
+                open={!!confirmDeactivate}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmDeactivate(null);
+                    }
+                }}
+                title="Deactivate this table?"
+                description="Its QR code stops working. Order history is kept."
+                confirmLabel="Deactivate"
+                danger
+                onConfirm={async () => {
+                    if (!confirmDeactivate) return;
+
+                    const tableId = confirmDeactivate;
+                    setConfirmDeactivate(null);
+
+                    await deactivate(tableId);
+                }}
+            />
+
+            {/* Regenerate confirmation */}
+            <ConfirmDialog
+                open={!!confirmRegenerate}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setConfirmRegenerate(null);
+                    }
+                }}
+                title="Regenerate QR code?"
+                description="The current QR code will stop working immediately. Any previously printed QR code will no longer work."
+                confirmLabel="Regenerate"
+                danger
+                onConfirm={async () => {
+                    if (!confirmRegenerate) return;
+
+                    const tableId = confirmRegenerate;
+                    setConfirmRegenerate(null);
+
+                    await regenerate(tableId);
+                }}
+            />
         </div>
     );
 }

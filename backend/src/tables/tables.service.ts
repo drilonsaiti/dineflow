@@ -166,27 +166,29 @@ export class TablesService {
 
     // ---------- QR file output ----------
 
-    async getQrPng(venueId: string, tableId: string): Promise<Buffer> {
+    async getQrPng(venueId: string, tableId: string): Promise<{ buffer: Buffer; filename: string }> {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
             const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
-            const table = await tx.table.findUniqueOrThrow({ where: { id: tableId } });
-            return QRCode.toBuffer(this.buildTableUrl(venue.slug, table.token), {
+            const table = await tx.table.findUniqueOrThrow({ where: { id: tableId }, include: { area: true } });
+            const buffer = await QRCode.toBuffer(this.buildTableUrl(venue.slug, table.token), {
                 margin: 1,
                 width: 800,
             });
+            return { buffer, filename: this.qrFilename(table, 'png') };
         });
     }
 
-    async getQrSvg(venueId: string, tableId: string): Promise<string> {
+    async getQrSvg(venueId: string, tableId: string): Promise<{ svg: string; filename: string }> {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
             const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
-            const table = await tx.table.findUniqueOrThrow({ where: { id: tableId } });
-            return QRCode.toString(this.buildTableUrl(venue.slug, table.token), {
+            const table = await tx.table.findUniqueOrThrow({ where: { id: tableId }, include: { area: true } });
+            const svg = await QRCode.toString(this.buildTableUrl(venue.slug, table.token), {
                 type: 'svg',
                 margin: 1,
             });
+            return { svg, filename: this.qrFilename(table, 'svg') };
         });
     }
 
@@ -233,5 +235,11 @@ export class TablesService {
             throw new GoneException('This table is no longer active. Please ask staff for help.');
         }
         return table;
+    }
+
+    private qrFilename(table: { label: string; area?: { name: string } | null }, ext: 'png' | 'svg'): string {
+        const parts = [table.area?.name, table.label].filter(Boolean);
+        const safe = parts.join('-').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
+        return `${safe || 'table'}.${ext}`;
     }
 }
