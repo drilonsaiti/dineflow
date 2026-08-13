@@ -73,10 +73,10 @@ export default function OrderTrackingPage({
     }, [order?.status]);
 
     if (error && !order) {
-        return <div className="p-8 text-center text-gray-500">{error}</div>;
+        return <div className="p-8 text-center text-muted">{error}</div>;
     }
     if (!order) {
-        return <div className="p-8 text-center text-gray-400">Loading your order…</div>;
+        return <div className="p-8 text-center text-muted-soft">Loading your order…</div>;
     }
 
     const currentIndex = STATUS_STEPS.indexOf(order.status as any);
@@ -84,55 +84,61 @@ export default function OrderTrackingPage({
     return (
         <div className="px-4 py-6">
             <div className="text-center">
-                <p className="text-sm text-gray-500">Order</p>
-                <h1 className="text-3xl font-bold">#{order.dailyNumber}</h1>
-                {order.customerName && <p className="text-sm text-gray-500">for {order.customerName}</p>}
+                <p className="text-sm text-muted">Order</p>
+                <h1 className="text-3xl">#{order.dailyNumber}</h1>
+                {order.customerName && <p className="text-sm text-muted">for {order.customerName}</p>}
             </div>
 
             {order.status === 'CANCELLED' ? (
-                <div className="mt-8 rounded-xl bg-red-50 p-4 text-center text-red-700">
+                <div className="mt-8 rounded-xl bg-error/5 p-4 text-center text-error">
                     This order was cancelled. Ask staff if you have questions.
                 </div>
             ) : (
                 <div
-                    className="mt-8 flex items-center justify-between"
+                    className="relative mt-8 flex items-start justify-between"
                     role="status"
                     aria-live="polite"
                     aria-label={`Order status: ${STATUS_LABELS[order.status]}`}
                 >
+                    <div className="absolute left-0 right-0 top-[18px] -z-10 mx-[18px] h-0.5 bg-surface-strong dark:bg-gray-700">
+                        <div
+                            className="h-full bg-accent transition-all"
+                            style={{
+                                width: currentIndex <= 0 ? '0%' : `${(currentIndex / (STATUS_STEPS.length - 1)) * 100}%`,
+                            }}
+                        />
+                    </div>
+
                     {STATUS_STEPS.map((step, i) => (
                         <div key={step} className="flex flex-1 flex-col items-center">
                             <div
                                 className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium ${
-                                    i <= currentIndex ? 'bg-brand text-white' : 'bg-gray-100 text-gray-400'
+                                    i <= currentIndex ? 'bg-accent text-white' : 'bg-surface-card text-muted-soft dark:bg-surface-dark-elevated'
                                 }`}
                             >
                                 {i < currentIndex ? '✓' : i + 1}
                             </div>
-                            <p className={`mt-1 text-center text-[11px] ${i <= currentIndex ? 'text-gray-800' : 'text-gray-400'}`}>
+                            <p className={`mt-1 text-center text-[11px] ${i <= currentIndex ? 'text-ink dark:text-white' : 'text-muted-soft'}`}>
                                 {STATUS_LABELS[step]}
                             </p>
-                            {i < STATUS_STEPS.length - 1 && (
-                                <div className={`absolute mt-4 h-0.5 w-full ${i < currentIndex ? 'bg-brand' : 'bg-gray-100'}`} style={{ display: 'none' }} />
-                            )}
                         </div>
                     ))}
                 </div>
             )}
 
-            <div className="mt-8 rounded-xl border border-gray-200 bg-white divide-y divide-gray-100 dark:border-gray-800 dark:bg-gray-900">
+            <div className="mt-8 divide-y divide-hairline-soft rounded-xl border border-hairline bg-canvas dark:divide-gray-800 dark:border-gray-800 dark:bg-surface-dark-elevated">
                 {order.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3">
                         <div>
-                            <p className="text-sm font-medium">
+                            <p className="text-sm font-medium text-ink dark:text-white">
                                 {item.quantity}× {item.menuItem.name}
                             </p>
-                            {item.note && <p className="text-xs text-gray-500">{item.note}</p>}
+                            {item.note && <p className="text-xs text-muted">{item.note}</p>}
                         </div>
-                        <p className="text-sm text-gray-600">{formatCents(item.lineTotalCents)}</p>
+                        <p className="text-sm text-muted">{formatCents(item.lineTotalCents)}</p>
                     </div>
                 ))}
-                <div className="flex items-center justify-between p-3 font-semibold">
+                <div className="flex items-center justify-between p-3 font-semibold text-ink dark:text-white">
                     <span>Total</span>
                     <span>{formatCents(order.totalCents)}</span>
                 </div>
@@ -140,7 +146,7 @@ export default function OrderTrackingPage({
 
             <Link
                 href={`/r/${venueSlug}/t/${token}`}
-                className="mt-6 flex min-h-[44px] w-full items-center justify-center rounded-full border border-gray-200 font-medium"
+                className="btn-secondary mt-6 w-full rounded-full"
             >
                 Add more items
             </Link>

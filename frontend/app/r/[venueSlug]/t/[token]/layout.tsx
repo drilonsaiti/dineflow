@@ -73,9 +73,9 @@ export default function TableLayout({
     if (error) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
-                <p className="text-lg font-medium">{error}</p>
+                <p className="text-lg font-medium text-ink dark:text-white">{error}</p>
 
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-muted">
                     Please ask a staff member for help.
                 </p>
             </div>
@@ -84,7 +84,7 @@ export default function TableLayout({
 
     if (!info) {
         return (
-            <div className="flex min-h-screen items-center justify-center text-gray-400">
+            <div className="flex min-h-screen items-center justify-center text-muted-soft">
                 Loading…
             </div>
         );
@@ -93,14 +93,17 @@ export default function TableLayout({
     return (
         <CartProvider token={token}>
             <div
-                className="min-h-screen pb-24"
+                className="min-h-screen bg-canvas pb-24 dark:bg-surface-dark"
                 style={
                     {
-                        '--brand-color': info.venue.brandColor ?? '#111827',
+                        '--brand-color': info.venue.brandColor ?? '#EA580C',
                     } as React.CSSProperties
                 }
             >
-                <header className="sticky top-0 z-10 flex items-center justify-between bg-brand px-4 py-3 text-white shadow-sm">
+                <header
+                    className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 text-white shadow-elevated"
+                    style={{ backgroundColor: 'var(--brand-color)' }}
+                >
                     <Link href={`/r/${venueSlug}/t/${token}`} className="flex min-w-0 items-center gap-3">
                         {info.venue.logoUrl && (
                             <img src={info.venue.logoUrl} alt={info.venue.name} className="h-8 w-8 rounded-full object-cover" />
@@ -156,7 +159,8 @@ function CartBar({
         <Link
             href={`/r/${venueSlug}/t/${token}/cart`}
             aria-live="polite"
-            className="fixed inset-x-0 bottom-0 z-20 bg-brand px-4 py-3 text-white shadow-[0_-2px_10px_rgba(0,0,0,0.15)]"
+            className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 text-white shadow-[0_-2px_10px_rgba(0,0,0,0.15)]"
+            style={{ backgroundColor: 'var(--brand-color)' }}
         >
             <div className="mx-auto flex min-h-[44px] max-w-2xl items-center justify-between">
         <span className="font-medium">

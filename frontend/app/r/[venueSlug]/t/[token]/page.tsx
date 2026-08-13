@@ -65,7 +65,7 @@ export default function MenuPage({ params }: MenuPageProps) {
 
     if (error) {
         return (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-muted">
                 <p>Unable to load the menu.</p>
                 <p className="mt-1 text-sm">{error}</p>
             </div>
@@ -74,7 +74,7 @@ export default function MenuPage({ params }: MenuPageProps) {
 
     if (!menu) {
         return (
-            <div className="p-8 text-center text-gray-400">
+            <div className="p-8 text-center text-muted-soft">
                 Loading menu…
             </div>
         );
@@ -86,7 +86,7 @@ export default function MenuPage({ params }: MenuPageProps) {
         menu.categories.every((category) => category.items.length === 0)
     ) {
         return (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-muted">
                 This menu isn't set up yet. Please check with staff.
             </div>
         );
@@ -104,23 +104,27 @@ export default function MenuPage({ params }: MenuPageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-canvas dark:bg-surface-dark">
             {/* Category navigation */}
-            <div className="sticky top-[52px] z-10 flex gap-2 overflow-x-auto border-b border-gray-200 bg-gray-50 px-4 py-3 shadow-sm">
-                {menu.categories.map((category) => (
-                    <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => handleCategoryClick(category.id)}
-                        className={`flex min-h-[44px] shrink-0 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                            activeCategory === category.id
-                                ? 'bg-brand text-white'
-                                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900'
-                        }`}
-                    >
-                        {category.name}
-                    </button>
-                ))}
+            <div className="sticky top-[52px] z-10 flex gap-2 overflow-x-auto border-b border-hairline bg-canvas px-4 py-3 shadow-sm dark:border-gray-800 dark:bg-surface-dark">
+                {menu.categories.map((category) => {
+                    const isActive = activeCategory === category.id;
+                    return (
+                        <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => handleCategoryClick(category.id)}
+                            className={`flex min-h-[44px] shrink-0 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                                isActive
+                                    ? 'text-white'
+                                    : 'border border-hairline bg-canvas text-body hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-gray-300'
+                            }`}
+                            style={isActive ? { backgroundColor: 'var(--brand-color)' } : undefined}
+                        >
+                            {category.name}
+                        </button>
+                    );
+                })}
             </div>
 
             {/* Menu */}
@@ -131,12 +135,12 @@ export default function MenuPage({ params }: MenuPageProps) {
                         id={`cat-${category.id}`}
                         className="scroll-mt-32"
                     >
-                        <h2 className="text-lg font-semibold">
+                        <h2 className="text-lg">
                             {category.name}
                         </h2>
 
                         {category.description && (
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-muted">
                                 {category.description}
                             </p>
                         )}
@@ -152,9 +156,9 @@ export default function MenuPage({ params }: MenuPageProps) {
                                         }
                                     }}
                                     disabled={!item.isAvailable}
-                                    className={`flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 text-left transition dark:border-gray-800 dark:bg-gray-900 ${
+                                    className={`flex w-full items-center gap-3 rounded-xl border border-hairline bg-canvas p-3 text-left transition dark:border-gray-800 dark:bg-surface-dark-elevated ${
                                         item.isAvailable
-                                            ? 'active:scale-[0.99] hover:border-gray-300'
+                                            ? 'active:scale-[0.99] hover:border-gray-300 dark:hover:border-gray-600'
                                             : 'cursor-not-allowed opacity-50'
                                     }`}
                                 >
@@ -167,25 +171,25 @@ export default function MenuPage({ params }: MenuPageProps) {
                                         />
                                     ) : (
                                         <div
-                                            className="h-16 w-16 shrink-0 rounded-lg bg-gray-100"
+                                            className="h-16 w-16 shrink-0 rounded-lg bg-surface-card dark:bg-surface-dark-elevated"
                                             aria-hidden="true"
                                         />
                                     )}
 
                                     {/* Content */}
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate font-medium">
+                                        <p className="truncate font-medium text-ink dark:text-white">
                                             {item.name}
                                         </p>
 
                                         {item.description && (
-                                            <p className="line-clamp-2 text-sm text-gray-500">
+                                            <p className="line-clamp-2 text-sm text-muted">
                                                 {item.description}
                                             </p>
                                         )}
 
                                         <div className="mt-1 flex items-center gap-2">
-                                            <span className="text-sm font-semibold">
+                                            <span className="text-sm font-semibold text-ink dark:text-white">
                                                 {formatCents(
                                                     item.priceCents,
                                                     menu.venue.currency
@@ -193,7 +197,7 @@ export default function MenuPage({ params }: MenuPageProps) {
                                             </span>
 
                                             {!item.isAvailable && (
-                                                <span className="text-xs font-medium text-red-500">
+                                                <span className="text-xs font-medium text-error">
                                                     Unavailable
                                                 </span>
                                             )}
