@@ -8,6 +8,7 @@ import { formatCents } from '@/lib/money';
 import { formatElapsed } from '@/lib/elapsed';
 import {TableRow} from "@/types/table";
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
+import {Checkbox} from "@/components/ui/Checkbox";
 
 export default function TablesLivePage({ params }: { params: Promise<{ venueId: string }> }) {
     const { venueId } = use(params);
@@ -15,15 +16,26 @@ export default function TablesLivePage({ params }: { params: Promise<{ venueId: 
     const [activeOrders, setActiveOrders] = useState<StaffOrder[]>([]);
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [tableOrders, setTableOrders] = useState<StaffOrder[]>([]);
+    const [assignments, setAssignments] = useState<any[]>([]);
+    const [myTablesOnly, setMyTablesOnly] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     async function refreshOverview() {
-        const [tablesRes, ordersRes] = await Promise.all([
+        const [tablesRes, ordersRes,assignmentsRes] = await Promise.all([
             api.get<TableRow[]>(`/venues/${venueId}/tables`),
             api.get<StaffOrder[]>(`/venues/${venueId}/orders`),
+            api.get<any[]>(`/venues/${venueId}/table-assignments`)
         ]);
         setTables(tablesRes.filter((t) => t.isActive));
         setActiveOrders(ordersRes);
+        setAssignments(assignmentsRes);
     }
+
+    useEffect(() => {
+        import('@/lib/supabase').then(({ supabase }) =>
+            supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null)),
+        );
+    }, []);
 
     useEffect(() => {
         refreshOverview();
@@ -37,6 +49,15 @@ export default function TablesLivePage({ params }: { params: Promise<{ venueId: 
         setTableOrders(await api.get<StaffOrder[]>(`/venues/${venueId}/tables/${tableId}/orders`));
     }
 
+    async function claimTable(tableId: string) {
+        await api.post(`/venues/${venueId}/table-assignments`, { tableId });
+        refreshOverview();
+    }
+    async function releaseTable(tableId: string) {
+        await api.delete(`/venues/${venueId}/table-assignments/${tableId}`);
+        refreshOverview();
+    }
+
     const activeCountByTable = activeOrders.reduce<Record<string, number>>((acc, o) => {
         acc[(o as any).tableId ?? o.table?.label] = (acc[(o as any).tableId ?? o.table?.label] ?? 0) + 1;
         return acc;
@@ -48,27 +69,59 @@ export default function TablesLivePage({ params }: { params: Promise<{ venueId: 
         <div className="mx-auto max-w-5xl p-6">
             <h1 className="text-2xl">Tables</h1>
 
+            <label className="mt-4 flex items-center gap-2 text-sm text-ink dark:text-white cursor-pointer select-none">
+                <Checkbox
+                    checked={myTablesOnly}
+                    onCheckedChange={(checked) => setMyTablesOnly(checked === true)}
+                />
+                My tables only
+            </label>
+
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {tables.map((table) => {
-                    const count = activeCountByTable[table.id] ?? 0;
-                    return (
-                        <button
-                            key={table.id}
-                            onClick={() => openTable(table.id)}
-                            className={`rounded-xl border p-4 text-left transition-colors ${
-                                count > 0
-                                    ? 'border-ink bg-surface-card dark:border-white dark:bg-surface-dark-elevated'
-                                    : 'border-hairline bg-canvas dark:border-gray-800 dark:bg-surface-dark-elevated'
-                            }`}
-                        >
-                            <p className="font-medium text-ink dark:text-white">{table.label}</p>
-                            {table.area && <p className="text-xs text-muted">{table.area.name}</p>}
-                            {count > 0 && (
-                                <p className="mt-1 text-sm font-semibold text-ink dark:text-white">{count} active order{count === 1 ? '' : 's'}</p>
-                            )}
-                        </button>
-                    );
-                })}
+                {tables
+                    .filter((table) => {
+                        if (!myTablesOnly) return true;
+                        const assignment = assignments.find((a) => a.tableId === table.id);
+                        return assignment?.userId === currentUserId;
+                    })
+                    .map((table) => {
+                        const count = activeCountByTable[table.id] ?? 0;
+                        const assignment = assignments.find((a) => a.tableId === table.id);
+                        return (
+                            <div
+                                key={table.id}
+                                className={`rounded-xl border p-4 transition-colors ${
+                                    count > 0
+                                        ? 'border-ink bg-surface-card dark:border-white dark:bg-surface-dark-elevated'
+                                        : 'border-hairline bg-canvas dark:border-gray-800 dark:bg-surface-dark-elevated'
+                                }`}
+                            >
+                                <button onClick={() => openTable(table.id)} className="w-full text-left">
+                                    <p className="font-medium text-ink dark:text-white">{table.label}</p>
+                                    {table.area && <p className="text-xs text-muted">{table.area.name}</p>}
+                                    {count > 0 && (
+                                        <p className="mt-1 text-sm font-semibold text-ink dark:text-white">
+                                            {count} active order{count === 1 ? '' : 's'}
+                                        </p>
+                                    )}
+                                </button>
+                                <div className="mt-2 flex items-center justify-between text-xs">
+                        <span className="text-muted">
+                            {assignment ? `Claimed: ${assignment.user.fullName ?? assignment.user.email}` : 'Unclaimed'}
+                        </span>
+                                    {assignment?.userId === currentUserId ? (
+                                        <button onClick={() => releaseTable(table.id)} className="font-medium text-error hover:underline">
+                                            Release
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => claimTable(table.id)} className="font-medium text-ink hover:underline dark:text-white">
+                                            Claim
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
             </div>
 
             <Dialog open={!!selectedTableId} onOpenChange={(open) => !open && setSelectedTableId(null)}>

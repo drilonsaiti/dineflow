@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatCents } from '@/lib/money';
-import {Banknote, HandMetal} from "lucide-react";
+import {Banknote, CheckCircle2, HandMetal, Star} from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 const POLL_INTERVAL_MS = 4000; // short, deliberate delay (section 11) — not a bug
@@ -43,8 +43,14 @@ export default function OrderTrackingPage({
     const { venueSlug, token, orderId } = use(params);
     const [order, setOrder] = useState<OrderData | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [requestSent, setRequestSent] = useState<string | null>(null);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [requestResult, setRequestResult] = useState<any>(null);
+    const [showGuestCount, setShowGuestCount] = useState(false);
+    const [guestCount, setGuestCount] = useState(2);
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState('');
+    const [feedbackSent, setFeedbackSent] = useState(false);
+    const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
     async function fetchOrder() {
         try {
@@ -74,17 +80,35 @@ export default function OrderTrackingPage({
         }
     }, [order?.status]);
 
-    async function sendTableRequest(type: 'CALL_WAITER' | 'REQUEST_BILL_CASH') {
+    async function sendTableRequest(type: 'CALL_WAITER' | 'REQUEST_BILL_CASH', count?: number) {
         try {
-            await fetch(`${API_URL}/public/table-requests`, {
+            const res = await fetch(`${API_URL}/public/table-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableToken: token, type }),
+                body: JSON.stringify({ tableToken: token, type, guestCount: count }),
             });
-            setRequestSent(type);
-            setTimeout(() => setRequestSent(null), 5000);
+            setRequestResult(await res.json());
+            setShowGuestCount(false);
+            setTimeout(() => setRequestResult(null), 15000);
         } catch {
             // silent — not critical enough to interrupt the tracking screen
+        }
+    }
+
+    async function submitFeedback() {
+        if (rating === 0) return;
+        setSubmittingFeedback(true);
+        try {
+            await fetch(`${API_URL}/public/orders/${orderId}/feedback`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tableToken: token, rating, comment: comment || undefined }),
+            });
+            setFeedbackSent(true);
+        } catch {
+            // silent — feedback isn't critical enough to interrupt the tracking screen
+        } finally {
+            setSubmittingFeedback(false);
         }
     }
 
@@ -94,8 +118,6 @@ export default function OrderTrackingPage({
     if (!order) {
         return <div className="p-8 text-center text-muted-soft">Loading your order…</div>;
     }
-
-
 
     const currentIndex = STATUS_STEPS.indexOf(order.status as any);
 
@@ -166,29 +188,106 @@ export default function OrderTrackingPage({
                 <button
                     type="button"
                     onClick={() => sendTableRequest('CALL_WAITER')}
-                    className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-hairline bg-canvas text-sm font-medium text-ink transition-colors hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-white dark:hover:bg-gray-800"
+                    className="flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-hairline bg-canvas text-sm font-medium text-ink transition-colors hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-white dark:hover:bg-gray-800"
                 >
                     <HandMetal className="h-4 w-4 shrink-0 text-muted" aria-hidden />
                     Call waiter
                 </button>
                 <button
                     type="button"
-                    onClick={() => sendTableRequest('REQUEST_BILL_CASH')}
-                    className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl border border-hairline bg-canvas text-sm font-medium text-ink transition-colors hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-white dark:hover:bg-gray-800"
+                    onClick={() => setShowGuestCount(true)}
+                    className="flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-hairline bg-canvas text-sm font-medium text-ink transition-colors hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-white dark:hover:bg-gray-800"
                 >
                     <Banknote className="h-4 w-4 shrink-0 text-muted" aria-hidden />
                     Pay with cash
                 </button>
             </div>
-            {requestSent && (
-                <p
-                    role="status"
-                    aria-live="polite"
-                    className="mt-2 text-center text-sm text-accent"
-                >
-                    {requestSent === 'CALL_WAITER'
-                        ? 'A staff member is on their way.'
-                        : 'Staff will bring your bill for cash payment.'}
+
+            {showGuestCount && (
+                <div className="mt-3 rounded-lg border border-hairline bg-canvas p-3 dark:border-gray-800 dark:bg-surface-dark-elevated">
+                    <label className="text-sm font-medium text-ink dark:text-white">Splitting the bill? How many guests?</label>
+                    <div className="mt-2 flex items-center gap-3">
+                        <input
+                            type="number"
+                            min={1}
+                            className="input w-20 py-1.5 text-sm"
+                            value={guestCount}
+                            onChange={(e) => setGuestCount(Number(e.target.value))}
+                        />
+                        <button
+                            onClick={() => sendTableRequest('REQUEST_BILL_CASH', guestCount)}
+                            className="rounded-md px-4 py-2 text-sm font-medium text-white"
+                            style={{ backgroundColor: 'var(--brand-color, #EA580C)' }}
+                        >
+                            Request bill
+                        </button>
+                        <button
+                            onClick={() => sendTableRequest('REQUEST_BILL_CASH')}
+                            className="text-sm text-muted underline"
+                        >
+                            Just bring the bill
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {requestResult && (
+                <div role="status" aria-live="polite" className="mt-2 rounded-lg bg-success/10 p-3 text-center text-sm text-success">
+                    {requestResult.type === 'CALL_WAITER' && 'A staff member is on their way.'}
+                    {requestResult.type === 'REQUEST_BILL_CASH' && (
+                        <>
+                            Staff will bring your bill for cash payment.
+                            {requestResult.perPersonCentsAtRequest && (
+                                <> Split {requestResult.guestCount} ways: <strong>{formatCents(requestResult.perPersonCentsAtRequest)}</strong> each.</>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
+
+            {order.status === 'SERVED' && !feedbackSent && (
+                <div className="mt-6 rounded-xl border border-hairline bg-canvas p-4 text-center dark:border-gray-800 dark:bg-surface-dark-elevated">
+                    <p className="font-medium text-ink dark:text-white">How was everything?</p>
+                    <div className="mt-2 flex justify-center gap-1">
+                        {[1, 2, 3, 4, 5].map((n) => (
+                            <button
+                                key={n}
+                                onClick={() => setRating(n)}
+                                aria-label={`${n} star${n === 1 ? '' : 's'}`}
+                                className="flex h-11 w-11 items-center justify-center"
+                            >
+                                <Star
+                                    className={`h-6 w-6 transition-colors ${n > rating ? 'text-muted-soft' : ''}`}
+                                    style={n <= rating ? { color: 'var(--brand-color, #EA580C)', fill: 'var(--brand-color, #EA580C)' } : undefined}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                    {rating > 0 && (
+                        <div className="mt-2">
+                            <textarea
+                                className="input"
+                                rows={2}
+                                placeholder="Anything you'd like to add? (optional)"
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                            />
+                            <button
+                                onClick={submitFeedback}
+                                disabled={submittingFeedback}
+                                className="mt-2 rounded-full px-6 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
+                                style={{ backgroundColor: 'var(--brand-color, #EA580C)' }}
+                            >
+                                {submittingFeedback ? 'Sending…' : 'Submit'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+            {feedbackSent && (
+                <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-sm text-muted">
+                    <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
+                    Thanks for the feedback!
                 </p>
             )}
 

@@ -1,78 +1,118 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { CartLine, loadCart, saveCart, cartSubtotalCents, cartCount } from '@/lib/cart';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL!;
+const POLL_INTERVAL_MS = 3000; // shared cart — other devices at the table can add/remove any time
+
+export interface SharedCartLine {
+    id: string;
+    menuItemId: string;
+    name: string;
+    photoUrl: string | null;
+    isAvailable: boolean;
+    quantity: number;
+    note: string | null;
+    addedByLabel: string | null;
+    modifiers: { modifierOptionId: string; name: string; priceDeltaCents: number }[];
+    unitPriceCents: number;
+    lineTotalCents: number;
+}
+
+interface AddLineInput {
+    menuItemId: string;
+    quantity: number;
+    note?: string;
+    modifierOptionIds: string[];
+}
 
 interface CartContextValue {
-    lines: CartLine[];
-    addLine: (line: Omit<CartLine, 'lineId'>) => void;
-    updateQuantity: (lineId: string, quantity: number) => void;
-    updateNote: (lineId: string, note: string) => void;
-    removeLine: (lineId: string) => void;
-    removeMenuItemIds: (menuItemIds: string[]) => void; // used on "item no longer available"
-    clear: () => void;
+    lines: SharedCartLine[];
+    loading: boolean;
+    guestName: string;
+    setGuestName: (name: string) => void;
+    addLine: (line: AddLineInput) => Promise<void>;
+    updateQuantity: (itemId: string, quantity: number) => Promise<void>;
+    updateNote: (itemId: string, note: string) => Promise<void>;
+    removeLine: (itemId: string) => Promise<void>;
+    refresh: () => Promise<void>;
     subtotalCents: number;
     count: number;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-export function CartProvider({ token, children }: { token: string; children: ReactNode }) {
-    const [lines, setLines] = useState<CartLine[]>([]);
-    const [hydrated, setHydrated] = useState(false);
+function guestNameKey(token: string) {
+    return `qr-saas:guest-name:${token}`;
+}
 
-    // Load once on mount (client-only — localStorage isn't available during SSR).
+export function CartProvider({ token, children }: { token: string; children: ReactNode }) {
+    const [lines, setLines] = useState<SharedCartLine[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [guestName, setGuestNameState] = useState('');
+
     useEffect(() => {
-        setLines(loadCart(token));
-        setHydrated(true);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        setGuestNameState(localStorage.getItem(guestNameKey(token)) ?? '');
+    }, [token]);
+
+    function setGuestName(name: string) {
+        setGuestNameState(name);
+        localStorage.setItem(guestNameKey(token), name);
+    }
+
+    const refresh = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_URL}/public/table-cart/${token}`);
+            if (res.ok) setLines(await res.json());
+        } finally {
+            setLoading(false);
+        }
     }, [token]);
 
     useEffect(() => {
-        if (hydrated) saveCart(token, lines);
-    }, [token, lines, hydrated]);
+        refresh();
+        const interval = setInterval(refresh, POLL_INTERVAL_MS);
+        return () => clearInterval(interval);
+    }, [refresh]);
 
-    function addLine(line: Omit<CartLine, 'lineId'>) {
-        setLines((prev) => [...prev, { ...line, lineId: crypto.randomUUID() }]);
+    async function addLine(line: AddLineInput) {
+        await fetch(`${API_URL}/public/table-cart`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tableToken: token, addedByLabel: guestName || undefined, ...line }),
+        });
+        await refresh();
     }
 
-    function updateQuantity(lineId: string, quantity: number) {
-        setLines((prev) =>
-            quantity <= 0
-                ? prev.filter((l) => l.lineId !== lineId)
-                : prev.map((l) => (l.lineId === lineId ? { ...l, quantity } : l)),
-        );
+    async function updateQuantity(itemId: string, quantity: number) {
+        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ quantity }),
+        });
+        await refresh();
     }
 
-    function updateNote(lineId: string, note: string) {
-        setLines((prev) => prev.map((l) => (l.lineId === lineId ? { ...l, note } : l)));
+    async function updateNote(itemId: string, note: string) {
+        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ note }),
+        });
+        await refresh();
     }
 
-    function removeLine(lineId: string) {
-        setLines((prev) => prev.filter((l) => l.lineId !== lineId));
+    async function removeLine(itemId: string) {
+        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}`, { method: 'DELETE' });
+        await refresh();
     }
 
-    function removeMenuItemIds(menuItemIds: string[]) {
-        setLines((prev) => prev.filter((l) => !menuItemIds.includes(l.menuItemId)));
-    }
-
-    function clear() {
-        setLines([]);
-    }
+    const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
+    const count = lines.reduce((sum, l) => sum + l.quantity, 0);
 
     return (
         <CartContext.Provider
-            value={{
-                lines,
-                addLine,
-                updateQuantity,
-                updateNote,
-                removeLine,
-                removeMenuItemIds,
-                clear,
-                subtotalCents: cartSubtotalCents(lines),
-                count: cartCount(lines),
-            }}
+            value={{ lines, loading, guestName, setGuestName, addLine, updateQuantity, updateNote, removeLine, refresh, subtotalCents, count }}
         >
             {children}
         </CartContext.Provider>

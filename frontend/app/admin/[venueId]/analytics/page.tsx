@@ -2,9 +2,11 @@
 
 import { use, useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Star } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import {AnalyticsSummary, BestSeller, BusiestTable, BusiestHour} from "@/types/analytic";
+import {FeedbackSummary} from "@/types/feedback";
 
 export default function AnalyticsPage({ params }: { params: Promise<{ venueId: string }> }) {
     const { venueId } = use(params);
@@ -13,7 +15,9 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
     const [bestSellers, setBestSellers] = useState<BestSeller[]>([]);
     const [busiestTables, setBusiestTables] = useState<BusiestTable[]>([]);
     const [busiestHours, setBusiestHours] = useState<BusiestHour[]>([]);
+    const [feedback, setFeedback] = useState<FeedbackSummary | null>(null);
     const [loading, setLoading] = useState(true);
+
 
     useEffect(() => {
         Promise.all([
@@ -24,12 +28,14 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
             api.get<BestSeller[]>(`/venues/${venueId}/analytics/best-sellers`),
             api.get<BusiestTable[]>(`/venues/${venueId}/analytics/busiest-tables`),
             api.get<BusiestHour[]>(`/venues/${venueId}/analytics/busiest-hours`),
-        ]).then(([s, a, bs, bt, bh]) => {
+            api.get<FeedbackSummary>(`/venues/${venueId}/analytics/feedback`)
+        ]).then(([s, a, bs, bt, bh,fs]) => {
             setSummary(s);
             setAvgReady(a);
             setBestSellers(bs);
             setBusiestTables(bt);
             setBusiestHours(bh);
+            setFeedback(fs)
             setLoading(false);
         });
     }, [venueId]);
@@ -91,6 +97,44 @@ export default function AnalyticsPage({ params }: { params: Promise<{ venueId: s
                             </li>
                         ))}
                     </ul>
+                )}
+            </div>
+
+            <div className="card">
+                <h2 className="text-sm font-medium text-muted">Guest satisfaction</h2>
+                <div className="mt-1 flex items-center gap-2">
+                    <span className="text-3xl font-semibold text-ink dark:text-white">
+                        {feedback?.avgRating ?? '—'}
+                    </span>
+                    <Star className="h-6 w-6 text-warning" style={{ fill: 'currentColor' }} aria-hidden />
+                </div>
+                {(feedback?.totalRatings ?? 0) > 0 && (
+                    <p className="text-xs text-muted-soft">from {feedback!.totalRatings} ratings</p>
+                )}
+                {feedback?.recent && feedback.recent.length > 0 && (
+                    <ul className="mt-3 space-y-2 divide-y divide-hairline-soft dark:divide-gray-800">
+                        {feedback.recent.map((r: any, i: number) => (
+                            <li key={i} className="pt-2 text-sm first:pt-0">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium text-ink dark:text-white">#{r.orderNumber}</span>
+                                    <span className="flex items-center gap-0.5">
+                                        {Array.from({ length: 5 }).map((_, si) => (
+                                            <Star
+                                                key={si}
+                                                className={`h-3.5 w-3.5 ${si < r.rating ? 'text-warning' : 'text-surface-strong dark:text-gray-700'}`}
+                                                style={si < r.rating ? { fill: 'currentColor' } : undefined}
+                                                aria-hidden
+                                            />
+                                        ))}
+                                    </span>
+                                </div>
+                                {r.comment && <p className="mt-0.5 text-muted">"{r.comment}"</p>}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+                {(!feedback?.recent || feedback.recent.length === 0) && (
+                    <p className="mt-2 text-sm text-muted-soft">No ratings yet.</p>
                 )}
             </div>
 

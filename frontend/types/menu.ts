@@ -12,6 +12,8 @@ export interface MenuItem {
     displayOrder: number;
     tags: { tag: Tag }[];
     modifierGroups: ModifierGroup[];
+    stockCount: number | null;
+    lowStockThreshold: number | null;
 }
 
 export interface MenuCategory {

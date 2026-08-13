@@ -84,9 +84,7 @@ export function ItemDetailModal({
         });
     }
 
-    function handleAdd() {
-        // Required-group validation (section 5: required vs optional, min/max
-        // selections) — enforced client-side before it ever reaches checkout.
+    async function handleAdd() {
         for (const group of item.modifierGroups) {
             const chosenCount = (selected[group.id] ?? []).length;
             if (chosenCount < group.minSelect) {
@@ -95,21 +93,13 @@ export function ItemDetailModal({
             }
         }
 
-        const modifiers = item.modifierGroups.flatMap((group) =>
-            (selected[group.id] ?? []).map((optionId) => {
-                const option = group.options.find((o) => o.id === optionId)!;
-                return { modifierOptionId: option.id, name: option.name, priceDeltaCents: option.priceDeltaCents };
-            }),
-        );
+        const modifierOptionIds = item.modifierGroups.flatMap((group) => selected[group.id] ?? []);
 
-        addLine({
+        await addLine({
             menuItemId: item.id,
-            name: item.name,
-            photoUrl: item.photoUrl,
-            unitPriceCents,
             quantity,
             note: note || undefined,
-            modifiers,
+            modifierOptionIds,
         });
         onClose();
     }

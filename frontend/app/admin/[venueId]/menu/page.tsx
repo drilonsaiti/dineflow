@@ -120,11 +120,21 @@ export default function MenuAdminPage({
         );
     }
 
+    const lowStockItems = categories
+        .flatMap((c) => c.items)
+        .filter((i: any) => i.stockCount != null && i.stockCount <= (i.lowStockThreshold ?? 5));
+
     return (
         <div className="mx-auto max-w-3xl space-y-8 p-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl">Menu</h1>
             </div>
+
+            {lowStockItems.length > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+                    ⚠️ Running low: {lowStockItems.map((i: any) => `${i.name} (${i.stockCount} left)`).join(', ')}
+                </div>
+            )}
 
             <CategoryForm
                 venueId={venueId}

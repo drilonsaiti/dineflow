@@ -44,6 +44,8 @@ export function ItemForm({
     const [submitting, setSubmitting] = useState(false);
     const [photoUrl, setPhotoUrl] = useState(existing?.photoUrl ?? '');
     const [uploading, setUploading] = useState(false);
+    const [stockCount, setStockCount] = useState(existing?.stockCount?.toString() ?? '');
+    const [lowStockThreshold, setLowStockThreshold] = useState(existing?.lowStockThreshold?.toString() ?? '');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const showToast = useToast();
@@ -147,6 +149,8 @@ export function ItemForm({
                         priceDeltaCents: o.priceDeltaCents,
                     })),
                 })),
+                stockCount: stockCount === '' ? null : Number(stockCount),
+                lowStockThreshold: lowStockThreshold === '' ? null : Number(lowStockThreshold),
             };
 
             if (existing) {
@@ -338,6 +342,33 @@ export function ItemForm({
                         onChange={handleFileSelected}
                     />
                 </div>
+            </div>
+
+            <div className="flex gap-3">
+                <div className="flex-1">
+                    <label className="block text-xs font-medium text-muted">Track stock? (optional)</label>
+                    <input
+                        type="number"
+                        min={0}
+                        className="input mt-1"
+                        placeholder="Leave blank = unlimited"
+                        value={stockCount}
+                        onChange={(e) => setStockCount(e.target.value)}
+                    />
+                </div>
+                {stockCount !== '' && (
+                    <div className="w-32">
+                        <label className="block text-xs font-medium text-muted">Low stock warning at</label>
+                        <input
+                            type="number"
+                            min={0}
+                            className="input mt-1"
+                            placeholder="5"
+                            value={lowStockThreshold}
+                            onChange={(e) => setLowStockThreshold(e.target.value)}
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="space-y-3">
