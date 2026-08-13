@@ -7,6 +7,7 @@ import {OrderCard} from "@/components/OrderCard";
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { isAdjacentTransition } from '@/lib/order-transitions';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
+import {TableRequestsPanel} from "@/components/TableRequestsPanel";
 
 export interface StaffOrder {
     id: string;
@@ -150,7 +151,7 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
                     </button>
                 </div>
             </header>
-
+            <TableRequestsPanel venueId={venueId} />
             <DragDropContext onDragEnd={handleDragEnd}>
                 <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden p-3">
                     {COLUMNS.map((col) => {

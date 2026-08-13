@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import {IsIn, IsInt, IsOptional, IsString, MaxLength, Min} from 'class-validator';
 
 export class CreateCategoryDto {
     @IsString()
@@ -13,6 +13,10 @@ export class CreateCategoryDto {
     @IsInt()
     @Min(0)
     displayOrder?: number;
+
+    @IsOptional()
+    @IsIn(['kitchen', 'bar'])
+    station?: string;
 }
 
 export class UpdateCategoryDto {
@@ -29,4 +33,8 @@ export class UpdateCategoryDto {
     @IsInt()
     @Min(0)
     displayOrder?: number;
+
+    @IsOptional()
+    @IsIn(['kitchen', 'bar'])
+    station?: string;
 }

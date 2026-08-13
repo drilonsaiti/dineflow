@@ -80,19 +80,22 @@ model Venue {
   plan                      PlanTier           @default(FREE)
   subscriptionStatus        SubscriptionStatus @default(TRIALING)
   staffAlertWebhookUrl      String?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
   lateOrderThresholdMinutes Int                @default(10)
   maxTables                 Int                @default(10)
   analyticsHistoryDays      Int                @default(30)
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
-  memberships VenueMembership[]
-  categories  MenuCategory[]
-  menuItems   MenuItem[]
-  tags        Tag[]
-  areas       Area[]
-  tables      Table[]
-  orders      Order[]
+  memberships   VenueMembership[]
+  categories    MenuCategory[]
+  menuItems     MenuItem[]
+  tags          Tag[]
+  areas         Area[]
+  tables        Table[]
+  orders        Order[]
+  tableRequests TableRequest[]
 }
 
 // ---------- Menu ----------
@@ -102,6 +105,7 @@ model MenuCategory {
   venueId      String   @db.Uuid
   name         String
   description  String?
+  station      String?
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
 
@@ -219,9 +223,10 @@ model Table {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  venue  Venue   @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  area   Area?   @relation(fields: [areaId], references: [id])
-  orders Order[]
+  venue         Venue          @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  area          Area?          @relation(fields: [areaId], references: [id])
+  orders        Order[]
+  tableRequests TableRequest[]
 
   @@index([venueId])
 }
@@ -258,6 +263,7 @@ model Order {
   @@unique([venueId, dailyNumber, createdAt])
   @@index([venueId, status])
   @@index([tableId])
+  @@index([venueId, createdAt])
 }
 
 model OrderItem {
@@ -340,4 +346,34 @@ model NotificationLog {
 
   @@index([venueId])
   @@index([orderId])
+}
+
+enum TableRequestType {
+  CALL_WAITER
+  REQUEST_BILL_CASH
+}
+
+enum TableRequestStatus {
+  PENDING
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+// Customer-initiated, staff-facing — "call waiter" / "I'd like to pay cash"
+// (distinct from Order/OrderStatus, since this isn't about food at all).
+model TableRequest {
+  id                   String             @id @default(uuid()) @db.Uuid
+  venueId              String             @db.Uuid
+  tableId              String             @db.Uuid
+  type                 TableRequestType
+  status               TableRequestStatus @default(PENDING)
+  createdAt            DateTime           @default(now())
+  acknowledgedAt       DateTime?
+  acknowledgedByUserId String?            @db.Uuid
+  resolvedAt           DateTime?
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id])
+
+  @@index([venueId, status])
 }

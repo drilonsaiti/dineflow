@@ -7,6 +7,7 @@ import { CurrentUser, CurrentVenue } from '../common/current-user.decorator';
 import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
 import { OrderStatus } from '@prisma/client';
 import { IsIn } from 'class-validator';
+import { Throttle } from '@nestjs/throttler';
 
 class AdvanceStatusDto {
   @IsIn(Object.values(OrderStatus))
@@ -19,6 +20,7 @@ export class OrdersController {
 
   // ----- Public customer flow (no auth — zero login by design) -----
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Public()
   @Post('public/orders')
   placeOrder(@Body() dto: PlaceOrderDto) {
@@ -48,5 +50,11 @@ export class OrdersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.ordersService.advanceStatus(scope.venueId, orderId, dto.status, user.id);
+  }
+
+  @Get('venues/:venueId/tables/:tableId/orders')
+  @UseGuards(VenueScopeGuard)
+  listForTable(@CurrentVenue() scope: { venueId: string }, @Param('tableId') tableId: string) {
+    return this.ordersService.listForTable(scope.venueId, tableId);
   }
 }

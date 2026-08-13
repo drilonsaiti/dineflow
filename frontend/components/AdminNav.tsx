@@ -35,10 +35,11 @@ export function AdminNav() {
         ? [
             { href: `/admin/${venueId}/dashboard`, label: 'Orders' },
             { href: `/admin/${venueId}/menu`, label: 'Menu' },
-            { href: `/admin/${venueId}/tables`, label: 'Tables' },
+            { href: `/admin/${venueId}/tables`, label: 'Tables & QR' },
             { href: `/admin/${venueId}/analytics`, label: 'Analytics' },
             { href: `/admin/${venueId}/settings`, label: 'Settings' },
             { href: `/admin/${venueId}/staff`, label: 'Staff' },
+            { href: `/admin/${venueId}/tables-live`, label: 'Tables' },
         ]
         : [];
 

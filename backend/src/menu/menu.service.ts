@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {Inject, Injectable, NotFoundException} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 import { CreateMenuItemDto, UpdateMenuItemDto, ReorderDto } from './dto/menu-item.dto';
 import { CreateTagDto } from './dto/tag.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 const ITEM_INCLUDE = {
     tags: { include: { tag: true } },
@@ -11,8 +13,10 @@ const ITEM_INCLUDE = {
 
 @Injectable()
 export class MenuService {
-    constructor(private readonly prisma: PrismaService) {}
-
+    constructor(
+        private readonly prisma: PrismaService,
+        @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    ) {}
     // ---------- Categories ----------
 
     listCategories(venueId: string) {
@@ -42,11 +46,13 @@ export class MenuService {
                 where: { venueId },
                 _max: { displayOrder: true },
             });
+            await this.invalidatePublicMenuCache(venueId);
             return tx.menuCategory.create({
                 data: {
                     venueId,
                     name: dto.name,
                     description: dto.description,
+                    station: dto.station,
                     displayOrder: dto.displayOrder ?? (maxOrder._max.displayOrder ?? -1) + 1,
                 },
             });
@@ -56,6 +62,7 @@ export class MenuService {
     async updateCategory(venueId: string, categoryId: string, dto: UpdateCategoryDto) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertCategoryInVenue(tx, venueId, categoryId);
+            await this.invalidatePublicMenuCache(venueId);
             return tx.menuCategory.update({ where: { id: categoryId }, data: dto });
         });
     }
@@ -66,6 +73,7 @@ export class MenuService {
             // Blocked by FK if items still reference it — caller should move/delete
             // items first; we don't cascade-delete menu items from a category
             // deletion, that's too destructive for a misclick.
+            await this.invalidatePublicMenuCache(venueId);
             return tx.menuCategory.delete({ where: { id: categoryId } });
         });
     }
@@ -80,6 +88,7 @@ export class MenuService {
                     }),
                 ),
             );
+            await this.invalidatePublicMenuCache(venueId);
             return { ok: true };
         });
     }
@@ -116,7 +125,7 @@ export class MenuService {
             if (dto.modifierGroups?.length) {
                 await this.replaceModifierGroups(tx, item.id, dto.modifierGroups);
             }
-
+            await this.invalidatePublicMenuCache(venueId);
             return tx.menuItem.findUnique({ where: { id: item.id }, include: ITEM_INCLUDE });
         });
     }
@@ -151,7 +160,7 @@ export class MenuService {
             if (dto.modifierGroups) {
                 await this.replaceModifierGroups(tx, itemId, dto.modifierGroups);
             }
-
+            await this.invalidatePublicMenuCache(venueId);
             return tx.menuItem.findUnique({ where: { id: itemId }, include: ITEM_INCLUDE });
         });
     }
@@ -162,7 +171,9 @@ export class MenuService {
     async setAvailability(venueId: string, itemId: string, isAvailable: boolean) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertItemInVenue(tx, venueId, itemId);
-            return tx.menuItem.update({ where: { id: itemId }, data: { isAvailable } });
+            const item = await tx.menuItem.update({ where: { id: itemId }, data: { isAvailable } });
+            await this.invalidatePublicMenuCache(venueId);
+            return item;
         });
     }
 
@@ -174,6 +185,7 @@ export class MenuService {
             // reject this if the item has ever been ordered. Prefer
             // setAvailability(false) for "retire this item" in the UI; this
             // delete is really only for items created by mistake, never ordered.
+            await this.invalidatePublicMenuCache(venueId);
             return tx.menuItem.delete({ where: { id: itemId } });
         });
     }
@@ -185,6 +197,7 @@ export class MenuService {
                     tx.menuItem.updateMany({ where: { id, venueId }, data: { displayOrder: index } }),
                 ),
             );
+            await this.invalidatePublicMenuCache(venueId);
             return { ok: true };
         });
     }
@@ -231,7 +244,8 @@ export class MenuService {
         return this.prisma.withVenueScope(venueId, (tx) => tx.tag.findMany({ where: { venueId } }));
     }
 
-    createTag(venueId: string, dto: CreateTagDto) {
+    async createTag(venueId: string, dto: CreateTagDto) {
+        await this.invalidatePublicMenuCache(venueId);
         return this.prisma.withVenueScope(venueId, (tx) =>
             tx.tag.create({ data: { venueId, label: dto.label, kind: dto.kind ?? 'dietary' } }),
         );
@@ -241,6 +255,7 @@ export class MenuService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const tag = await tx.tag.findUnique({ where: { id: tagId } });
             if (!tag || tag.venueId !== venueId) throw new NotFoundException('Tag not found');
+            await this.invalidatePublicMenuCache(venueId);
             return tx.tag.delete({ where: { id: tagId } });
         });
     }
@@ -252,21 +267,32 @@ export class MenuService {
      * are ever queried), and only ever returns available items' visibility
      * flag as-is so the frontend can grey out unavailable items. */
     async getPublicMenu(venueSlug: string) {
+        const cacheKey = `public-menu:${venueSlug}`;
+        const cached = await this.cache.get(cacheKey);
+        if (cached) return cached;
+
         const venue = await this.prisma.venue.findUnique({ where: { slug: venueSlug } });
         if (!venue) throw new NotFoundException('Venue not found');
 
-        return this.prisma.withVenueScope(venue.id, async (tx) => {
+        const result = await this.prisma.withVenueScope(venue.id, async (tx) => {
             const categories = await tx.menuCategory.findMany({
                 where: { venueId: venue.id },
                 orderBy: { displayOrder: 'asc' },
-                include: {
-                    items: {
-                        orderBy: { displayOrder: 'asc' },
-                        include: ITEM_INCLUDE,
-                    },
-                },
+                include: { items: { orderBy: { displayOrder: 'asc' }, include: ITEM_INCLUDE } },
             });
             return { venue, categories };
         });
+
+        // Short TTL (15s), not "forever until invalidated" — a customer
+        // scanning mid-write-window sees a menu at most 15s stale even if an
+        // invalidation call below somehow fails to fire, rather than serving
+        // wrong-for-the-shift data indefinitely.
+        await this.cache.set(cacheKey, result, 15_000);
+        return result;
+    }
+
+    private async invalidatePublicMenuCache(venueId: string) {
+        const venue = await this.prisma.venue.findUnique({ where: { id: venueId }, select: { slug: true } });
+        if (venue) await this.cache.del(`public-menu:${venue.slug}`);
     }
 }

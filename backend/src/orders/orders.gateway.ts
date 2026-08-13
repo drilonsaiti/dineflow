@@ -89,4 +89,12 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
   emitOrderEvent(venueId: string, event: 'order_created' | 'order_updated', data: unknown) {
     this.server.to(`venue:${venueId}`).emit(event, data);
   }
+
+  emitTableRequestEvent(
+      venueId: string,
+      event: 'table_request_created' | 'table_request_updated',
+      data: unknown,
+  ) {
+    this.server.to(`venue:${venueId}`).emit(event, data);
+  }
 }

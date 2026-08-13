@@ -55,7 +55,7 @@ export function OrderCard({
             <ul className="mt-2 space-y-1 text-sm">
                 {order.items.map((item) => (
                     <li key={item.id}>
-                        <span className="font-medium text-ink dark:text-white">{item.quantity}× {item.menuItem.name}</span>
+                        <span className="font-medium text-ink dark:text-white">{item.quantity}× {item?.menuItem?.name ?? ''}</span>
                         {item.modifiers.length > 0 && (
                             <span className="text-muted">
                 {' '}

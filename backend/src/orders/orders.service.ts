@@ -158,9 +158,18 @@ export class OrdersService {
           where: {
             venueId,
             status: { notIn: [OrderStatus.SERVED, OrderStatus.CANCELLED] },
+            // An order "belongs" to a station if any of its line items came
+            // from a category tagged for that station. Categories with no
+            // station set (null) are venue-wide (e.g. desserts shown to
+            // everyone) and are intentionally excluded from a station-scoped
+            // view — a kitchen filter should show kitchen work, not
+            // everything that isn't explicitly bar.
+            ...(station
+                ? { items: { some: { menuItem: { category: { station } } } } }
+                : {}),
           },
           include: {
-            items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+            items: { include: { menuItem: { include: { category: true } }, modifiers: { include: { modifierOption: true } } } },
             table: true,
             statusEvents: {
               orderBy: { changedAt: 'desc' },
@@ -218,5 +227,23 @@ export class OrdersService {
       }
       return updated;
     });
+  }
+
+  async listForTable(venueId: string, tableId: string) {
+    return this.prisma.withVenueScope(venueId, (tx) =>
+        tx.order.findMany({
+          where: { venueId, tableId },
+          include: {
+            items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+            statusEvents: {
+              orderBy: { changedAt: 'desc' },
+              take: 1,
+              include: { changedBy: { select: { id: true, email: true, fullName: true } } },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20,
+        }),
+    );
   }
 }

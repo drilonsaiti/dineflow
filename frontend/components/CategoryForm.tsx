@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
 
 export function CategoryForm({
                                  venueId,
@@ -13,6 +14,7 @@ export function CategoryForm({
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [station, setStation] = useState('');
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
@@ -22,6 +24,7 @@ export function CategoryForm({
             await api.post(`/venues/${venueId}/menu/categories`, {
                 name,
                 description: description || undefined,
+                station: station || undefined,
             });
             setName('');
             setDescription('');
@@ -50,6 +53,17 @@ export function CategoryForm({
                     onChange={(e) => setDescription(e.target.value)}
                 />
             </div>
+
+            <Select value={station} onValueChange={setStation}>
+                <SelectTrigger className="w-36">
+                    <SelectValue placeholder="All stations" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="">All stations</SelectItem>
+                    <SelectItem value="kitchen">Kitchen</SelectItem>
+                    <SelectItem value="bar">Bar</SelectItem>
+                </SelectContent>
+            </Select>
             <button type="submit" disabled={submitting} className="btn-primary">
                 Add category
             </button>

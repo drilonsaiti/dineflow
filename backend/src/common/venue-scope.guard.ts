@@ -36,11 +36,16 @@ export class VenueScopeGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
     const venueId: string | undefined = req.params?.venueId;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const user = req.user;
 
     if (!venueId) {
       throw new ForbiddenException('Route is missing a venueId param');
     }
+    if (venueId && !UUID_RE.test(venueId)) {
+      throw new ForbiddenException('Malformed venue id');
+    }
+
     if (!user) {
       // Should be unreachable — JwtAuthGuard runs first — but never assume.
       throw new ForbiddenException('No authenticated user');

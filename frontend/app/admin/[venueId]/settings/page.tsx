@@ -54,6 +54,38 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                         onChange={(e) => setWebhookUrl(e.target.value)}
                     />
                 </div>
+
+                <div className="border-t border-gray-200 pt-6">
+                    <h2 className="text-lg font-semibold">Plan & billing</h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Free plan includes up to 10 tables and 30 days of analytics history.
+                    </p>
+                    <div className="mt-3 flex gap-3">
+                        <button
+                            onClick={async () => {
+                                const { url } = await api.post<{ url: string }>(`/venues/${venueId}/billing/checkout-session`, { plan: 'PRO' });
+                                window.location.href = url;
+                            }}
+                            className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white"
+                        >
+                            Upgrade to Pro
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { url } = await api.post<{ url: string }>(`/venues/${venueId}/billing/portal-session`, {});
+                                    window.location.href = url;
+                                } catch (err: any) {
+                                    alert(err.message);
+                                }
+                            }}
+                            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium"
+                        >
+                            Manage billing
+                        </button>
+                    </div>
+                </div>
+
                 <div>
                     <label className="block text-sm font-medium text-ink dark:text-white">Late order threshold (minutes)</label>
                     <input
