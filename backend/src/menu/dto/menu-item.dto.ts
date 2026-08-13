@@ -109,6 +109,16 @@ export class CreateMenuItemDto {
     @ValidateNested({ each: true })
     @Type(() => ModifierGroupDto)
     modifierGroups?: ModifierGroupDto[];
+
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    stockCount?: number;
+
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    lowStockThreshold?: number;
 }
 
 export class UpdateMenuItemDto extends CreateMenuItemDto {

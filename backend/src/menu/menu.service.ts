@@ -119,6 +119,8 @@ export class MenuService {
                     dineInOnly: dto.dineInOnly ?? false,
                     takeawayOnly: dto.takeawayOnly ?? false,
                     tags: dto.tagIds ? { create: dto.tagIds.map((tagId) => ({ tagId })) } : undefined,
+                    stockCount: dto.stockCount,
+                    lowStockThreshold: dto.lowStockThreshold,
                 },
             });
 
@@ -147,6 +149,8 @@ export class MenuService {
                     displayOrder: dto.displayOrder,
                     dineInOnly: dto.dineInOnly,
                     takeawayOnly: dto.takeawayOnly,
+                    stockCount: dto.stockCount,
+                    lowStockThreshold: dto.lowStockThreshold,
                 },
             });
 
@@ -291,7 +295,7 @@ export class MenuService {
         return result;
     }
 
-    private async invalidatePublicMenuCache(venueId: string) {
+    async invalidatePublicMenuCache(venueId: string) {
         const venue = await this.prisma.venue.findUnique({ where: { id: venueId }, select: { slug: true } });
         if (venue) await this.cache.del(`public-menu:${venue.slug}`);
     }

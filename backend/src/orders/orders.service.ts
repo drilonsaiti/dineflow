@@ -10,6 +10,8 @@ import { assertValidTransition } from './order-status.machine';
 import { OrdersGateway } from './orders.gateway';
 import { TablesService } from '../tables/tables.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {MenuService} from "../menu/menu.service";
+import {SubmitFeedbackDto} from "./submit-feedback.dto";
 
 @Injectable()
 export class OrdersService {
@@ -18,6 +20,7 @@ export class OrdersService {
       private readonly gateway: OrdersGateway,
       private readonly tablesService: TablesService,
       private readonly notifications: NotificationsService,
+      private readonly menuService: MenuService,
   ) {}
 
   // ---------- Customer-facing (public, no auth — section 3/11) ----------
@@ -40,19 +43,30 @@ export class OrdersService {
   async placeOrder(dto: PlaceOrderDto) {
     const table = await this.tablesService.resolveByToken(dto.tableToken);
 
-    return this.prisma.withVenueScope(table.venueId, async (tx) => {
-      // Re-check availability at placement time, not just at add-to-cart
-      // time (section 18: item goes 86'd while sitting in an open cart).
-      const menuItemIds = dto.items.map((i) => i.menuItemId);
+    const result = await this.prisma.withVenueScope(table.venueId, async (tx) => {
+      const cartItems = await tx.tableCartItem.findMany({ where: { tableId: table.id } });
+      if (cartItems.length === 0) {
+        throw new BadRequestException('Your cart is empty.');
+      }
+
+      const menuItemIds = cartItems.map((i) => i.menuItemId);
       const menuItems = await tx.menuItem.findMany({
         where: { id: { in: menuItemIds }, venueId: table.venueId },
         include: { modifierGroups: { include: { options: true } } },
       });
       const menuItemsById = new Map(menuItems.map((m) => [m.id, m]));
 
-      const unavailable = dto.items.filter((i) => {
+      // Availability AND stock checked at placement time (section 18's
+      // edge case, plus the new stock-tracking feature) — never trusted
+      // from when the item was added to the shared cart, which could have
+      // been minutes or an entire other round ago.
+      const unavailable = cartItems.filter((i) => {
         const item = menuItemsById.get(i.menuItemId);
-        return !item || !item.isAvailable;
+        return (
+            !item ||
+            !item.isAvailable ||
+            (item.stockCount != null && item.stockCount < i.quantity)
+        );
       });
       if (unavailable.length > 0) {
         throw new BadRequestException({
@@ -61,48 +75,38 @@ export class OrdersService {
         });
       }
 
-      // Integer-safe money throughout (section 18) — cents only, never float.
       let totalCents = 0;
-      const itemsData = dto.items.map((i) => {
-        const menuItem = menuItemsById.get(i.menuItemId)!;
+      const itemsData = cartItems.map((cartItem) => {
+        const menuItem = menuItemsById.get(cartItem.menuItemId)!;
         const allOptions = menuItem.modifierGroups.flatMap((g) => g.options);
-        const chosen = i.modifiers.map((m) => {
-          const option = allOptions.find((o) => o.id === m.modifierOptionId);
+        const chosen = cartItem.modifierOptionIds.map((id) => {
+          const option = allOptions.find((o) => o.id === id);
           if (!option) throw new BadRequestException('Invalid modifier selection.');
           return option;
         });
         const modifierDelta = chosen.reduce((sum, o) => sum + o.priceDeltaCents, 0);
         const unitPriceCents = menuItem.priceCents + modifierDelta;
-        const lineTotalCents = unitPriceCents * i.quantity;
+        const lineTotalCents = unitPriceCents * cartItem.quantity;
         totalCents += lineTotalCents;
 
         return {
           menuItemId: menuItem.id,
-          quantity: i.quantity,
-          note: i.note,
+          quantity: cartItem.quantity,
+          note: cartItem.note,
           unitPriceCents,
           lineTotalCents,
           modifiers: {
-            create: chosen.map((o) => ({
-              modifierOptionId: o.id,
-              priceDeltaCents: o.priceDeltaCents,
-            })),
+            create: chosen.map((o) => ({ modifierOptionId: o.id, priceDeltaCents: o.priceDeltaCents })),
           },
         };
       });
 
-      // Per-venue-per-day ticket number (section 8), race-safe (section 18:
-      // "two customers at the same table order in quick succession"). A
-      // plain COUNT()+1 can hand out the same number to two concurrent
-      // requests; an upsert + FOR UPDATE-style atomic increment cannot,
-      // because Postgres serializes writers to the same counter row.
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
-
       await tx.$executeRaw`
         INSERT INTO "DailyOrderCounter" ("venueId", "day", "lastValue")
         VALUES (${table.venueId}, ${startOfDay}, 1)
-          ON CONFLICT ("venueId", "day")
+        ON CONFLICT ("venueId", "day")
         DO UPDATE SET "lastValue" = "DailyOrderCounter"."lastValue" + 1
       `;
       const counterRow = await tx.dailyOrderCounter.findUniqueOrThrow({
@@ -125,9 +129,31 @@ export class OrdersService {
         include: { items: true, table: true },
       });
 
-      this.gateway.emitOrderEvent(table.venueId, 'order_created', order);
-      return order;
+      // Decrement stock for tracked items; auto-86 anything that just hit zero.
+      let stockChanged = false;
+      for (const cartItem of cartItems) {
+        const menuItem = menuItemsById.get(cartItem.menuItemId)!;
+        if (menuItem.stockCount != null) {
+          const newStock = menuItem.stockCount - cartItem.quantity;
+          await tx.menuItem.update({
+            where: { id: menuItem.id },
+            data: { stockCount: newStock, isAvailable: newStock > 0 ? menuItem.isAvailable : false },
+          });
+          stockChanged = true;
+        }
+      }
+
+      // The shared cart's job is done — clear it for the next round.
+      await tx.tableCartItem.deleteMany({ where: { tableId: table.id } });
+
+      return { order, stockChanged };
     });
+
+    this.gateway.emitOrderEvent(table.venueId, 'order_created', result.order);
+    if (result.stockChanged) {
+      await this.menuService.invalidatePublicMenuCache(table.venueId);
+    }
+    return result.order;
   }
 
   /** Polled by the customer's tracking screen every few seconds (section 11). */
@@ -245,5 +271,18 @@ export class OrdersService {
           take: 20,
         }),
     );
+  }
+
+  async submitFeedback(orderId: string, dto: SubmitFeedbackDto) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId }, include: { table: true } });
+    if (!order || order.table.token !== dto.tableToken) throw new NotFoundException('Order not found.');
+    if (order.status !== OrderStatus.SERVED) {
+      throw new BadRequestException('You can rate your order once it has been served.');
+    }
+    return this.prisma.orderFeedback.upsert({
+      where: { orderId },
+      update: { rating: dto.rating, comment: dto.comment },
+      create: { orderId, rating: dto.rating, comment: dto.comment },
+    });
   }
 }

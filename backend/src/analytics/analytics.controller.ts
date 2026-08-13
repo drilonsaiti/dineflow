@@ -41,4 +41,9 @@ export class AnalyticsController {
     getBusiestHours(@CurrentVenue() scope: { venueId: string }, @Query('since') since?: string) {
         return this.analyticsService.getBusiestHours(scope.venueId, this.parseSince(since));
     }
+
+    @Get('feedback')
+    getFeedback(@CurrentVenue() scope: { venueId: string }, @Query('since') since?: string) {
+        return this.analyticsService.getFeedbackSummary(scope.venueId, this.parseSince(since));
+    }
 }

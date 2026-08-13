@@ -8,6 +8,7 @@ import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
 import { OrderStatus } from '@prisma/client';
 import { IsIn } from 'class-validator';
 import { Throttle } from '@nestjs/throttler';
+import {SubmitFeedbackDto} from "./submit-feedback.dto";
 
 class AdvanceStatusDto {
   @IsIn(Object.values(OrderStatus))
@@ -56,5 +57,11 @@ export class OrdersController {
   @UseGuards(VenueScopeGuard)
   listForTable(@CurrentVenue() scope: { venueId: string }, @Param('tableId') tableId: string) {
     return this.ordersService.listForTable(scope.venueId, tableId);
+  }
+
+  @Public()
+  @Post('public/orders/:orderId/feedback')
+  submitFeedback(@Param('orderId') orderId: string, @Body() dto: SubmitFeedbackDto) {
+    return this.ordersService.submitFeedback(orderId, dto);
   }
 }

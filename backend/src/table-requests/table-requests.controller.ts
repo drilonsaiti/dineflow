@@ -11,11 +11,11 @@ import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
 export class TableRequestsController {
     constructor(private readonly service: TableRequestsService) {}
 
-    @Throttle({ default: { limit: 6, ttl: 60_000 } }) // a table mashing "call waiter" shouldn't spam staff
+    @Throttle({ default: { limit: 6, ttl: 60_000 } })
     @Public()
     @Post('public/table-requests')
     create(@Body() dto: CreateTableRequestDto) {
-        return this.service.create(dto.tableToken, dto.type);
+        return this.service.create(dto.tableToken, dto.type, dto.guestCount);
     }
 
     @Get('venues/:venueId/table-requests')

@@ -165,4 +165,29 @@ export class AnalyticsService {
             return Array.from({ length: 24 }, (_, hour) => ({ hour, count: byHour.get(hour) ?? 0 }));
         });
     }
+
+    async getFeedbackSummary(venueId: string, since?: Date) {
+        const clampedSince = await this.clampSince(venueId, since);
+        return this.prisma.withVenueScope(venueId, async (tx) => {
+            const feedback = await tx.orderFeedback.findMany({
+                where: { order: { venueId, createdAt: { gte: clampedSince } } },
+                include: { order: { select: { dailyNumber: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: 50,
+            });
+            const avgRating = feedback.length
+                ? Math.round((feedback.reduce((s, f) => s + f.rating, 0) / feedback.length) * 10) / 10
+                : null;
+            return {
+                avgRating,
+                totalRatings: feedback.length,
+                recent: feedback.slice(0, 10).map((f) => ({
+                    orderNumber: f.order.dailyNumber,
+                    rating: f.rating,
+                    comment: f.comment,
+                    createdAt: f.createdAt,
+                })),
+            };
+        });
+    }
 }

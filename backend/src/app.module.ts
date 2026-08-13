@@ -15,6 +15,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { StaffModule } from './staff/staff.module';
 import { TableRequestsModule } from './table-requests/table-requests.module';
 import { BillingModule } from './billing/billing.module';
+import {TableCartModule} from "./table-cart/table-cart.module";
+import {TableAssignmentsModule} from "./table-assignments/table-assignments.module";
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { BillingModule } from './billing/billing.module';
     StaffModule,
     TableRequestsModule,
     BillingModule,
+    TableCartModule,
+    TableAssignmentsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

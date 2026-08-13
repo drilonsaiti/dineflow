@@ -11,11 +11,27 @@ export class TableRequestsService {
         private readonly gateway: OrdersGateway,
     ) {}
 
-    async create(tableToken: string, type: 'CALL_WAITER' | 'REQUEST_BILL_CASH') {
+    async create(tableToken: string, type: 'CALL_WAITER' | 'REQUEST_BILL_CASH', guestCount?: number) {
         const table = await this.tablesService.resolveByToken(tableToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
+            let totalCentsAtRequest: number | undefined;
+            let perPersonCentsAtRequest: number | undefined;
+
+            if (type === 'REQUEST_BILL_CASH') {
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+                const agg = await tx.order.aggregate({
+                    where: { venueId: table.venueId, tableId: table.id, createdAt: { gte: startOfDay }, status: { not: 'CANCELLED' } },
+                    _sum: { totalCents: true },
+                });
+                totalCentsAtRequest = agg._sum.totalCents ?? 0;
+                if (guestCount && guestCount > 0) {
+                    perPersonCentsAtRequest = Math.round(totalCentsAtRequest / guestCount);
+                }
+            }
+
             const request = await tx.tableRequest.create({
-                data: { venueId: table.venueId, tableId: table.id, type },
+                data: { venueId: table.venueId, tableId: table.id, type, guestCount, totalCentsAtRequest, perPersonCentsAtRequest },
                 include: { table: true },
             });
             this.gateway.emitTableRequestEvent(table.venueId, 'table_request_created', request);

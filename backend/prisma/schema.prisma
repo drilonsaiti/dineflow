@@ -26,6 +26,8 @@ model User {
   createdAt    DateTime           @default(now())
   memberships  VenueMembership[]
   statusEvents OrderStatusEvent[] @relation("ChangedBy")
+
+  tableAssignments StaffTableAssignment[]
 }
 
 enum VenueRole {
@@ -80,22 +82,24 @@ model Venue {
   plan                      PlanTier           @default(FREE)
   subscriptionStatus        SubscriptionStatus @default(TRIALING)
   staffAlertWebhookUrl      String?
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
+  stripeCustomerId          String?
+  stripeSubscriptionId      String?
   lateOrderThresholdMinutes Int                @default(10)
   maxTables                 Int                @default(10)
   analyticsHistoryDays      Int                @default(30)
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
-  memberships   VenueMembership[]
-  categories    MenuCategory[]
-  menuItems     MenuItem[]
-  tags          Tag[]
-  areas         Area[]
-  tables        Table[]
-  orders        Order[]
-  tableRequests TableRequest[]
+  memberships      VenueMembership[]
+  categories       MenuCategory[]
+  menuItems        MenuItem[]
+  tags             Tag[]
+  areas            Area[]
+  tables           Table[]
+  orders           Order[]
+  tableRequests    TableRequest[]
+  tableCartItems   TableCartItem[]
+  staffAssignments StaffTableAssignment[]
 }
 
 // ---------- Menu ----------
@@ -131,25 +135,28 @@ model Tag {
 }
 
 model MenuItem {
-  id           String   @id @default(uuid()) @db.Uuid
-  venueId      String   @db.Uuid
-  categoryId   String   @db.Uuid
-  name         String
-  description  String?
-  photoUrl     String?
-  priceCents   Int
-  isAvailable  Boolean  @default(true)
-  displayOrder Int      @default(0)
-  dineInOnly   Boolean  @default(false)
-  takeawayOnly Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                String   @id @default(uuid()) @db.Uuid
+  venueId           String   @db.Uuid
+  categoryId        String   @db.Uuid
+  name              String
+  description       String?
+  photoUrl          String?
+  priceCents        Int
+  isAvailable       Boolean  @default(true)
+  displayOrder      Int      @default(0)
+  dineInOnly        Boolean  @default(false)
+  takeawayOnly      Boolean  @default(false)
+  stockCount        Int? // null = not tracked (unlimited); set = decremented on each order, auto-86's at 0
+  lowStockThreshold Int? // null = defaults to 5 in the UI warning
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   venue          Venue           @relation(fields: [venueId], references: [id], onDelete: Cascade)
   category       MenuCategory    @relation(fields: [categoryId], references: [id])
   tags           MenuItemTag[]
   modifierGroups ModifierGroup[]
   orderItems     OrderItem[]
+  tableCartItems TableCartItem[]
 
   @@index([venueId])
   @@index([categoryId])
@@ -223,10 +230,12 @@ model Table {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  venue         Venue          @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  area          Area?          @relation(fields: [areaId], references: [id])
-  orders        Order[]
-  tableRequests TableRequest[]
+  venue          Venue                 @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  area           Area?                 @relation(fields: [areaId], references: [id])
+  orders         Order[]
+  tableRequests  TableRequest[]
+  tableCartItems TableCartItem[]
+  assignment     StaffTableAssignment?
 
   @@index([venueId])
 }
@@ -259,6 +268,7 @@ model Order {
   table        Table              @relation(fields: [tableId], references: [id])
   items        OrderItem[]
   statusEvents OrderStatusEvent[]
+  feedback     OrderFeedback?
 
   @@unique([venueId, dailyNumber, createdAt])
   @@index([venueId, status])
@@ -335,8 +345,8 @@ enum NotificationChannel {
 // depending on the SMS provider's own dashboard.
 model NotificationLog {
   id        String              @id @default(uuid())
-  venueId   String
-  orderId   String?
+  venueId   String              @db.Uuid
+  orderId   String?             @db.Uuid
   kind      NotificationKind
   channel   NotificationChannel
   recipient String // phone number, webhook URL, or email — whichever channel
@@ -362,18 +372,64 @@ enum TableRequestStatus {
 // Customer-initiated, staff-facing — "call waiter" / "I'd like to pay cash"
 // (distinct from Order/OrderStatus, since this isn't about food at all).
 model TableRequest {
-  id                   String             @id @default(uuid()) @db.Uuid
-  venueId              String             @db.Uuid
-  tableId              String             @db.Uuid
-  type                 TableRequestType
-  status               TableRequestStatus @default(PENDING)
-  createdAt            DateTime           @default(now())
-  acknowledgedAt       DateTime?
-  acknowledgedByUserId String?            @db.Uuid
-  resolvedAt           DateTime?
+  id                      String             @id @default(uuid()) @db.Uuid
+  venueId                 String             @db.Uuid
+  tableId                 String             @db.Uuid
+  type                    TableRequestType
+  status                  TableRequestStatus @default(PENDING)
+  createdAt               DateTime           @default(now())
+  acknowledgedAt          DateTime?
+  acknowledgedByUserId    String?            @db.Uuid
+  resolvedAt              DateTime?
+  guestCount              Int?
+  totalCentsAtRequest     Int?
+  perPersonCentsAtRequest Int?
 
   venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
   table Table @relation(fields: [tableId], references: [id])
 
   @@index([venueId, status])
+}
+
+model TableCartItem {
+  id                String   @id @default(uuid())
+  venueId           String   @db.Uuid
+  tableId           String   @db.Uuid
+  menuItemId        String   @db.Uuid
+  quantity          Int
+  note              String?
+  addedByLabel      String? // optional first name so the group can see who added what
+  modifierOptionIds String[] @default([])
+  createdAt         DateTime @default(now())
+
+  venue    Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table    Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([tableId])
+}
+
+model OrderFeedback {
+  id        String   @id @default(uuid())
+  orderId   String   @unique @db.Uuid
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// One active assignee per table — lets a waiter "claim" their section for a
+// shift, and lets the dashboard filter to "my tables" so a busy floor
+// doesn't mean reading every table's cards to find yours.
+model StaffTableAssignment {
+  id        String   @id @default(uuid())
+  venueId   String   @db.Uuid
+  tableId   String   @unique @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
