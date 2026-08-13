@@ -67,11 +67,15 @@ export default function CartPage({ params }: { params: Promise<{ venueSlug: stri
         return (
             <div className="p-8 text-center text-muted">
                 Your cart is empty.{' '}
-                <a href={`/r/${venueSlug}/t/${token}`} className="font-medium text-accent underline">
-                    Back to menu
-                </a>
-            </div>
-        );
+
+                <a href={`/r/${venueSlug}/t/${token}`}
+                className="font-medium underline"
+                style={{ color: 'var(--brand-color, #EA580C)' }}
+                >
+                Back to menu
+            </a>
+    </div>
+    );
     }
 
     return (
@@ -166,7 +170,12 @@ export default function CartPage({ params }: { params: Promise<{ venueSlug: stri
 
             {error && <p className="mt-3 text-sm text-error">{error}</p>}
 
-            <button onClick={placeOrder} disabled={submitting} className="btn-accent mt-4 w-full">
+            <button
+                onClick={placeOrder}
+                disabled={submitting}
+                className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
+                style={{ backgroundColor: 'var(--brand-color, #EA580C)' }}
+            >
                 {submitting ? 'Placing order…' : 'Place order'}
             </button>
         </div>

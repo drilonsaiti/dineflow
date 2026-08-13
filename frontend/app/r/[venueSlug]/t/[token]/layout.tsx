@@ -11,7 +11,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
-interface TableInfo {
+export interface TableInfo {
     table: {
         id: string;
         label: string;
@@ -96,7 +96,7 @@ export default function TableLayout({
                 className="min-h-screen bg-canvas pb-24 dark:bg-surface-dark"
                 style={
                     {
-                        '--brand-color': info.venue.brandColor ?? '#EA580C',
+                        '--brand-color': info.venue.brandColor ?? '#EA580CFF',
                     } as React.CSSProperties
                 }
             >
@@ -118,7 +118,7 @@ export default function TableLayout({
                     </Link>
                     <div className="flex items-center gap-2">
                         <ThemeToggle />
-                        <HeaderCartLink venueSlug={venueSlug} token={token} />
+                        <HeaderCartLink venueSlug={venueSlug} token={token} info={info}/>
                     </div>
                 </header>
 

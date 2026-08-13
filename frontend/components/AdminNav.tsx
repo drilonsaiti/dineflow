@@ -35,11 +35,12 @@ export function AdminNav() {
         ? [
             { href: `/admin/${venueId}/dashboard`, label: 'Orders' },
             { href: `/admin/${venueId}/menu`, label: 'Menu' },
+            { href: `/admin/${venueId}/tables-live`, label: 'Tables' },
             { href: `/admin/${venueId}/tables`, label: 'Tables & QR' },
             { href: `/admin/${venueId}/analytics`, label: 'Analytics' },
             { href: `/admin/${venueId}/settings`, label: 'Settings' },
             { href: `/admin/${venueId}/staff`, label: 'Staff' },
-            { href: `/admin/${venueId}/tables-live`, label: 'Tables' },
+
         ]
         : [];
 
@@ -71,7 +72,7 @@ export function AdminNav() {
                                 key={l.href}
                                 href={l.href}
                                 className={
-                                    pathname?.startsWith(l.href)
+                                    pathname === l.href || pathname?.startsWith(`${l.href}/`)
                                         ? 'font-semibold text-ink dark:text-white'
                                         : 'text-muted hover:text-ink dark:hover:text-white'
                                 }
