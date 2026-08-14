@@ -2,10 +2,13 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import {ToastProvider} from "@/components/ui/Toast";
+import { PWARegister } from '@/components/PWARegister';
+import {QueryProvider} from "@/components/QueryProvider";
 
 export const metadata = {
-    title: "QR Ordering",
-    description: "Multi-tenant QR table ordering",
+    title: 'Dineflow - QR Ordering',
+    description: 'Multi-tenant QR table ordering',
+    manifest: '/manifest.json',
 };
 
 const themeInitScript = `
@@ -36,12 +39,20 @@ export default function RootLayout({
                     __html: themeInitScript,
                 }}
             />
+            <PWARegister />
+
+            <link rel="apple-touch-icon" href="/icon-192.png" />
+            <meta name="theme-color" content="#111111" />
         </head>
 
         <body>
-        <ThemeProvider>
-            <ToastProvider>{children}</ToastProvider>
-        </ThemeProvider>
+        <QueryProvider>
+            <ThemeProvider>
+                <ToastProvider>
+                    {children}
+                </ToastProvider>
+            </ThemeProvider>
+        </QueryProvider>
         </body>
         </html>
     );

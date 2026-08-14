@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import {createContext, ReactNode, useContext, useEffect, useState} from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
@@ -9,6 +9,7 @@ import { CartProvider, useCart } from '@/components/CartContext';
 import {HeaderCartLink} from "@/components/HeadCartLink";
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { setSessionToken } from '@/lib/session';
+import { useOnlineStatus } from '@/lib/online-status';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -30,6 +31,11 @@ export interface TableInfo {
     sessionToken: string
 }
 
+const VenueCurrencyContext = createContext<string>('USD');
+export function useVenueCurrencyPublic() {
+    return useContext(VenueCurrencyContext);
+}
+
 export default function TableLayout({
                                         children,
                                     }: {
@@ -44,6 +50,7 @@ export default function TableLayout({
 
     const [info, setInfo] = useState<TableInfo | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const online = useOnlineStatus();
 
     useEffect(() => {
         if (!token) return;
@@ -94,6 +101,7 @@ export default function TableLayout({
     }
 
     return (
+        <VenueCurrencyContext.Provider value={info.venue.currency}>
         <CartProvider token={token}>
             <div
                 className="min-h-screen bg-canvas pb-24 dark:bg-surface-dark"
@@ -128,6 +136,12 @@ export default function TableLayout({
                     </div>
                 </header>
 
+                {!online && (
+                    <div role="status" className="bg-amber-100 px-4 py-2 text-center text-sm text-amber-800">
+                        You're offline — showing the last loaded menu. Ordering is paused until you're back online.
+                    </div>
+                )}
+
                 <main className="mx-auto max-w-2xl">
                     {children}
                 </main>
@@ -139,6 +153,7 @@ export default function TableLayout({
                 />
             </div>
         </CartProvider>
+        </VenueCurrencyContext.Provider>
     );
 }
 

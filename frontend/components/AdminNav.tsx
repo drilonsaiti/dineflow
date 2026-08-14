@@ -40,7 +40,7 @@ export function AdminNav() {
             { href: `/admin/${venueId}/analytics`, label: 'Analytics' },
             { href: `/admin/${venueId}/settings`, label: 'Settings' },
             { href: `/admin/${venueId}/staff`, label: 'Staff' },
-
+            { href: `/admin/${venueId}/z-report`, label: 'Z-report' },
         ]
         : [];
 

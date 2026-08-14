@@ -22,6 +22,9 @@ export default function MenuPage({ params }: MenuPageProps) {
     const [menu, setMenu] = useState<PublicMenu | null>(null);
     const [activeItem, setActiveItem] = useState<PublicMenuItem | null>(null);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [excludedAllergens, setExcludedAllergens] = useState<string[]>([]);
+    const [requiredDietary, setRequiredDietary] = useState<string[]>([]);
+    const [showFilters, setShowFilters] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -103,6 +106,19 @@ export default function MenuPage({ params }: MenuPageProps) {
             });
     }
 
+    const allTags = menu
+        ? Array.from(new Map(menu.categories.flatMap((c) => c.items.flatMap((i) => i.tags.map((t) => [t.tag.id, t.tag]))))).map(([, t]) => t)
+        : [];
+    const allergenTags = allTags.filter((t) => t.kind === 'allergen');
+    const dietaryTags = allTags.filter((t) => t.kind === 'dietary');
+
+    function itemPassesFilters(item: PublicMenuItem): boolean {
+        const itemTagIds = item.tags.map((t) => t.tag.id);
+        if (excludedAllergens.some((id) => itemTagIds.includes(id))) return false; // hide items containing any excluded allergen
+        if (requiredDietary.length > 0 && !requiredDietary.every((id) => itemTagIds.includes(id))) return false; // require all selected dietary tags
+        return true;
+    }
+
     return (
         <div className="min-h-screen bg-canvas dark:bg-surface-dark">
             {/* Category navigation */}
@@ -146,7 +162,10 @@ export default function MenuPage({ params }: MenuPageProps) {
                         )}
 
                         <div className="mt-3 space-y-3">
-                            {category.items.map((item) => (
+                            {category.items.filter(itemPassesFilters).length === 0 && (excludedAllergens.length + requiredDietary.length) > 0 && (
+                                <p className="text-sm text-gray-400">No items in this category match your filters.</p>
+                            )}
+                            {category.items.filter(itemPassesFilters).map((item) => (
                                 <button
                                     key={item.id}
                                     type="button"
@@ -209,6 +228,53 @@ export default function MenuPage({ params }: MenuPageProps) {
                     </section>
                 ))}
             </div>
+
+            {(allergenTags.length > 0 || dietaryTags.length > 0) && (
+                <div className="px-4">
+                    <button
+                        onClick={() => setShowFilters((s) => !s)}
+                        className="mt-2 flex min-h-[36px] items-center gap-1 rounded-full border border-gray-200 px-3 text-xs font-medium text-gray-600"
+                    >
+                        🔍 Dietary filters {(excludedAllergens.length + requiredDietary.length) > 0 && `(${excludedAllergens.length + requiredDietary.length})`}
+                    </button>
+                    {showFilters && (
+                        <div className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-white p-3">
+                            {dietaryTags.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-medium text-gray-500">Show only</p>
+                                    <div className="mt-1 flex flex-wrap gap-1.5">
+                                        {dietaryTags.map((tag) => (
+                                            <button
+                                                key={tag.id}
+                                                onClick={() => setRequiredDietary((prev) => prev.includes(tag.id) ? prev.filter((id) => id !== tag.id) : [...prev, tag.id])}
+                                                className={`rounded-full px-3 py-1 text-xs ${requiredDietary.includes(tag.id) ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600'}`}
+                                            >
+                                                {tag.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {allergenTags.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-medium text-gray-500">Exclude (allergens)</p>
+                                    <div className="mt-1 flex flex-wrap gap-1.5">
+                                        {allergenTags.map((tag) => (
+                                            <button
+                                                key={tag.id}
+                                                onClick={() => setExcludedAllergens((prev) => prev.includes(tag.id) ? prev.filter((id) => id !== tag.id) : [...prev, tag.id])}
+                                                className={`rounded-full px-3 py-1 text-xs ${excludedAllergens.includes(tag.id) ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'}`}
+                                            >
+                                                {tag.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Item details */}
             {activeItem && (

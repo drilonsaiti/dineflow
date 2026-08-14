@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getSessionToken } from '@/lib/session';
 import { formatCents } from '@/lib/money';
+import {useVenueCurrencyPublic} from "@/app/r/[venueSlug]/t/[token]/layout";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -16,6 +17,7 @@ export default function TableTabPage({ params }: { params: { venueSlug: string; 
     const { token } = params;
     const [tab, setTab] = useState<TabData | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const currency = useVenueCurrencyPublic();
 
     useEffect(() => {
         const session = getSessionToken(token);
@@ -45,7 +47,7 @@ export default function TableTabPage({ params }: { params: { venueSlug: string; 
                     <div key={person.label} className="rounded-xl border border-gray-200 bg-white p-4">
                         <div className="flex items-center justify-between">
                             <p className="font-medium">{person.label}</p>
-                            <p className="font-semibold">{formatCents(person.totalCents, 'USD')}</p>
+                            <p className="font-semibold">{formatCents(person.totalCents, currency)}</p>
                         </div>
                         <ul className="mt-2 space-y-1 text-sm text-gray-600">
                             {person.items.map((item, i) => (
@@ -62,7 +64,7 @@ export default function TableTabPage({ params }: { params: { venueSlug: string; 
 
             <div className="mt-4 flex items-center justify-between rounded-xl bg-gray-50 p-4 text-lg font-semibold">
                 <span>Table total</span>
-                <span>{formatCents(tab.grandTotalCents, )}</span>
+                <span>{formatCents(tab.grandTotalCents,currency )}</span>
             </div>
         </div>
     );

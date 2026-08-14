@@ -77,6 +77,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }, [refresh]);
 
     async function addLine(line: AddLineInput) {
+        if (!navigator.onLine) return;
         await fetch(`${API_URL}/public/table-cart`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -91,6 +92,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }
 
     async function updateQuantity(itemId: string, quantity: number) {
+        if (!navigator.onLine) return;
         await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -100,6 +102,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }
 
     async function updateNote(itemId: string, note: string) {
+        if (!navigator.onLine) return;
         await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -109,6 +112,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }
 
     async function removeLine(itemId: string) {
+        if (!navigator.onLine) return;
         await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, { method: 'DELETE' });
         await refresh();
     }

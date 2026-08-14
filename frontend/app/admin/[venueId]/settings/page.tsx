@@ -15,6 +15,10 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
     const [currency, setCurrency] = useState('USD');
     const [timezone, setTimezone] = useState('UTC');
     const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [taxRatePercent, setTaxRatePercent] = useState('');
+    const [taxInclusive, setTaxInclusive] = useState(true);
+    const [autoPrintTickets, setAutoPrintTickets] = useState(false);
+    const [printerBridgeUrl, setPrinterBridgeUrl] = useState('');
     const showToast = useToast();
 
     useEffect(() => {
@@ -26,6 +30,8 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
             setBrandColor(venue.brandColor ?? '#111111');
             setCurrency(venue.currency ?? 'USD');
             setTimezone(venue.timezone ?? 'UTC');
+            setTaxRatePercent(venue.taxRatePercent ?? '');
+            setTaxInclusive(venue.taxInclusive ?? true);
         });
     }, [venueId]);
 
@@ -41,6 +47,8 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                 brandColor,
                 currency,
                 timezone,
+                taxRatePercent: taxRatePercent ? Number(taxRatePercent) : undefined,
+                taxInclusive
             });
             showToast('Settings saved');
         } catch (err: unknown) {
@@ -115,6 +123,19 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                                 <input className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Europe/Zurich" />
                             </div>
                         </div>
+
+                        <div className="flex gap-4">
+                            <div>
+                                <label className="block text-sm font-medium">Tax rate % (optional)</label>
+                                <input type="number" step="0.1" className="mt-1 w-24 rounded-md border border-gray-300 px-3 py-2 text-sm" value={taxRatePercent} onChange={(e) => setTaxRatePercent(e.target.value)} />
+                            </div>
+                            <div className="flex items-end pb-2">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input type="checkbox" checked={taxInclusive} onChange={(e) => setTaxInclusive(e.target.checked)} />
+                                    Prices include tax
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -177,6 +198,34 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                         Also controls the "sitting too long" highlight on the staff dashboard.
                     </p>
                 </div>
+
+                <div className="border-t border-gray-200 pt-6">
+                    <h2 className="text-lg font-semibold">Kitchen printing</h2>
+                    <label className="mt-2 flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={autoPrintTickets} onChange={(e) => setAutoPrintTickets(e.target.checked)} />
+                        Auto-open a print ticket for every new order
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500">
+                        Opens a small print window with your browser's default printer — works with any printer set as default
+                        on the dashboard computer/tablet, including most thermal receipt printers.
+                    </p>
+                    <div className="mt-4">
+                        <label className="block text-sm font-medium">
+                            ESC/POS bridge URL <span className="text-gray-400 font-normal">(advanced, optional)</span>
+                        </label>
+                        <input
+                            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                            placeholder="http://192.168.1.50:9100"
+                            value={printerBridgeUrl}
+                            onChange={(e) => setPrinterBridgeUrl(e.target.value)}
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                            For silent, no-dialog printing to a networked thermal printer. Requires running a small bridge
+                            program on your venue's network — see the printer-bridge reference script in the codebase.
+                        </p>
+                    </div>
+                </div>
+
                 <button type="submit" disabled={saving} className="btn-primary">
                     {saving ? 'Saving…' : 'Save'}
                 </button>
