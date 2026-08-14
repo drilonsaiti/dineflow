@@ -190,4 +190,73 @@ export class AnalyticsService {
             };
         });
     }
+
+    async getZReport(venueId: string, date?: Date) {
+        const venue = await this.prisma.venue.findUniqueOrThrow({ where: { id: venueId } });
+        const day = date ?? new Date();
+        const start = new Date(day);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+
+        return this.prisma.withVenueScope(venueId, async (tx) => {
+            const [nonCancelled, cancelled, bestSeller, busiestHourRow] = await Promise.all([
+                tx.order.aggregate({
+                    where: { venueId, createdAt: { gte: start, lt: end }, status: { not: 'CANCELLED' } },
+                    _count: true,
+                    _sum: { totalCents: true },
+                }),
+                tx.order.count({ where: { venueId, createdAt: { gte: start, lt: end }, status: 'CANCELLED' } }),
+                tx.orderItem.groupBy({
+                    by: ['menuItemId'],
+                    where: { order: { venueId, createdAt: { gte: start, lt: end }, status: { not: 'CANCELLED' } } },
+                    _sum: { quantity: true },
+                    orderBy: { _sum: { quantity: 'desc' } },
+                    take: 1,
+                }),
+                tx.$queryRaw<{ hour: number; count: bigint }[]>`
+          SELECT EXTRACT(HOUR FROM "createdAt")::int AS hour, COUNT(*)::bigint AS count
+          FROM "Order"
+          WHERE "venueId" = ${venueId}::uuid AND "createdAt" >= ${start} AND "createdAt" < ${end} AND "status" != 'CANCELLED'
+          GROUP BY hour ORDER BY count DESC LIMIT 1
+        `,
+            ]);
+
+            const grossSalesCents = nonCancelled._sum.totalCents ?? 0;
+            const ordersCount = nonCancelled._count;
+
+            let taxCents: number | null = null;
+            let netSalesCents = grossSalesCents;
+            if (venue.taxRatePercent != null) {
+                taxCents = venue.taxInclusive
+                    ? Math.round(grossSalesCents - grossSalesCents / (1 + venue.taxRatePercent / 100))
+                    : Math.round(grossSalesCents * (venue.taxRatePercent / 100));
+                netSalesCents = venue.taxInclusive ? grossSalesCents - taxCents : grossSalesCents;
+            }
+
+            let bestSellerName: string | null = null;
+            if (bestSeller[0]) {
+                const item = await tx.menuItem.findUnique({ where: { id: bestSeller[0].menuItemId }, select: { name: true } });
+                bestSellerName = item?.name ?? null;
+            }
+
+            return {
+                date: start.toISOString().slice(0, 10),
+                currency: venue.currency,
+                ordersCount,
+                cancelledCount: cancelled,
+                grossSalesCents,
+                netSalesCents,
+                taxCents,
+                taxRatePercent: venue.taxRatePercent,
+                averageOrderValueCents: ordersCount > 0 ? Math.round(grossSalesCents / ordersCount) : 0,
+                bestSellerName,
+                busiestHour: busiestHourRow[0] ? Number(busiestHourRow[0].hour) : null,
+                // Known limitation: orders don't currently track payment method
+                // (cash vs card), so this report can't break sales out by tender
+                // type — flagging rather than fabricating a number.
+                note: 'Payment-method breakdown is not available — orders are not currently tagged by tender type.',
+            };
+        });
+    }
 }

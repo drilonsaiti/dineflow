@@ -46,4 +46,10 @@ export class AnalyticsController {
     getFeedback(@CurrentVenue() scope: { venueId: string }, @Query('since') since?: string) {
         return this.analyticsService.getFeedbackSummary(scope.venueId, this.parseSince(since));
     }
+
+    @Get('z-report')
+    getZReport(@CurrentVenue() scope: { venueId: string }, @Query('date') date?: string) {
+        const parsed = date ? new Date(date) : undefined;
+        return this.analyticsService.getZReport(scope.venueId, parsed);
+    }
 }

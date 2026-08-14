@@ -12,6 +12,7 @@ import { TablesService } from '../tables/tables.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import {MenuService} from "../menu/menu.service";
 import {SubmitFeedbackDto} from "./submit-feedback.dto";
+import {PrinterService} from "../printer/printer.service";
 
 @Injectable()
 export class OrdersService {
@@ -21,6 +22,7 @@ export class OrdersService {
       private readonly tablesService: TablesService,
       private readonly notifications: NotificationsService,
       private readonly menuService: MenuService,
+      private readonly printer: PrinterService,
   ) {}
 
   // ---------- Customer-facing (public, no auth — section 3/11) ----------
@@ -165,6 +167,8 @@ export class OrdersService {
     if (result.stockChanged) {
       await this.menuService.invalidatePublicMenuCache(table.venueId);
     }
+
+    this.printer.printOrderTicket(table.venueId, result.order.id).catch(() => {}); // fire-and-forget, see PrinterService
     return result.order;
   }
 
@@ -338,6 +342,17 @@ export class OrdersService {
         byPerson: Array.from(byPerson.values()),
         grandTotalCents,
       };
+    });
+  }
+
+  async getOneForVenue(venueId: string, orderId: string) {
+    return this.prisma.withVenueScope(venueId, async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } }, table: true },
+      });
+      if (!order || order.venueId !== venueId) throw new NotFoundException('Order not found');
+      return order;
     });
   }
 }

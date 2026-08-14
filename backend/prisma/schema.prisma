@@ -88,6 +88,10 @@ model Venue {
   maxTables                 Int                @default(10)
   maxStaff                  Int                @default(3)
   analyticsHistoryDays      Int                @default(30)
+  taxRatePercent            Float? // null = no tax tracked/shown on the Z-report
+  taxInclusive              Boolean            @default(true) // true = menu prices already include tax (common in EU); false = tax added on top
+  autoPrintTickets          Boolean            @default(false)
+  printerBridgeUrl          String? // optional — see PrinterModule note; points at a local ESC/POS bridge on the venue's network, not this backend itself
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 

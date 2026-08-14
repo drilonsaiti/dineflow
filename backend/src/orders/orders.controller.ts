@@ -70,4 +70,10 @@ export class OrdersController {
   getTableTab(@Param('token') token: string, @Query('session') session: string) {
     return this.ordersService.getTableTab(token, session);
   }
+
+  @Get('venues/:venueId/orders/:orderId')
+  @UseGuards(VenueScopeGuard)
+  getOne(@CurrentVenue() scope: { venueId: string }, @Param('orderId') orderId: string) {
+    return this.ordersService.getOneForVenue(scope.venueId, orderId);
+  }
 }
