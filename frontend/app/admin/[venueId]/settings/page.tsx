@@ -9,14 +9,23 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
     const [webhookUrl, setWebhookUrl] = useState('');
     const [thresholdMinutes, setThresholdMinutes] = useState(10);
     const [saving, setSaving] = useState(false);
+    const [type, setType] = useState('restaurant');
+    const [logoUrl, setLogoUrl] = useState('');
+    const [brandColor, setBrandColor] = useState('#111111');
+    const [currency, setCurrency] = useState('USD');
+    const [timezone, setTimezone] = useState('UTC');
+    const [uploadingLogo, setUploadingLogo] = useState(false);
     const showToast = useToast();
 
     useEffect(() => {
-        api.get<{ staffAlertWebhookUrl: string | null; lateOrderThresholdMinutes: number }>(
-            `/venues/${venueId}`,
-        ).then((venue) => {
+        api.get<any>(`/venues/${venueId}`).then((venue) => {
             setWebhookUrl(venue.staffAlertWebhookUrl ?? '');
             setThresholdMinutes(venue.lateOrderThresholdMinutes);
+            setType(venue.type ?? 'restaurant');
+            setLogoUrl(venue.logoUrl ?? '');
+            setBrandColor(venue.brandColor ?? '#111111');
+            setCurrency(venue.currency ?? 'USD');
+            setTimezone(venue.timezone ?? 'UTC');
         });
     }, [venueId]);
 
@@ -27,6 +36,11 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
             await api.post(`/venues/${venueId}/settings`, {
                 staffAlertWebhookUrl: webhookUrl || undefined,
                 lateOrderThresholdMinutes: thresholdMinutes,
+                type,
+                logoUrl: logoUrl || undefined,
+                brandColor,
+                currency,
+                timezone,
             });
             showToast('Settings saved');
         } catch (err: unknown) {
@@ -36,10 +50,74 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
         }
     }
 
+    async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingLogo(true);
+        try {
+            const token = await (await import('@/lib/supabase')).getAccessToken();
+            const formData = new FormData();
+            formData.append('file', file);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/venues/${venueId}/uploads/image`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+            });
+            if (!res.ok) throw new Error((await res.json()).message ?? 'Upload failed');
+            const { url } = await res.json();
+            setLogoUrl(url);
+        } catch (err: any) {
+            alert(err.message);
+        } finally {
+            setUploadingLogo(false);
+        }
+    }
+
     return (
         <div className="mx-auto max-w-lg p-6">
             <h1 className="text-2xl">Notification settings</h1>
             <form onSubmit={save} className="mt-6 space-y-5">
+                <div>
+                    <h1 className="text-2xl font-semibold">Venue profile</h1>
+                    <div className="mt-4 space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium">Venue type</label>
+                            <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
+                                <option value="restaurant">Restaurant</option>
+                                <option value="cafe">Café</option>
+                                <option value="bar">Bar</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium">Logo</label>
+                            <div className="mt-1 flex items-center gap-3">
+                                {logoUrl ? <img src={logoUrl} alt="" className="h-12 w-12 rounded-full object-cover" /> : <div className="h-12 w-12 rounded-full bg-gray-200" />}
+                                <label className="rounded-md border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">
+                                    {uploadingLogo ? 'Uploading…' : 'Upload logo'}
+                                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                                </label>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <div>
+                                <label className="block text-sm font-medium">Brand color</label>
+                                <input type="color" className="mt-1 h-10 w-16 rounded border border-gray-300" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium">Currency</label>
+                                <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                                    {['DEN','USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD'].map((c) => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-sm font-medium">Timezone</label>
+                                <input className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Europe/Zurich" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div>
                     <label className="block text-sm font-medium text-ink dark:text-white">Staff alert webhook URL</label>
                     <p className="text-xs text-muted mb-1">

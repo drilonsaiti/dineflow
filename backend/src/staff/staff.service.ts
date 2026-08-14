@@ -36,19 +36,32 @@ export class StaffService {
      * then grants venue membership immediately so clicking the link drops
      * them straight into the venue rather than a separate "accept" step. */
     async invite(venueId: string, dto: InviteStaffDto) {
-        const { data, error } = await this.adminClient.auth.admin.inviteUserByEmail(dto.email, {
-            redirectTo: `${process.env.PUBLIC_APP_URL ?? 'http://localhost:3000'}/admin`,
-        });
+        const venue = await this.prisma.venue.findUniqueOrThrow({ where: { id: venueId } });
+        const currentCount = await this.prisma.venueMembership.count({ where: { venueId } });
+        if (currentCount >= venue.maxStaff) {
+            throw new BadRequestException(
+                `Your plan (${venue.plan}) allows up to ${venue.maxStaff} staff members. Upgrade to add more.`,
+            );
+        }
+
+        // Look up first — inviteUserByEmail errors if the email already has an
+        // account (e.g. they're staff at another venue on this platform).
+        const { data: existing } = await this.adminClient.auth.admin.listUsers();
+        const found = existing.users.find((u) => u.email === dto.email);
 
         let userId: string;
-        if (error) {
-            // Most common failure here is "user already registered" — look them
-            // up and add membership instead of treating it as a hard failure.
-            const { data: existing } = await this.adminClient.auth.admin.listUsers();
-            const found = existing.users.find((u) => u.email === dto.email);
-            if (!found) throw new BadRequestException(error.message);
+        if (found) {
+            // Reset their password to the new PIN so the owner's freshly-set PIN
+            // is always the one that works, even if they already had an account.
+            await this.adminClient.auth.admin.updateUserById(found.id, { password: dto.pin });
             userId = found.id;
         } else {
+            const { data, error } = await this.adminClient.auth.admin.createUser({
+                email: dto.email,
+                password: dto.pin,
+                email_confirm: true, // skip the confirmation-email step entirely — owner is vouching for this person directly
+            });
+            if (error || !data.user) throw new BadRequestException(error?.message ?? 'Could not create account');
             userId = data.user.id;
         }
 

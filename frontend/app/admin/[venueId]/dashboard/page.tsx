@@ -43,6 +43,10 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
     const [station, setStation] = useState<string>('');
     const [connected, setConnected] = useState(false);
     const [soundOn, setSoundOn] = useState(true);
+    const [role, setRole] = useState<string | null>(null);
+    const [assignments, setAssignments] = useState<any[]>([]);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [showAllColumns, setShowAllColumns] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     const refresh = useCallback(async () => {
@@ -59,6 +63,14 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
     useEffect(() => {
         refresh();
     }, [refresh]);
+
+    useEffect(() => {
+        api.get<{ role: string }>(`/venues/${venueId}/my-membership`).then((r) => setRole(r.role));
+        api.get<any[]>(`/venues/${venueId}/table-assignments`).then(setAssignments);
+        import('@/lib/supabase').then(({ supabase }) =>
+            supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null)),
+        );
+    }, [venueId]);
 
     useEffect(() => {
         const socket = getSocket();
@@ -121,13 +133,20 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
     }
 
     const visibleOrders = orders.filter((o) => COLUMNS.some((c) => c.status === o.status));
-
+    const isWaiter = role === 'STAFF';
+    const visibleColumns = isWaiter && !showAllColumns ? COLUMNS.filter((c) => c.status === 'READY') : COLUMNS;
     return (
         <div className="flex h-screen flex-col bg-canvas text-ink dark:bg-surface-dark dark:text-white">
             <audio ref={audioRef} src="/new-order.mp3" preload="auto" />
 
             <header className="flex items-center justify-between border-b border-hairline px-4 py-3 dark:border-gray-800">
                 <h1 className="text-lg">Order board</h1>
+                {isWaiter && (
+                    <label className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={showAllColumns} onChange={(e) => setShowAllColumns(e.target.checked)} />
+                        Show all columns
+                    </label>
+                )}
                 <div className="flex items-center gap-4 text-sm">
             <span className={`flex items-center gap-1.5 font-medium ${connected ? 'text-success' : 'text-error'}`}>
                 <span className={`h-2 w-2 rounded-full ${connected ? 'bg-success' : 'bg-error'}`} />
@@ -152,9 +171,25 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
                 </div>
             </header>
             <TableRequestsPanel venueId={venueId} />
+            {isWaiter && (
+                <div className="flex gap-2 overflow-x-auto border-b border-gray-800 px-4 py-2">
+                    {assignments
+                        .filter((a) => a.userId === currentUserId)
+                        .map((a) => (
+                            <span key={a.tableId} className="shrink-0 rounded-full bg-brand/20 px-3 py-1 text-xs font-medium text-brand">
+                {a.table.label}
+              </span>
+                        ))}
+                    {assignments.filter((a) => a.userId === currentUserId).length === 0 && (
+                        <a href={`/admin/${venueId}/tables-live`} className="text-xs text-gray-500 underline">
+                            Claim a table →
+                        </a>
+                    )}
+                </div>
+            )}
             <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="grid flex-1 grid-cols-4 gap-3 overflow-hidden p-3">
-                    {COLUMNS.map((col) => {
+                <div className={`grid flex-1 gap-3 overflow-hidden p-3 grid-cols-${visibleColumns.length}`}>
+                    {visibleColumns.map((col) => {
                         const columnOrders = visibleOrders
                             .filter((o) => o.status === col.status)
                             .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -184,9 +219,16 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
                                                             className={dragSnapshot.isDragging ? 'opacity-80' : ''}
                                                         >
                                                             <OrderCard
+                                                                key={order.id}
                                                                 order={order}
+                                                                currency={currency}
                                                                 lateThresholdMinutes={LATE_THRESHOLD_MINUTES}
                                                                 onAdvance={(to) => advance(order, to)}
+                                                                onCancel={() => advance(order, 'CANCELLED')}
+                                                                canServe={
+                                                                    role !== 'STAFF' ||
+                                                                    assignments.some((a) => a.tableId === (order as any).tableId && a.userId === currentUserId)
+                                                                }
                                                             />
                                                         </div>
                                                     )}

@@ -86,6 +86,7 @@ model Venue {
   stripeSubscriptionId      String?
   lateOrderThresholdMinutes Int                @default(10)
   maxTables                 Int                @default(10)
+  maxStaff                  Int                @default(3)
   analyticsHistoryDays      Int                @default(30)
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt

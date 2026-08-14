@@ -21,7 +21,7 @@ export class OrdersController {
 
   // ----- Public customer flow (no auth — zero login by design) -----
 
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Public()
   @Post('public/orders')
   placeOrder(@Body() dto: PlaceOrderDto) {
@@ -45,12 +45,12 @@ export class OrdersController {
   @Patch('venues/:venueId/orders/:orderId/status')
   @UseGuards(VenueScopeGuard)
   advanceStatus(
-    @CurrentVenue() scope: { venueId: string },
-    @Param('orderId') orderId: string,
-    @Body() dto: AdvanceStatusDto,
-    @CurrentUser() user: AuthenticatedUser,
+      @CurrentVenue() scope: { venueId: string; role: string },
+      @Param('orderId') orderId: string,
+      @Body() dto: AdvanceStatusDto,
+      @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.ordersService.advanceStatus(scope.venueId, orderId, dto.status, user.id);
+    return this.ordersService.advanceStatus(scope.venueId, orderId, dto.status, user.id, scope.role);
   }
 
   @Get('venues/:venueId/tables/:tableId/orders')

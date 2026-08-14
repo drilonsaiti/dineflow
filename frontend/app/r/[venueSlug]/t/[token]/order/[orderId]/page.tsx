@@ -51,6 +51,7 @@ export default function OrderTrackingPage({
     const [comment, setComment] = useState('');
     const [feedbackSent, setFeedbackSent] = useState(false);
     const [submittingFeedback, setSubmittingFeedback] = useState(false);
+    const [activeRequests, setActiveRequests] = useState<any[]>([]);
 
     async function fetchOrder() {
         try {
@@ -71,6 +72,17 @@ export default function OrderTrackingPage({
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [orderId]);
+
+    useEffect(() => {
+        const poll = () =>
+            fetch(`${API_URL}/public/table-requests/${token}/active`)
+                .then((r) => r.json())
+                .then(setActiveRequests)
+                .catch(() => {});
+        poll();
+        const id = setInterval(poll, 5000);
+        return () => clearInterval(id);
+    }, [token]);
 
     // Stop polling once the order reaches a terminal state — no point
     // hammering the endpoint for an order that will never change again.
@@ -183,6 +195,15 @@ export default function OrderTrackingPage({
                     <span>{formatCents(order.totalCents)}</span>
                 </div>
             </div>
+
+            {activeRequests.some((r) => r.type === 'REQUEST_BILL_CASH') && (
+                <div className="mt-4 rounded-lg bg-blue-50 p-3 text-center text-sm text-blue-700">
+                    Someone at this table already requested the bill
+                    {activeRequests.find((r) => r.type === 'REQUEST_BILL_CASH')?.guestCount &&
+                        ` — splitting ${activeRequests.find((r) => r.type === 'REQUEST_BILL_CASH').guestCount} ways`}
+                    . Tap below to adjust.
+                </div>
+            )}
 
             <div className="mt-6 grid grid-cols-2 gap-3">
                 <button

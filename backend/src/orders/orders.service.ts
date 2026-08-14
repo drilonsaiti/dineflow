@@ -43,6 +43,17 @@ export class OrdersService {
   async placeOrder(dto: PlaceOrderDto) {
     const table = await this.tablesService.resolveByToken(dto.tableToken);
 
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60_000);
+    const recentOrderCount = await this.prisma.order.count({
+      where: { tableId: table.id, createdAt: { gte: twoMinutesAgo } },
+    });
+
+    if (recentOrderCount >= 5) {
+      throw new BadRequestException(
+          'Too many orders placed for this table recently. Please wait a moment or ask a staff member for help.',
+      );
+    }
+    
     const result = await this.prisma.withVenueScope(table.venueId, async (tx) => {
       const cartItems = await tx.tableCartItem.findMany({ where: { tableId: table.id } });
       if (cartItems.length === 0) {
@@ -209,16 +220,15 @@ export class OrdersService {
   }
 
   async advanceStatus(
-    venueId: string,
-    orderId: string,
-    toStatus: OrderStatus,
-    staffUserId: string,
+      venueId: string,
+      orderId: string,
+      toStatus: OrderStatus,
+      staffUserId: string,
+      staffRole: string,
   ) {
     return this.prisma.withVenueScope(venueId, async (tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId } });
-      if (!order || order.venueId !== venueId) {
-        throw new NotFoundException('Order not found.');
-      }
+      if (!order || order.venueId !== venueId) throw new NotFoundException('Order not found.');
 
       try {
         assertValidTransition(order.status, toStatus);
@@ -226,31 +236,28 @@ export class OrdersService {
         throw new BadRequestException((e as Error).message);
       }
 
+      // Marking SERVED is the one action that's claim-gated: a waiter can
+      // only serve a table they've claimed, so accountability for "who
+      // actually walked the food out" stays meaningful. Owners/managers
+      // bypass this — they're allowed to cover any table.
+      if (toStatus === OrderStatus.SERVED && !['OWNER', 'MANAGER'].includes(staffRole)) {
+        const assignment = await tx.staffTableAssignment.findUnique({ where: { tableId: order.tableId } });
+        if (!assignment || assignment.userId !== staffUserId) {
+          throw new BadRequestException('You can only mark orders served at a table you\'ve claimed.');
+        }
+      }
+
       const updated = await tx.order.update({
         where: { id: orderId },
-        data: {
-          status: toStatus,
-          statusEvents: { create: { status: toStatus, changedByUserId: staffUserId } },
-        },
+        data: { status: toStatus, statusEvents: { create: { status: toStatus, changedByUserId: staffUserId } } },
         include: {
           items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
           table: true,
-          statusEvents: {
-            orderBy: { changedAt: 'desc' },
-            take: 1,
-            include: { changedBy: { select: { id: true, email: true, fullName: true } } },
-          },
+          statusEvents: { orderBy: { changedAt: 'desc' }, take: 1, include: { changedBy: { select: { id: true, email: true, fullName: true } } } },
         },
       });
 
       this.gateway.emitOrderEvent(venueId, 'order_updated', updated);
-
-      if (toStatus === OrderStatus.READY) {
-        // Fire-and-forget on purpose — a failed/slow SMS provider should
-        // never block or fail the actual status transition staff care
-        // about; NotificationLog captures the outcome for later review.
-        this.notifications.notifyCustomerOrderReady(venueId, orderId).catch(() => {});
-      }
       return updated;
     });
   }

@@ -11,6 +11,7 @@ type Props = {
     venueId: string;
     categoryId: string;
     existing?: MenuItem;
+    venueTags: { id: string; label: string; kind: string }[];
     onDone: () => void;
 };
 
@@ -23,12 +24,7 @@ type DraftGroup = Omit<ModifierGroup, 'id' | 'options'> & {
         )[];
 };
 
-export function ItemForm({
-                             venueId,
-                             categoryId,
-                             existing,
-                             onDone,
-                         }: Props) {
+export function ItemForm({ venueId, categoryId, existing, venueTags, onDone }: Props) {
     const [name, setName] = useState(existing?.name ?? '');
     const [description, setDescription] = useState(
         existing?.description ?? ''
@@ -39,6 +35,10 @@ export function ItemForm({
 
     const [groups, setGroups] = useState<DraftGroup[]>(
         existing?.modifierGroups.map((g) => ({ ...g })) ?? []
+    );
+
+    const [selectedTagIds, setSelectedTagIds] = useState<string[]>(
+        existing?.tags.map((t) => t.tag.id) ?? [],
     );
 
     const [submitting, setSubmitting] = useState(false);
@@ -151,6 +151,7 @@ export function ItemForm({
                 })),
                 stockCount: stockCount === '' ? null : Number(stockCount),
                 lowStockThreshold: lowStockThreshold === '' ? null : Number(lowStockThreshold),
+                tagIds: selectedTagIds,
             };
 
             if (existing) {
@@ -534,6 +535,29 @@ export function ItemForm({
                     </div>
                 ))}
             </div>
+
+            {venueTags.length > 0 && (
+                <div>
+                    <p className="text-xs font-medium text-gray-500">Tags</p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                        {venueTags.map((tag) => {
+                            const checked = selectedTagIds.includes(tag.id);
+                            return (
+                                <button
+                                    key={tag.id}
+                                    type="button"
+                                    onClick={() =>
+                                        setSelectedTagIds((prev) => (checked ? prev.filter((id) => id !== tag.id) : [...prev, tag.id]))
+                                    }
+                                    className={`rounded-full px-3 py-1 text-xs ${checked ? 'bg-brand text-white' : 'bg-gray-100 text-gray-600'}`}
+                                >
+                                    {tag.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="flex gap-2">
                 <button

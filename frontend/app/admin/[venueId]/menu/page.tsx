@@ -9,6 +9,7 @@ import { ItemForm } from '@/components/ItemForm';
 import { Switch } from '@/components/ui/Switch';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useToast } from '@/components/ui/Toast';
+import {TagManager} from "@/components/TagManager";
 
 export default function MenuAdminPage({
                                           params,
@@ -24,7 +25,7 @@ export default function MenuAdminPage({
         categoryId: string;
         item: any;
     } | null>(null);
-
+    const [venueTags, setVenueTags] = useState<any[]>([]);
     const [confirmDeleteItem, setConfirmDeleteItem] = useState<string | null>(null);
     const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<string | null>(null);
 
@@ -49,8 +50,13 @@ export default function MenuAdminPage({
         }
     }
 
+    async function refreshTags() {
+        setVenueTags(await api.get(`/venues/${venueId}/menu/tags`));
+    }
+
     useEffect(() => {
         refresh();
+        refreshTags()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [venueId]);
 
@@ -141,6 +147,9 @@ export default function MenuAdminPage({
                 onCreated={refresh}
             />
 
+            <TagManager venueId={venueId} onChange={refreshTags} />
+
+
             {categories.length === 0 && (
                 <p className="text-muted">
                     No categories yet — add one above to get started.
@@ -178,6 +187,7 @@ export default function MenuAdminPage({
                             <ItemForm
                                 venueId={venueId}
                                 categoryId={category.id}
+                                venueTags={venueTags}
                                 onDone={() => {
                                     setAddingItemTo(null);
                                     refresh();
@@ -193,6 +203,8 @@ export default function MenuAdminPage({
                                             venueId={venueId}
                                             categoryId={category.id}
                                             existing={item}
+                                            venueTags={venueTags}
+
                                             onDone={() => {
                                                 setEditingItem(null);
                                                 refresh();
@@ -322,6 +334,7 @@ export default function MenuAdminPage({
                     await deleteCategory(categoryId);
                 }}
             />
+
         </div>
     );
 }

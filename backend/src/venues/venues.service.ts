@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateVenueDto } from './dto/create-venue.dto';
 import { VenueRole } from '@prisma/client';
 
+const MAX_FREE_VENUES = 1;
+
 function slugify(input: string): string {
   return input
     .toLowerCase()
@@ -20,12 +22,23 @@ export class VenuesService {
    * guard (there's no venue yet to scope to) — every other route on this
    * venue requires the membership row created here. */
   async create(userId: string, dto: CreateVenueDto) {
-    const slug = dto.slug ? slugify(dto.slug) : slugify(dto.name);
-
-    const existing = await this.prisma.venue.findUnique({ where: { slug } });
-    if (existing) {
-      throw new ConflictException(`Slug "${slug}" is already taken`);
+    const ownedCount = await this.prisma.venueMembership.count({
+      where: { userId, role: VenueRole.OWNER },
+    });
+    if (ownedCount >= MAX_FREE_VENUES) {
+      const paidVenue = await this.prisma.venue.findFirst({
+        where: { memberships: { some: { userId, role: VenueRole.OWNER } }, plan: { not: 'FREE' } },
+      });
+      if (!paidVenue) {
+        throw new ConflictException(
+            `Your account already has a venue on the free plan. Upgrade that venue's plan to add another.`,
+        );
+      }
     }
+
+    const slug = dto.slug ? slugify(dto.slug) : slugify(dto.name);
+    const existing = await this.prisma.venue.findUnique({ where: { slug } });
+    if (existing) throw new ConflictException(`Slug "${slug}" is already taken`);
 
     return this.prisma.venue.create({
       data: {
@@ -35,9 +48,7 @@ export class VenuesService {
         brandColor: dto.brandColor,
         currency: dto.currency ?? 'USD',
         timezone: dto.timezone ?? 'UTC',
-        memberships: {
-          create: { userId, role: VenueRole.OWNER },
-        },
+        memberships: { create: { userId, role: VenueRole.OWNER } },
       },
     });
   }

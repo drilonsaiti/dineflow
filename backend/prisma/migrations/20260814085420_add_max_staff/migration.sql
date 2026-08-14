@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Venue" ADD COLUMN     "maxStaff" INTEGER NOT NULL DEFAULT 3;

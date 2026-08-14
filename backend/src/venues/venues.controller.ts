@@ -39,4 +39,10 @@ export class VenuesController {
   ) {
     return this.venuesService.updateSettings(scope.venueId, dto);
   }
+
+  @Get(':venueId/my-membership')
+  @UseGuards(VenueScopeGuard)
+  getMyMembership(@CurrentVenue() scope: { venueId: string; role: string }) {
+    return { role: scope.role };
+  }
 }

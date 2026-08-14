@@ -17,6 +17,7 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
     const { venueId } = use(params);
     const [members, setMembers] = useState<Membership[]>([]);
     const [email, setEmail] = useState('');
+    const [pin, setPin] = useState('');
     const [role, setRole] = useState('STAFF');
     const [inviting, setInviting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -37,8 +38,9 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
         setInviting(true);
         setError(null);
         try {
-            await api.post(`/venues/${venueId}/staff/invite`, { email, role });
+            await api.post(`/venues/${venueId}/staff/invite`, { email, role, pin });
             setEmail('');
+            setPin('');
             refresh();
             showToast('Invite sent');
         } catch (err: any) {
@@ -61,6 +63,10 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
     return (
         <div className="mx-auto max-w-xl p-6 space-y-6">
             <h1 className="text-2xl">Staff</h1>
+            <p className="text-xs text-gray-500">
+                Pick a PIN and tell the employee directly (in person, by text) — this is what they'll use to sign in at{' '}
+                <code>/staff-login</code>.
+            </p>
 
             <form onSubmit={invite} className="card-soft flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[180px]">
@@ -88,6 +94,18 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium text-muted">PIN (4-6 digits)</label>
+                    <input
+                        inputMode="numeric"
+                        required
+                        maxLength={6}
+                        className="input mt-1 w-28 text-center tracking-widest"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                        placeholder="1234"
+                    />
                 </div>
                 <button type="submit" disabled={inviting} className="btn-primary">
                     {inviting ? 'Inviting…' : 'Send invite'}

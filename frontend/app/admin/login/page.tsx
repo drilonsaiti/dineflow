@@ -24,6 +24,9 @@ export default function LoginPage() {
     return (
         <div className="mx-auto max-w-sm p-8">
             <h1 className="text-xl">Sign in or create your account</h1>
+            <a href="/staff-login" className="mt-6 block text-center text-sm text-gray-500 underline">
+                Staff member with a PIN? Sign in here instead
+            </a>
             <p className="mt-1 text-sm text-muted">
                 Enter your email — we'll send a link. First time here? That same link creates your account.
             </p>

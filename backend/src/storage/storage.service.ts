@@ -50,4 +50,6 @@ export class StorageService {
         const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
         return data.publicUrl;
     }
+
+
 }

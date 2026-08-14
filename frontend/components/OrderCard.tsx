@@ -10,10 +10,14 @@ export function OrderCard({
                               order,
                               lateThresholdMinutes,
                               onAdvance,
+                              canServe = true,
                           }: {
     order: StaffOrder;
+    currency: string;
     lateThresholdMinutes: number;
     onAdvance: (toStatus: any) => void;
+    onCancel: () => void;
+    canServe?: boolean;
 }) {
     // Re-render every 30s so elapsed time and the "late" flag stay accurate
     // without needing a new order event.
@@ -79,7 +83,9 @@ export function OrderCard({
                 {next && (
                     <button
                         onClick={() => onAdvance(next)}
-                        className="btn-primary flex-[2] text-sm"
+                        disabled={next === 'SERVED' && !canServe}
+                        title={next === 'SERVED' && !canServe ? "Claim this table to mark it served" : undefined}
+                        className="min-h-[44px] flex-[2] rounded-md bg-brand text-sm font-semibold disabled:opacity-40"
                     >
                         {next === 'VIEWED' && 'Mark seen →'}
                         {next === 'PREPARING' && 'Start preparing →'}

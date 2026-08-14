@@ -39,4 +39,10 @@ export class TableRequestsController {
     resolve(@CurrentVenue() scope: { venueId: string }, @Param('id') id: string) {
         return this.service.resolve(scope.venueId, id);
     }
+
+    @Public()
+    @Get('public/table-requests/:token/active')
+    getActive(@Param('token') token: string) {
+        return this.service.getActiveForTable(token);
+    }
 }
