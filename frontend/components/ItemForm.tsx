@@ -46,6 +46,8 @@ export function ItemForm({ venueId, categoryId, existing, venueTags, onDone }: P
     const [uploading, setUploading] = useState(false);
     const [stockCount, setStockCount] = useState(existing?.stockCount?.toString() ?? '');
     const [lowStockThreshold, setLowStockThreshold] = useState(existing?.lowStockThreshold?.toString() ?? '');
+    const [availableFrom, setAvailableFrom] = useState(existing?.availableFrom ?? '');
+    const [availableTo, setAvailableTo] = useState(existing?.availableTo ?? '');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const showToast = useToast();
@@ -152,6 +154,8 @@ export function ItemForm({ venueId, categoryId, existing, venueTags, onDone }: P
                 stockCount: stockCount === '' ? null : Number(stockCount),
                 lowStockThreshold: lowStockThreshold === '' ? null : Number(lowStockThreshold),
                 tagIds: selectedTagIds,
+                availableFrom: availableFrom || undefined,
+                availableTo: availableTo || undefined,
             };
 
             if (existing) {
@@ -286,6 +290,17 @@ export function ItemForm({ venueId, categoryId, existing, venueTags, onDone }: P
                         placeholder="12.50"
                         inputMode="decimal"
                     />
+                </div>
+            </div>
+
+            <div className="flex gap-3">
+                <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500">Available from (optional)</label>
+                    <input type="time" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} />
+                </div>
+                <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-500">Available until</label>
+                    <input type="time" className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={availableTo} onChange={(e) => setAvailableTo(e.target.value)} />
                 </div>
             </div>
 

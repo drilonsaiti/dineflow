@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {IsIn, IsInt, IsOptional, IsString, Max, Min} from 'class-validator';
 
 export class CreateTableRequestDto {
     @IsString()
@@ -11,4 +11,13 @@ export class CreateTableRequestDto {
     @IsInt()
     @Min(1)
     guestCount?: number;
+
+    @IsString()
+    sessionToken!: string;
+
+    @IsOptional()
+    @IsInt()
+    @Min(0)
+    @Max(100)
+    tipPercent?: number;
 }

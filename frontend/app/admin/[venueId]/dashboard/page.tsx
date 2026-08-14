@@ -221,7 +221,8 @@ export default function StaffDashboardPage({ params }: { params: Promise<{ venue
                                                             <OrderCard
                                                                 key={order.id}
                                                                 order={order}
-                                                                currency={currency}
+                                                                // TODO CHANGE WITH venue currency
+                                                                currency="USD"
                                                                 lateThresholdMinutes={LATE_THRESHOLD_MINUTES}
                                                                 onAdvance={(to) => advance(order, to)}
                                                                 onCancel={() => advance(order, 'CANCELLED')}

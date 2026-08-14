@@ -287,6 +287,12 @@ export class MenuService {
             return { venue, categories };
         });
 
+        for (const category of result.categories) {
+            for (const item of category.items as any[]) {
+                item.isAvailable = item.isAvailable && this.isWithinSchedule(item.availableFrom, item.availableTo);
+            }
+        }
+
         // Short TTL (15s), not "forever until invalidated" — a customer
         // scanning mid-write-window sees a menu at most 15s stale even if an
         // invalidation call below somehow fails to fire, rather than serving
@@ -298,5 +304,20 @@ export class MenuService {
     async invalidatePublicMenuCache(venueId: string) {
         const venue = await this.prisma.venue.findUnique({ where: { id: venueId }, select: { slug: true } });
         if (venue) await this.cache.del(`public-menu:${venue.slug}`);
+    }
+
+    /** Overnight-safe window check — e.g. availableFrom "22:00", availableTo
+     * "02:00" correctly covers 23:30 and 01:00 but not 15:00. */
+    private isWithinSchedule(availableFrom: string | null, availableTo: string | null): boolean {
+        if (!availableFrom || !availableTo) return true;
+        const now = new Date();
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const [fh, fm] = availableFrom.split(':').map(Number);
+        const [th, tm] = availableTo.split(':').map(Number);
+        const fromMinutes = fh * 60 + fm;
+        const toMinutes = th * 60 + tm;
+        return fromMinutes <= toMinutes
+            ? nowMinutes >= fromMinutes && nowMinutes <= toMinutes
+            : nowMinutes >= fromMinutes || nowMinutes <= toMinutes; // overnight wrap
     }
 }

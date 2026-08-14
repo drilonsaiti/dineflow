@@ -11,20 +11,28 @@ export class TableRequestsService {
         private readonly gateway: OrdersGateway,
     ) {}
 
-    async create(tableToken: string, type: 'CALL_WAITER' | 'REQUEST_BILL_CASH', guestCount?: number) {
+    async create(
+        tableToken: string,
+        type: 'CALL_WAITER' | 'REQUEST_BILL_CASH',
+        sessionToken: string,
+        guestCount?: number,
+        tipPercent?: number,
+    ) {
         const table = await this.tablesService.resolveByToken(tableToken);
+        await this.tablesService.assertSessionValid(table.id, sessionToken);
+
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
+            // Merge into an existing pending/acknowledged bill request for this
+            // table rather than spawning a duplicate — a second guest asking to
+            // split differently is updating the same bill, not requesting a
+            // second one.
             if (type === 'REQUEST_BILL_CASH') {
-                // Merge into an existing pending/acknowledged bill request for this
-                // table rather than spawning a duplicate — a second guest asking
-                // to split differently is updating the same bill, not requesting
-                // a second one (see the design note above).
                 const existing = await tx.tableRequest.findFirst({
                     where: { tableId: table.id, type: 'REQUEST_BILL_CASH', status: { not: 'RESOLVED' } },
                 });
                 if (existing) {
-                    const totalCents = existing.totalCentsAtRequest ?? 0;
                     const mergedGuestCount = guestCount ?? existing.guestCount ?? undefined;
+                    const totalCents = existing.totalCentsAtRequest ?? 0;
                     const perPersonCentsAtRequest = mergedGuestCount ? Math.round(totalCents / mergedGuestCount) : null;
                     const updated = await tx.tableRequest.update({
                         where: { id: existing.id },
@@ -38,6 +46,7 @@ export class TableRequestsService {
 
             let totalCentsAtRequest: number | undefined;
             let perPersonCentsAtRequest: number | undefined;
+
             if (type === 'REQUEST_BILL_CASH') {
                 const startOfDay = new Date();
                 startOfDay.setHours(0, 0, 0, 0);
@@ -45,7 +54,8 @@ export class TableRequestsService {
                     where: { venueId: table.venueId, tableId: table.id, createdAt: { gte: startOfDay }, status: { not: 'CANCELLED' } },
                     _sum: { totalCents: true },
                 });
-                totalCentsAtRequest = agg._sum.totalCents ?? 0;
+                const baseTotal = agg._sum.totalCents ?? 0;
+                totalCentsAtRequest = tipPercent ? Math.round(baseTotal * (1 + tipPercent / 100)) : baseTotal;
                 if (guestCount) perPersonCentsAtRequest = Math.round(totalCentsAtRequest / guestCount);
             }
 
@@ -97,6 +107,11 @@ export class TableRequestsService {
                 data: { status: 'RESOLVED', resolvedAt: new Date() },
                 include: { table: true },
             });
+            if (updated.type === 'REQUEST_BILL_CASH') {
+                // The visit is over — end the session so any link/screenshot from
+                // this sitting stops working, and the next diners get a fresh one.
+                await this.tablesService.closeActiveSession(updated.tableId);
+            }
             this.gateway.emitTableRequestEvent(venueId, 'table_request_updated', updated);
             return updated;
         });

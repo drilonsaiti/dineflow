@@ -101,6 +101,7 @@ model Venue {
   tableRequests    TableRequest[]
   tableCartItems   TableCartItem[]
   staffAssignments StaffTableAssignment[]
+  tableSessions    TableSession[]
 }
 
 // ---------- Menu ----------
@@ -144,6 +145,8 @@ model MenuItem {
   photoUrl          String?
   priceCents        Int
   isAvailable       Boolean  @default(true)
+  availableFrom     String? // "HH:MM" 24h, venue-local time — null = always available (subject to isAvailable/stock as before)
+  availableTo       String? // "HH:MM" — if availableFrom > availableTo, treated as an overnight window (e.g. 22:00–02:00)
   displayOrder      Int      @default(0)
   dineInOnly        Boolean  @default(false)
   takeawayOnly      Boolean  @default(false)
@@ -237,6 +240,7 @@ model Table {
   tableRequests  TableRequest[]
   tableCartItems TableCartItem[]
   assignment     StaffTableAssignment?
+  tableSessions  TableSession[]
 
   @@index([venueId])
 }
@@ -285,6 +289,7 @@ model OrderItem {
   note           String?
   unitPriceCents Int
   lineTotalCents Int
+  addedByLabel   String?
 
   order     Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItem  MenuItem            @relation(fields: [menuItemId], references: [id])
@@ -433,4 +438,25 @@ model StaffTableAssignment {
   venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
   table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum TableSessionStatus {
+  ACTIVE
+  CLOSED
+}
+
+model TableSession {
+  id           String             @id @default(uuid())
+  venueId      String             @db.Uuid
+  tableId      String             @db.Uuid
+  sessionToken String             @unique @default(uuid())
+  status       TableSessionStatus @default(ACTIVE)
+  createdAt    DateTime           @default(now())
+  closedAt     DateTime?
+  expiresAt    DateTime?
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@index([tableId, status])
 }

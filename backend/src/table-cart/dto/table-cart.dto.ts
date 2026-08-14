@@ -22,6 +22,9 @@ export class AddCartItemDto {
     @IsArray()
     @IsString({ each: true })
     modifierOptionIds!: string[];
+
+    @IsString()
+    sessionToken!: string;
 }
 
 export class UpdateCartItemDto {

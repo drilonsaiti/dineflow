@@ -4,7 +4,7 @@ import {
     IsBoolean,
     IsInt,
     IsOptional,
-    IsString,
+    IsString, Matches,
     Max,
     MaxLength,
     Min,
@@ -119,6 +119,14 @@ export class CreateMenuItemDto {
     @IsInt()
     @Min(0)
     lowStockThreshold?: number;
+
+    @IsOptional()
+    @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'availableFrom must be HH:MM' })
+    availableFrom?: string;
+
+    @IsOptional()
+    @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'availableTo must be HH:MM' })
+    availableTo?: string;
 }
 
 export class UpdateMenuItemDto extends CreateMenuItemDto {

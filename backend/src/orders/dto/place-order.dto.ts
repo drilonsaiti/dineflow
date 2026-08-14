@@ -15,4 +15,7 @@ export class PlaceOrderDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsString()
+  sessionToken!: string;
 }

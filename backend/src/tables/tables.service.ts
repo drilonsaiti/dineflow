@@ -237,6 +237,60 @@ export class TablesService {
         return table;
     }
 
+    /** Returns the table's current active session, creating one if none
+     * exists (or the existing one has expired). Called every time the
+     * customer landing endpoint is hit — a legitimate diner scanning the
+     * physical QR always gets a valid session transparently; nothing here
+     * requires them to do anything differently. */
+    async getOrCreateSession(tableId: string, venueId: string) {
+        const existing = await this.prisma.tableSession.findFirst({
+            where: { tableId, status: 'ACTIVE' },
+        });
+
+        if (existing) {
+            if (!existing.expiresAt || existing.expiresAt > new Date()) return existing;
+            // Expired but never explicitly closed (e.g. nobody requested the
+            // bill) — close it now so a stale session never lingers as "active".
+            await this.prisma.tableSession.update({
+                where: { id: existing.id },
+                data: { status: 'CLOSED', closedAt: new Date() },
+            });
+        }
+
+        return this.prisma.tableSession.create({
+            data: {
+                venueId,
+                tableId,
+                expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4h backstop
+            },
+        });
+    }
+
+    /** The gate every cart/order/table-request write goes through. Throws a
+     * clear, friendly error (not a generic 403) if the session is missing,
+     * mismatched, closed, or expired — all of which mean "this link is no
+     * longer valid for ordering", the exact case this feature exists for. */
+    async assertSessionValid(tableId: string, sessionToken: string | undefined) {
+        if (!sessionToken) {
+            throw new GoneException('Your ordering session has expired. Please rescan the table QR code.');
+        }
+        const session = await this.prisma.tableSession.findUnique({ where: { sessionToken } });
+        const expired = session?.expiresAt && session.expiresAt < new Date();
+        if (!session || session.tableId !== tableId || session.status !== 'ACTIVE' || expired) {
+            throw new GoneException('Your ordering session has expired. Please rescan the table QR code.');
+        }
+    }
+
+    /** Called when a table's bill is settled — ends the visit so any
+     * previously-shared link/screenshot for this table stops working from
+     * this point on, and the next diners get a brand-new session. */
+    async closeActiveSession(tableId: string) {
+        await this.prisma.tableSession.updateMany({
+            where: { tableId, status: 'ACTIVE' },
+            data: { status: 'CLOSED', closedAt: new Date() },
+        });
+    }
+
     private qrFilename(table: { label: string; area?: { name: string } | null }, ext: 'png' | 'svg'): string {
         const parts = [table.area?.name, table.label].filter(Boolean);
         const safe = parts.join('-').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();

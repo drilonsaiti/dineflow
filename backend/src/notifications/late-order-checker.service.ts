@@ -27,30 +27,56 @@ export class LateOrderCheckerService {
     @Cron(CronExpression.EVERY_MINUTE)
     async checkForLateOrders() {
         const venues = await this.prisma.venue.findMany({
-            where: { staffAlertWebhookUrl: { not: null } }, // skip venues that haven't configured alerting at all
+            where: { staffAlertWebhookUrl: { not: null } },
             select: { id: true, lateOrderThresholdMinutes: true },
         });
 
         for (const venue of venues) {
-            const cutoff = new Date(Date.now() - venue.lateOrderThresholdMinutes * 60_000);
+            await this.checkLateOrders(venue.id, venue.lateOrderThresholdMinutes);
+            await this.checkStaleTableRequests(venue.id, venue.lateOrderThresholdMinutes);
+        }
+    }
 
-            const lateOrders = await this.prisma.order.findMany({
-                where: {
-                    venueId: venue.id,
-                    status: { in: [OrderStatus.RECEIVED, OrderStatus.VIEWED, OrderStatus.PREPARING] },
-                    createdAt: { lt: cutoff },
-                },
-                select: { id: true },
+    private async checkLateOrders(venueId: string, thresholdMinutes: number) {
+        const cutoff = new Date(Date.now() - thresholdMinutes * 60_000);
+        const lateOrders = await this.prisma.order.findMany({
+            where: {
+                venueId,
+                status: { in: [OrderStatus.RECEIVED, OrderStatus.VIEWED, OrderStatus.PREPARING] },
+                createdAt: { lt: cutoff },
+            },
+            select: { id: true },
+        });
+
+        for (const order of lateOrders) {
+            const alreadyNotified = await this.prisma.notificationLog.findFirst({
+                where: { orderId: order.id, kind: 'STAFF_ORDER_LATE', status: 'sent' },
             });
+            if (alreadyNotified) continue;
+            await this.notifications.notifyStaffOrderLate(venueId, order.id);
+        }
+    }
 
-            for (const order of lateOrders) {
-                const alreadyNotified = await this.prisma.notificationLog.findFirst({
-                    where: { orderId: order.id, kind: 'STAFF_ORDER_LATE', status: 'sent' },
-                });
-                if (alreadyNotified) continue;
+    /** A "call waiter" or "bring the bill" left unacknowledged past the
+     * threshold is arguably more urgent than a slow kitchen ticket — a guest
+     * is actively waiting on staff attention, not food prep. Reuses the same
+     * threshold and webhook rather than adding a second configurable value,
+     * since in practice venues want both alerted on roughly the same
+     * urgency window. */
+    private async checkStaleTableRequests(venueId: string, thresholdMinutes: number) {
+        const cutoff = new Date(Date.now() - thresholdMinutes * 60_000);
+        const stale = await this.prisma.tableRequest.findMany({
+            where: { venueId, status: 'PENDING', createdAt: { lt: cutoff } },
+            include: { table: true },
+        });
 
-                await this.notifications.notifyStaffOrderLate(venue.id, order.id);
-            }
+        for (const request of stale) {
+            const alreadyNotified = await this.prisma.notificationLog.findFirst({
+                where: { orderId: request.id, kind: 'STAFF_ORDER_LATE', status: 'sent' },
+            });
+            if (alreadyNotified) continue;
+
+            await this.notifications.notifyStaffTableRequestStale(venueId, request.id, request.table.label, request.type);
         }
     }
 }

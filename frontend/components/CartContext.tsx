@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { getSessionToken } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 const POLL_INTERVAL_MS = 3000; // shared cart — other devices at the table can add/remove any time
@@ -79,13 +80,18 @@ export function CartProvider({ token, children }: { token: string; children: Rea
         await fetch(`${API_URL}/public/table-cart`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tableToken: token, addedByLabel: guestName || undefined, ...line }),
+            body: JSON.stringify({
+                tableToken: token,
+                sessionToken: getSessionToken(token),
+                addedByLabel: guestName || undefined,
+                ...line,
+            }),
         });
         await refresh();
     }
 
     async function updateQuantity(itemId: string, quantity: number) {
-        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}`, {
+        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ quantity }),
@@ -94,7 +100,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }
 
     async function updateNote(itemId: string, note: string) {
-        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}`, {
+        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ note }),
@@ -103,7 +109,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }
 
     async function removeLine(itemId: string) {
-        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}`, { method: 'DELETE' });
+        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, { method: 'DELETE' });
         await refresh();
     }
 

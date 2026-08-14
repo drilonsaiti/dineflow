@@ -84,4 +84,27 @@ export class NotificationsService {
             data: { venueId, orderId: orderId ?? undefined, kind, channel, recipient, status, detail },
         });
     }
+
+    async notifyStaffTableRequestStale(venueId: string, requestId: string, tableLabel: string, type: string) {
+        const venue = await this.prisma.venue.findUnique({ where: { id: venueId } });
+        if (!venue?.staffAlertWebhookUrl) {
+            await this.log(venueId, requestId, 'STAFF_ORDER_LATE', 'WEBHOOK', 'n/a', 'skipped_not_configured');
+            return;
+        }
+
+        const label = type === 'CALL_WAITER' ? 'called for a waiter' : 'requested the bill';
+        const result = await this.webhookProvider.post(venue.staffAlertWebhookUrl, {
+            text: `🔔 ${tableLabel} ${label} and hasn't been acknowledged yet.`,
+        });
+
+        await this.log(
+            venueId,
+            requestId,
+            'STAFF_ORDER_LATE',
+            'WEBHOOK',
+            venue.staffAlertWebhookUrl,
+            result.ok ? 'sent' : 'failed',
+            result.detail,
+        );
+    }
 }

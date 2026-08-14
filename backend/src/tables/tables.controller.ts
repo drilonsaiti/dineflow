@@ -126,6 +126,7 @@ export class PublicTablesController {
     @Get(':token')
     async resolve(@Param('token') token: string) {
         const table = await this.tablesService.resolveByToken(token);
+        const session = await this.tablesService.getOrCreateSession(table.id, table.venueId);
         return {
             table: { id: table.id, label: table.label },
             venue: {
@@ -136,6 +137,7 @@ export class PublicTablesController {
                 currency: table.venue.currency,
             },
             area: table.area ? { name: table.area.name } : null,
+            sessionToken: session.sessionToken,
         };
     }
 }

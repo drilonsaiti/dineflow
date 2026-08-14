@@ -4,6 +4,7 @@ import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCents } from '@/lib/money';
 import {useCart} from "@/components/CartContext";
+import { getSessionToken } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -26,6 +27,7 @@ export default function CartPage({ params }: { params: Promise<{ venueSlug: stri
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     tableToken: token,
+                    sessionToken: getSessionToken(token),
                     customerName: customerName || undefined,
                     customerPhone: customerPhone || undefined,
                     note: orderNote || undefined,
@@ -35,7 +37,7 @@ export default function CartPage({ params }: { params: Promise<{ venueSlug: stri
 
             if (!res.ok) {
                 if (body.unavailableMenuItemIds) {
-                    await fetch(`${API_URL}/public/table-cart/${token}/bulk-remove`, {
+                    await fetch(`${API_URL}/public/table-cart/${token}/bulk-remove?session=${getSessionToken(token)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ menuItemIds: body.unavailableMenuItemIds }),

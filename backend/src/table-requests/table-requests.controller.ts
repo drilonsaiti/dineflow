@@ -15,7 +15,7 @@ export class TableRequestsController {
     @Public()
     @Post('public/table-requests')
     create(@Body() dto: CreateTableRequestDto) {
-        return this.service.create(dto.tableToken, dto.type, dto.guestCount);
+        return this.service.create(dto.tableToken, dto.type, dto.sessionToken, dto.guestCount, dto.tipPercent);
     }
 
     @Get('venues/:venueId/table-requests')

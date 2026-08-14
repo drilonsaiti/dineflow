@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, Patch, Post, Query} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { TableCartService } from './table-cart.service';
 import { AddCartItemDto, UpdateCartItemDto } from './dto/table-cart.dto';
@@ -26,20 +26,25 @@ export class TableCartController {
     update(
         @Param('token') token: string,
         @Param('itemId') itemId: string,
+        @Query('session') session: string,
         @Body() dto: UpdateCartItemDto,
     ) {
-        return this.cartService.update(token, itemId, dto);
+        return this.cartService.update(token, itemId, session, dto);
     }
 
     @Public()
     @Delete(':token/items/:itemId')
-    remove(@Param('token') token: string, @Param('itemId') itemId: string) {
-        return this.cartService.remove(token, itemId);
+    remove(@Param('token') token: string, @Param('itemId') itemId: string, @Query('session') session: string) {
+        return this.cartService.remove(token, itemId, session);
     }
 
     @Public()
     @Post(':token/bulk-remove')
-    bulkRemove(@Param('token') token: string, @Body('menuItemIds') menuItemIds: string[]) {
-        return this.cartService.removeByMenuItemIds(token, menuItemIds);
+    bulkRemove(
+        @Param('token') token: string,
+        @Query('session') session: string,
+        @Body('menuItemIds') menuItemIds: string[],
+    ) {
+        return this.cartService.removeByMenuItemIds(token, menuItemIds, session);
     }
 }

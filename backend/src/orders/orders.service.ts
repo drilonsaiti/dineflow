@@ -42,7 +42,7 @@ export class OrdersService {
 
   async placeOrder(dto: PlaceOrderDto) {
     const table = await this.tablesService.resolveByToken(dto.tableToken);
-
+    await this.tablesService.assertSessionValid(table.id, dto.sessionToken);
     const twoMinutesAgo = new Date(Date.now() - 2 * 60_000);
     const recentOrderCount = await this.prisma.order.count({
       where: { tableId: table.id, createdAt: { gte: twoMinutesAgo } },
@@ -104,6 +104,7 @@ export class OrdersService {
           menuItemId: menuItem.id,
           quantity: cartItem.quantity,
           note: cartItem.note,
+          addedByLabel: cartItem.addedByLabel,
           unitPriceCents,
           lineTotalCents,
           modifiers: {
@@ -290,6 +291,53 @@ export class OrdersService {
       where: { orderId },
       update: { rating: dto.rating, comment: dto.comment },
       create: { orderId, rating: dto.rating, comment: dto.comment },
+    });
+  }
+
+  /** Public, session-gated view of everything ordered by this table today —
+   * "the tab" — grouped by who added each item (section 1: uses the name
+   * customers already give when adding to the shared cart). Items with no
+   * addedByLabel land in a "Shared" bucket rather than being dropped. */
+
+  async getTableTab(tableToken: string, sessionToken: string) {
+    const table = await this.tablesService.resolveByToken(tableToken);
+    await this.tablesService.assertSessionValid(table.id, sessionToken);
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    return this.prisma.withVenueScope(table.venueId, async (tx) => {
+      const orders = await tx.order.findMany({
+        where: { venueId: table.venueId, tableId: table.id, createdAt: { gte: startOfDay }, status: { not: 'CANCELLED' } },
+        include: { items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } } },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const byPerson = new Map<string, { label: string; items: any[]; totalCents: number }>();
+      let grandTotalCents = 0;
+
+      for (const order of orders) {
+        for (const item of order.items) {
+          const label = item.addedByLabel ?? 'Shared';
+          if (!byPerson.has(label)) byPerson.set(label, { label, items: [], totalCents: 0 });
+          const bucket = byPerson.get(label)!;
+          bucket.items.push({
+            name: item.menuItem.name,
+            quantity: item.quantity,
+            note: item.note,
+            lineTotalCents: item.lineTotalCents,
+            modifiers: item.modifiers.map((m) => m.modifierOption.name),
+          });
+          bucket.totalCents += item.lineTotalCents;
+          grandTotalCents += item.lineTotalCents;
+        }
+      }
+
+      return {
+        orderCount: orders.length,
+        byPerson: Array.from(byPerson.values()),
+        grandTotalCents,
+      };
     });
   }
 }

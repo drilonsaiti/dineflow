@@ -64,4 +64,10 @@ export class OrdersController {
   submitFeedback(@Param('orderId') orderId: string, @Body() dto: SubmitFeedbackDto) {
     return this.ordersService.submitFeedback(orderId, dto);
   }
+
+  @Public()
+  @Get('public/tables/:token/tab')
+  getTableTab(@Param('token') token: string, @Query('session') session: string) {
+    return this.ordersService.getTableTab(token, session);
+  }
 }

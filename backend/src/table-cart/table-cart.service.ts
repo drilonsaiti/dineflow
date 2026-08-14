@@ -57,6 +57,7 @@ export class TableCartService {
 
     async add(dto: AddCartItemDto) {
         const table = await this.tablesService.resolveByToken(dto.tableToken);
+        await this.tablesService.assertSessionValid(table.id, dto.sessionToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const menuItem = await tx.menuItem.findUnique({
                 where: { id: dto.menuItemId },
@@ -84,8 +85,9 @@ export class TableCartService {
         });
     }
 
-    async update(tableToken: string, itemId: string, dto: UpdateCartItemDto) {
+    async update(tableToken: string, itemId: string, sessionToken: string | undefined, dto: UpdateCartItemDto) {
         const table = await this.tablesService.resolveByToken(tableToken);
+        await this.tablesService.assertSessionValid(table.id, sessionToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const item = await tx.tableCartItem.findUnique({ where: { id: itemId } });
             if (!item || item.tableId !== table.id) throw new NotFoundException('Cart item not found');
@@ -101,8 +103,9 @@ export class TableCartService {
         });
     }
 
-    async remove(tableToken: string, itemId: string) {
+    async remove(tableToken: string, itemId: string, sessionToken: string | undefined) {
         const table = await this.tablesService.resolveByToken(tableToken);
+        await this.tablesService.assertSessionValid(table.id, sessionToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const item = await tx.tableCartItem.findUnique({ where: { id: itemId } });
             if (!item || item.tableId !== table.id) throw new NotFoundException('Cart item not found');
@@ -114,8 +117,9 @@ export class TableCartService {
     /** Bulk-remove by menuItemId — used when checkout rejects items that went
      * unavailable between add-to-cart and placement (section 18's edge case,
      * now applied to a shared cart instead of per-browser localStorage). */
-    async removeByMenuItemIds(tableToken: string, menuItemIds: string[]) {
+    async removeByMenuItemIds(tableToken: string, menuItemIds: string[], sessionToken: string | undefined) {
         const table = await this.tablesService.resolveByToken(tableToken);
+        await this.tablesService.assertSessionValid(table.id, sessionToken);
         return this.prisma.withVenueScope(table.venueId, (tx) =>
             tx.tableCartItem.deleteMany({ where: { tableId: table.id, menuItemId: { in: menuItemIds } } }),
         );

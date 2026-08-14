@@ -8,6 +8,7 @@ import { formatCents } from '@/lib/money';
 import { CartProvider, useCart } from '@/components/CartContext';
 import {HeaderCartLink} from "@/components/HeadCartLink";
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { setSessionToken } from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -26,6 +27,7 @@ export interface TableInfo {
     area: {
         name: string;
     } | null;
+    sessionToken: string
 }
 
 export default function TableLayout({
@@ -60,6 +62,7 @@ export default function TableLayout({
             })
             .then((data: TableInfo) => {
                 setInfo(data);
+                setSessionToken(token, data.sessionToken);
             })
             .catch((e: unknown) => {
                 setError(
@@ -119,6 +122,9 @@ export default function TableLayout({
                     <div className="flex items-center gap-2">
                         <ThemeToggle />
                         <HeaderCartLink venueSlug={venueSlug} token={token} info={info}/>
+                        <Link href={`/r/${venueSlug}/t/${token}/tab`} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white" aria-label="View table tab">
+                            🧾
+                        </Link>
                     </div>
                 </header>
 

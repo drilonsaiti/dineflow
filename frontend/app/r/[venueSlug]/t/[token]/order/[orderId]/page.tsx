@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatCents } from '@/lib/money';
 import {Banknote, CheckCircle2, HandMetal, Star} from "lucide-react";
+import {getSessionToken} from "@/lib/session";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 const POLL_INTERVAL_MS = 4000; // short, deliberate delay (section 11) — not a bug
@@ -52,6 +53,7 @@ export default function OrderTrackingPage({
     const [feedbackSent, setFeedbackSent] = useState(false);
     const [submittingFeedback, setSubmittingFeedback] = useState(false);
     const [activeRequests, setActiveRequests] = useState<any[]>([]);
+    const [tipPercent, setTipPercent] = useState(0);
 
     async function fetchOrder() {
         try {
@@ -97,7 +99,14 @@ export default function OrderTrackingPage({
             const res = await fetch(`${API_URL}/public/table-requests`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableToken: token, type, guestCount: count }),
+                body: JSON.stringify({
+                    tableToken: token,
+                    type,
+                    sessionToken: getSessionToken(token),
+                    guestCount: count,
+                    tipPercent
+
+                }),
             });
             setRequestResult(await res.json());
             setShowGuestCount(false);
@@ -204,6 +213,14 @@ export default function OrderTrackingPage({
                     . Tap below to adjust.
                 </div>
             )}
+
+            <div className="mt-3 flex gap-2">
+                {[0, 10, 15, 20].map((p) => (
+                    <button key={p} onClick={() => setTipPercent(p)} className={`rounded-full px-3 py-1.5 text-sm ${tipPercent === p ? 'bg-brand text-white' : 'bg-gray-100'}`}>
+                        {p === 0 ? 'No tip' : `${p}%`}
+                    </button>
+                ))}
+            </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
                 <button

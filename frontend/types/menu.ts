@@ -14,6 +14,8 @@ export interface MenuItem {
     modifierGroups: ModifierGroup[];
     stockCount: number | null;
     lowStockThreshold: number | null;
+    availableFrom?: string
+    availableTo?: string;
 }
 
 export interface MenuCategory {
