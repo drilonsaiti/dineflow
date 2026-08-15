@@ -24,10 +24,22 @@ export class VenuesController {
     return this.venuesService.listForUser(user.id);
   }
 
+  // Full venue record — INCLUDES sensitive fields (staffAlertWebhookUrl,
+  // stripeCustomerId, stripeSubscriptionId). Owner/manager only.
   @Get(':venueId')
   @UseGuards(VenueScopeGuard)
+  @Roles(VenueRole.OWNER, VenueRole.MANAGER)
   getOne(@CurrentVenue() scope: { venueId: string }) {
     return this.venuesService.getById(scope.venueId);
+  }
+
+  // Narrow, safe-for-any-member subset — what the currency hook, settings
+  // display, and any staff-facing screen that just needs "the venue's
+  // name/currency/branding" should call instead of the full record above.
+  @Get(':venueId/basics')
+  @UseGuards(VenueScopeGuard)
+  getBasics(@CurrentVenue() scope: { venueId: string }) {
+    return this.venuesService.getBasics(scope.venueId);
   }
 
   @Post(':venueId/settings')

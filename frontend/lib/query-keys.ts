@@ -3,9 +3,11 @@
 // cache entry for "the same" data.
 export const queryKeys = {
     venue: (venueId: string) => ['venue', venueId] as const,
+    venueBasics: (venueId: string) => ['venue-basics', venueId] as const,
     venuesMine: () => ['venues', 'mine'] as const,
     orders: (venueId: string, station?: string) => ['orders', venueId, station ?? 'all'] as const,
     order: (venueId: string, orderId: string) => ['order', venueId, orderId] as const,
+    ordersForTable: (venueId: string, tableId: string) => ['orders-for-table', venueId, tableId] as const,
     menuCategories: (venueId: string) => ['menu-categories', venueId] as const,
     menuTags: (venueId: string) => ['menu-tags', venueId] as const,
     tables: (venueId: string) => ['tables', venueId] as const,
@@ -14,5 +16,16 @@ export const queryKeys = {
     tableAssignments: (venueId: string) => ['table-assignments', venueId] as const,
     tableRequests: (venueId: string) => ['table-requests', venueId] as const,
     analyticsSummary: (venueId: string) => ['analytics', 'summary', venueId] as const,
+    analyticsAvgReady: (venueId: string) => ['analytics', 'avg-ready', venueId] as const,
+    analyticsBestSellers: (venueId: string) => ['analytics', 'best-sellers', venueId] as const,
+    analyticsBusiestTables: (venueId: string) => ['analytics', 'busiest-tables', venueId] as const,
+    analyticsBusiestHours: (venueId: string) => ['analytics', 'busiest-hours', venueId] as const,
+    analyticsFeedback: (venueId: string) => ['analytics', 'feedback', venueId] as const,
     myMembership: (venueId: string) => ['my-membership', venueId] as const,
+    tableInfo: (token: string) => ['table-info', token] as const,
+    tableCart: (token: string) => ['table-cart', token] as const,
+    tableTab: (token: string) => ['table-tab', token] as const,
+    publicOrder: (orderId: string) => ['public-order', orderId] as const,
+    activeTableRequests: (token: string) => ['active-table-requests', token] as const,
+    estimatedWait: (venueSlug: string) => ['estimated-wait', venueSlug] as const,
 };

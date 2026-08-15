@@ -1,24 +1,13 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
-import { getSessionToken } from '@/lib/session';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
-const POLL_INTERVAL_MS = 3000; // shared cart — other devices at the table can add/remove any time
-
-export interface SharedCartLine {
-    id: string;
-    menuItemId: string;
-    name: string;
-    photoUrl: string | null;
-    isAvailable: boolean;
-    quantity: number;
-    note: string | null;
-    addedByLabel: string | null;
-    modifiers: { modifierOptionId: string; name: string; priceDeltaCents: number }[];
-    unitPriceCents: number;
-    lineTotalCents: number;
-}
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+    useTableCart,
+    useAddCartItem,
+    useUpdateCartItem,
+    useRemoveCartItem,
+    SharedCartLine,
+} from '@/hooks/useTableCart';
 
 interface AddLineInput {
     menuItemId: string;
@@ -36,7 +25,6 @@ interface CartContextValue {
     updateQuantity: (itemId: string, quantity: number) => Promise<void>;
     updateNote: (itemId: string, note: string) => Promise<void>;
     removeLine: (itemId: string) => Promise<void>;
-    refresh: () => Promise<void>;
     subtotalCents: number;
     count: number;
 }
@@ -48,10 +36,12 @@ function guestNameKey(token: string) {
 }
 
 export function CartProvider({ token, children }: { token: string; children: ReactNode }) {
-    const [lines, setLines] = useState<SharedCartLine[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [guestName, setGuestNameState] = useState('');
+    const { data: lines = [], isLoading } = useTableCart(token);
+    const addMutation = useAddCartItem(token);
+    const updateMutation = useUpdateCartItem(token);
+    const removeMutation = useRemoveCartItem(token);
 
+    const [guestName, setGuestNameState] = useState('');
     useEffect(() => {
         setGuestNameState(localStorage.getItem(guestNameKey(token)) ?? '');
     }, [token]);
@@ -61,60 +51,17 @@ export function CartProvider({ token, children }: { token: string; children: Rea
         localStorage.setItem(guestNameKey(token), name);
     }
 
-    const refresh = useCallback(async () => {
-        try {
-            const res = await fetch(`${API_URL}/public/table-cart/${token}`);
-            if (res.ok) setLines(await res.json());
-        } finally {
-            setLoading(false);
-        }
-    }, [token]);
-
-    useEffect(() => {
-        refresh();
-        const interval = setInterval(refresh, POLL_INTERVAL_MS);
-        return () => clearInterval(interval);
-    }, [refresh]);
-
     async function addLine(line: AddLineInput) {
-        if (!navigator.onLine) return;
-        await fetch(`${API_URL}/public/table-cart`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                tableToken: token,
-                sessionToken: getSessionToken(token),
-                addedByLabel: guestName || undefined,
-                ...line,
-            }),
-        });
-        await refresh();
+        await addMutation.mutateAsync({ ...line, addedByLabel: guestName || undefined });
     }
-
     async function updateQuantity(itemId: string, quantity: number) {
-        if (!navigator.onLine) return;
-        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quantity }),
-        });
-        await refresh();
+        await updateMutation.mutateAsync({ itemId, quantity });
     }
-
     async function updateNote(itemId: string, note: string) {
-        if (!navigator.onLine) return;
-        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ note }),
-        });
-        await refresh();
+        await updateMutation.mutateAsync({ itemId, note });
     }
-
     async function removeLine(itemId: string) {
-        if (!navigator.onLine) return;
-        await fetch(`${API_URL}/public/table-cart/${token}/items/${itemId}?session=${getSessionToken(token)}`, { method: 'DELETE' });
-        await refresh();
+        await removeMutation.mutateAsync(itemId);
     }
 
     const subtotalCents = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
@@ -122,7 +69,7 @@ export function CartProvider({ token, children }: { token: string; children: Rea
 
     return (
         <CartContext.Provider
-            value={{ lines, loading, guestName, setGuestName, addLine, updateQuantity, updateNote, removeLine, refresh, subtotalCents, count }}
+            value={{ lines, loading: isLoading, guestName, setGuestName, addLine, updateQuantity, updateNote, removeLine, subtotalCents, count }}
         >
             {children}
         </CartContext.Provider>

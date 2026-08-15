@@ -59,3 +59,11 @@ export function useOrderSocketSync(venueId: string, station?: string) {
         },
     };
 }
+
+export function useOrdersForTable(venueId: string, tableId: string | null) {
+    return useQuery({
+        queryKey: tableId ? queryKeys.ordersForTable(venueId, tableId) : ['orders-for-table', 'none'],
+        queryFn: () => api.get<StaffOrder[]>(`/venues/${venueId}/tables/${tableId}/orders`),
+        enabled: !!tableId, // only fetches once a table is actually selected
+    });
+}

@@ -72,4 +72,24 @@ export class VenuesService {
   async updateSettings(venueId: string, dto: { staffAlertWebhookUrl?: string; lateOrderThresholdMinutes?: number }) {
     return this.prisma.venue.update({ where: { id: venueId }, data: dto });
   }
+
+  async getBasics(venueId: string) {
+    const venue = await this.getById(venueId);
+    return {
+      id: venue.id,
+      name: venue.name,
+      slug: venue.slug,
+      type: venue.type,
+      logoUrl: venue.logoUrl,
+      brandColor: venue.brandColor,
+      currency: venue.currency,
+      timezone: venue.timezone,
+      plan: venue.plan,
+      autoPrintTickets: venue.autoPrintTickets,
+      // Deliberately omitted: staffAlertWebhookUrl, stripeCustomerId,
+      // stripeSubscriptionId, subscriptionStatus, maxTables, maxStaff,
+      // analyticsHistoryDays — billing/ops internals, owner/manager only,
+      // via the full getOne() route instead.
+    };
+  }
 }

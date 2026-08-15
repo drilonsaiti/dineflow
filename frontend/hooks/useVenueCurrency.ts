@@ -10,8 +10,7 @@ import { queryKeys } from '@/lib/query-keys';
 export function useVenueCurrency(venueId: string): string {
     const { data } = useQuery({
         queryKey: queryKeys.venue(venueId),
-        queryFn: () => api.get<{ currency: string }>(`/venues/${venueId}`),
-        staleTime: 5 * 60_000,
+        queryFn: () => api.get<{ currency: string }>(`/venues/${venueId}/basics`),        staleTime: 5 * 60_000,
     });
     return data?.currency ?? 'USD';
 }

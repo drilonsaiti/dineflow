@@ -10,6 +10,7 @@ import {HeaderCartLink} from "@/components/HeadCartLink";
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { setSessionToken } from '@/lib/session';
 import { useOnlineStatus } from '@/lib/online-status';
+import {useTableInfo} from "@/hooks/useTableInfo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -47,43 +48,14 @@ export default function TableLayout({
     }>();
 
     const { venueSlug, token } = params;
-
-    const [info, setInfo] = useState<TableInfo | null>(null);
-    const [error, setError] = useState<string | null>(null);
     const online = useOnlineStatus();
 
-    useEffect(() => {
-        if (!token) return;
-
-        fetch(`${API_URL}/public/tables/${token}`)
-            .then(async (res) => {
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-
-                    throw new Error(
-                        body.message ?? 'This QR code could not be loaded.',
-                    );
-                }
-
-                return res.json();
-            })
-            .then((data: TableInfo) => {
-                setInfo(data);
-                setSessionToken(token, data.sessionToken);
-            })
-            .catch((e: unknown) => {
-                setError(
-                    e instanceof Error
-                        ? e.message
-                        : 'This QR code could not be loaded.',
-                );
-            });
-    }, [token]);
+    const { data: info, error } = useTableInfo(token);
 
     if (error) {
         return (
             <div className="flex min-h-screen flex-col items-center justify-center p-8 text-center">
-                <p className="text-lg font-medium text-ink dark:text-white">{error}</p>
+                <p className="text-lg font-medium text-ink dark:text-white">{(error as Error).message}</p>
 
                 <p className="mt-2 text-sm text-muted">
                     Please ask a staff member for help.

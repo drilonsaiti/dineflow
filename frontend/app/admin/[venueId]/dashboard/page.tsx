@@ -25,6 +25,7 @@ import {
 import { TableRequestsPanel } from '@/components/TableRequestsPanel';
 import { OrderCard } from '@/components/OrderCard';
 import {useVenueCurrency} from "@/hooks/useVenueCurrency";
+import {playNotificationSound} from "@/lib/notification-sound";
 
 export interface StaffOrder {
     id: string;
@@ -116,7 +117,7 @@ export default function StaffDashboardPage({
 
     useEffect(() => {
         api.get<{ autoPrintTickets: boolean }>(
-            `/venues/${venueId}`,
+            `/venues/${venueId}/basics`,
         ).then((v) => setAutoPrint(v.autoPrintTickets));
     }, [venueId]);
 
@@ -157,7 +158,7 @@ export default function StaffDashboardPage({
             onOrderCreated(order);
 
             if (soundOn) {
-                audioRef.current?.play().catch(() => {});
+                playNotificationSound('order');
             }
 
             if (autoPrint) {
@@ -247,11 +248,6 @@ export default function StaffDashboardPage({
 
     return (
         <div className="flex h-screen flex-col bg-canvas text-ink dark:bg-surface-dark dark:text-white">
-            <audio
-                ref={audioRef}
-                src="/new-order.mp3"
-                preload="auto"
-            />
 
             <header className="flex items-center justify-between border-b border-hairline px-4 py-3 dark:border-gray-800">
                 <h1 className="text-lg">

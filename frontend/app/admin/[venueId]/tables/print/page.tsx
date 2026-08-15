@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import {TableRow} from "@/types/table";
+import {useTables} from "@/hooks/useTables";
 
 // Printable sheet: browser-native print (Cmd/Ctrl+P) rather than
 // server-generated PDF — every browser can already turn this into a PDF via
@@ -10,13 +11,8 @@ import {TableRow} from "@/types/table";
 // PDF" requirement (section 6) without a heavier server-side PDF pipeline.
 export default function PrintTablesPage({ params }: { params: Promise<{ venueId: string }> }) {
     const { venueId } = use(params);
-    const [tables, setTables] = useState<TableRow[]>([]);
-
-    useEffect(() => {
-        api.get<TableRow[]>(`/venues/${venueId}/tables`).then((all) => {
-            setTables(all.filter((t) => t.isActive));
-        });
-    }, [venueId]);
+    const { data: allTables = [] } = useTables(venueId);
+    const tables = allTables.filter((t) => t.isActive);
 
     return (
         <div className="min-h-screen bg-canvas p-8 dark:bg-surface-dark print:bg-white">
