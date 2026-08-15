@@ -95,13 +95,17 @@ export function ItemDetailModal({
 
         const modifierOptionIds = item.modifierGroups.flatMap((group) => selected[group.id] ?? []);
 
-        await addLine({
-            menuItemId: item.id,
-            quantity,
-            note: note || undefined,
-            modifierOptionIds,
-        });
-        onClose();
+        try {
+            await addLine({
+                menuItemId: item.id,
+                quantity,
+                note: note || undefined,
+                modifierOptionIds,
+            });
+            onClose();
+        } catch (err: any) {
+            setValidationError(err.message ?? 'Could not add this item. Please try again.');
+        }
     }
 
     return (

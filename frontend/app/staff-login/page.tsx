@@ -30,14 +30,14 @@ export default function StaffLoginPage() {
 
     return (
         <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
-            <h1 className="text-xl font-semibold">Staff sign in</h1>
-            <p className="mt-1 text-sm text-gray-500">Enter the email and PIN your manager gave you.</p>
+            <h1 className="text-xl">Staff sign in</h1>
+            <p className="mt-1 text-sm text-muted">Enter the email and PIN your manager gave you.</p>
             <form onSubmit={submit} className="mt-5 space-y-3">
                 <input
                     type="email"
                     required
                     placeholder="you@venue.com"
-                    className="w-full rounded-md border border-gray-300 px-3 py-3 text-base"
+                    className="input py-3 text-base"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                 />
@@ -47,19 +47,16 @@ export default function StaffLoginPage() {
                     required
                     maxLength={6}
                     placeholder="4-6 digit PIN"
-                    className="w-full rounded-md border border-gray-300 px-3 py-3 text-center text-2xl tracking-widest"
+                    className="input py-3 text-center text-2xl tracking-widest"
                     value={pin}
                     onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 />
-                <button
-                    disabled={loading}
-                    className="min-h-[48px] w-full rounded-md bg-brand font-medium text-white disabled:opacity-50"
-                >
+                <button disabled={loading} className="btn-primary w-full">
                     {loading ? 'Signing in…' : 'Sign in'}
                 </button>
-                {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+                {error && <p role="alert" className="text-sm text-error">{error}</p>}
             </form>
-            <a href="/admin/login" className="mt-6 text-center text-sm text-gray-500 underline">
+            <a href="/admin/login" className="mt-6 text-center text-sm text-muted underline">
                 Owner or manager? Sign in with email link instead
             </a>
         </div>

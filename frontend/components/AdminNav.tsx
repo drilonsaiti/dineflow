@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
+import {useVenuesMine} from "@/hooks/useVenues";
 
 interface VenueSummary {
     id: string;
@@ -17,14 +18,11 @@ interface VenueSummary {
 export function AdminNav() {
     const pathname = usePathname();
     const router = useRouter();
-    const [venues, setVenues] = useState<VenueSummary[]>([]);
 
     const match = pathname?.match(/^\/admin\/([^/]+)/);
     const venueId = match && !['login', 'onboarding'].includes(match[1]) ? match[1] : null;
 
-    useEffect(() => {
-        api.get<VenueSummary[]>('/venues/mine').then(setVenues).catch(() => {});
-    }, []);
+    const { data: venues = [] } = useVenuesMine();
 
     async function signOut() {
         await supabase.auth.signOut();

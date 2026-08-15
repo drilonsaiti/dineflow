@@ -67,3 +67,10 @@ export function useOrdersForTable(venueId: string, tableId: string | null) {
         enabled: !!tableId, // only fetches once a table is actually selected
     });
 }
+
+export function useOrder(venueId: string, orderId: string) {
+    return useQuery({
+        queryKey: queryKeys.order(venueId, orderId),
+        queryFn: () => api.get<StaffOrder>(`/venues/${venueId}/orders/${orderId}`),
+    });
+}

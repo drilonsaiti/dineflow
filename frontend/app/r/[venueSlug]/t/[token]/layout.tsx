@@ -3,6 +3,7 @@
 import {createContext, ReactNode, useContext, useEffect, useState} from 'react';
 import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Receipt } from 'lucide-react';
 
 import { formatCents } from '@/lib/money';
 import { CartProvider, useCart } from '@/components/CartContext';
@@ -74,57 +75,61 @@ export default function TableLayout({
 
     return (
         <VenueCurrencyContext.Provider value={info.venue.currency}>
-        <CartProvider token={token}>
-            <div
-                className="min-h-screen bg-canvas pb-24 dark:bg-surface-dark"
-                style={
-                    {
-                        '--brand-color': info.venue.brandColor ?? '#EA580CFF',
-                    } as React.CSSProperties
-                }
-            >
-                <header
-                    className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 text-white shadow-elevated"
-                    style={{ backgroundColor: 'var(--brand-color)' }}
+            <CartProvider token={token}>
+                <div
+                    className="min-h-screen bg-canvas pb-24 dark:bg-surface-dark"
+                    style={
+                        {
+                            '--brand-color': info.venue.brandColor ?? '#EA580CFF',
+                        } as React.CSSProperties
+                    }
                 >
-                    <Link href={`/r/${venueSlug}/t/${token}`} className="flex min-w-0 items-center gap-3">
-                        {info.venue.logoUrl && (
-                            <img src={info.venue.logoUrl} alt={info.venue.name} className="h-8 w-8 rounded-full object-cover" />
-                        )}
-                        <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold leading-tight">{info.venue.name}</p>
-                            <p className="truncate text-xs opacity-90 leading-tight">
-                                Ordering for {info.table.label}
-                                {info.area ? ` · ${info.area.name}` : ''}
-                            </p>
-                        </div>
-                    </Link>
-                    <div className="flex items-center gap-2">
-                        <ThemeToggle />
-                        <HeaderCartLink venueSlug={venueSlug} token={token} info={info}/>
-                        <Link href={`/r/${venueSlug}/t/${token}/tab`} className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white" aria-label="View table tab">
-                            🧾
+                    <header
+                        className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 text-white shadow-elevated"
+                        style={{ backgroundColor: 'var(--brand-color)' }}
+                    >
+                        <Link href={`/r/${venueSlug}/t/${token}`} className="flex min-w-0 items-center gap-3">
+                            {info.venue.logoUrl && (
+                                <img src={info.venue.logoUrl} alt={info.venue.name} className="h-8 w-8 rounded-full object-cover" />
+                            )}
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold leading-tight">{info.venue.name}</p>
+                                <p className="truncate text-xs opacity-90 leading-tight">
+                                    Ordering for {info.table.label}
+                                    {info.area ? ` · ${info.area.name}` : ''}
+                                </p>
+                            </div>
                         </Link>
-                    </div>
-                </header>
+                        <div className="flex items-center gap-2">
+                            <ThemeToggle />
+                            <HeaderCartLink venueSlug={venueSlug} token={token} info={info}/>
+                            <Link
+                                href={`/r/${venueSlug}/t/${token}/tab`}
+                                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white"
+                                aria-label="View table tab"
+                            >
+                                <Receipt className="h-5 w-5" aria-hidden />
+                            </Link>
+                        </div>
+                    </header>
 
-                {!online && (
-                    <div role="status" className="bg-amber-100 px-4 py-2 text-center text-sm text-amber-800">
-                        You're offline — showing the last loaded menu. Ordering is paused until you're back online.
-                    </div>
-                )}
+                    {!online && (
+                        <div role="status" className="bg-warning/15 px-4 py-2 text-center text-sm text-warning">
+                            You're offline — showing the last loaded menu. Ordering is paused until you're back online.
+                        </div>
+                    )}
 
-                <main className="mx-auto max-w-2xl">
-                    {children}
-                </main>
+                    <main className="mx-auto max-w-2xl">
+                        {children}
+                    </main>
 
-                <CartBar
-                    venueSlug={venueSlug}
-                    token={token}
-                    currency={info.venue.currency}
-                />
-            </div>
-        </CartProvider>
+                    <CartBar
+                        venueSlug={venueSlug}
+                        token={token}
+                        currency={info.venue.currency}
+                    />
+                </div>
+            </CartProvider>
         </VenueCurrencyContext.Provider>
     );
 }

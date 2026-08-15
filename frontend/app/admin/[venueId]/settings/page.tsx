@@ -1,19 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import {
     useVenueSettings,
     useUpdateVenueSettings,
     useCreateCheckoutSession,
     useCreatePortalSession,
 } from '@/hooks/useVenueSettings';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
+import { useToast } from '@/components/ui/Toast';
 
-export default function VenueSettingsPage({ params }: { params: { venueId: string } }) {
-    const { venueId } = params;
+export default function VenueSettingsPage({ params }: { params: Promise<{ venueId: string }> }) {
+    const { venueId } = use(params);
     const { data: venue, isLoading } = useVenueSettings(venueId);
     const updateMutation = useUpdateVenueSettings(venueId);
     const checkoutMutation = useCreateCheckoutSession(venueId);
     const portalMutation = useCreatePortalSession(venueId);
+    const showToast = useToast();
 
     const [webhookUrl, setWebhookUrl] = useState('');
     const [thresholdMinutes, setThresholdMinutes] = useState(10);
@@ -27,7 +31,6 @@ export default function VenueSettingsPage({ params }: { params: { venueId: strin
     const [autoPrintTickets, setAutoPrintTickets] = useState(false);
     const [printerBridgeUrl, setPrinterBridgeUrl] = useState('');
     const [uploadingLogo, setUploadingLogo] = useState(false);
-    const [saved, setSaved] = useState(false);
 
     // Seed local form state once the query resolves — a form needs editable
     // local state distinct from server cache, so this doesn't collapse into
@@ -63,8 +66,9 @@ export default function VenueSettingsPage({ params }: { params: { venueId: strin
             if (!res.ok) throw new Error((await res.json()).message ?? 'Upload failed');
             const { url } = await res.json();
             setLogoUrl(url);
+            showToast('Logo uploaded', 'success');
         } catch (err: any) {
-            alert(err.message);
+            showToast(err.message ?? 'Upload failed', 'error');
         } finally {
             setUploadingLogo(false);
         }
@@ -72,26 +76,33 @@ export default function VenueSettingsPage({ params }: { params: { venueId: strin
 
     async function save(e: React.FormEvent) {
         e.preventDefault();
-        setSaved(false);
-        await updateMutation.mutateAsync({
-            staffAlertWebhookUrl: webhookUrl || undefined,
-            lateOrderThresholdMinutes: thresholdMinutes,
-            type,
-            logoUrl: logoUrl || undefined,
-            brandColor,
-            currency,
-            timezone,
-            taxRatePercent: taxRatePercent ? Number(taxRatePercent) : undefined,
-            taxInclusive,
-            autoPrintTickets,
-            printerBridgeUrl: printerBridgeUrl || undefined,
-        });
-        setSaved(true);
+        try {
+            await updateMutation.mutateAsync({
+                staffAlertWebhookUrl: webhookUrl || undefined,
+                lateOrderThresholdMinutes: thresholdMinutes,
+                type,
+                logoUrl: logoUrl || undefined,
+                brandColor,
+                currency,
+                timezone,
+                taxRatePercent: taxRatePercent ? Number(taxRatePercent) : undefined,
+                taxInclusive,
+                autoPrintTickets,
+                printerBridgeUrl: printerBridgeUrl || undefined,
+            });
+            showToast('Settings saved', 'success');
+        } catch (err: any) {
+            showToast(err.message ?? 'Failed to save settings', 'error');
+        }
     }
 
     async function upgrade(plan: 'PRO' | 'BUSINESS') {
-        const { url } = await checkoutMutation.mutateAsync(plan);
-        window.location.href = url;
+        try {
+            const { url } = await checkoutMutation.mutateAsync(plan);
+            window.location.href = url;
+        } catch (err: any) {
+            showToast(err.message ?? 'Failed to start checkout', 'error');
+        }
     }
 
     async function manageBilling() {
@@ -99,31 +110,40 @@ export default function VenueSettingsPage({ params }: { params: { venueId: strin
             const { url } = await portalMutation.mutateAsync();
             window.location.href = url;
         } catch (err: any) {
-            alert(err.message);
+            showToast(err.message ?? 'Failed to open billing portal', 'error');
         }
     }
 
-    if (isLoading) return <div className="p-8 text-gray-500">Loading settings…</div>;
+    if (isLoading) return <div className="p-8 text-muted-soft">Loading settings…</div>;
 
     return (
         <div className="mx-auto max-w-lg p-6 space-y-8">
             <div>
-                <h1 className="text-2xl font-semibold">Venue profile</h1>
+                <h1 className="text-2xl">Venue profile</h1>
                 <div className="mt-4 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium">Venue type</label>
-                        <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={type} onChange={(e) => setType(e.target.value)}>
-                            <option value="restaurant">Restaurant</option>
-                            <option value="cafe">Café</option>
-                            <option value="bar">Bar</option>
-                            <option value="other">Other</option>
-                        </select>
+                        <label className="block text-sm font-medium text-ink dark:text-white">Venue type</label>
+                        <Select value={type} onValueChange={setType}>
+                            <SelectTrigger className="mt-1">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="restaurant">Restaurant</SelectItem>
+                                <SelectItem value="cafe">Café</SelectItem>
+                                <SelectItem value="bar">Bar</SelectItem>
+                                <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium">Logo</label>
+                        <label className="block text-sm font-medium text-ink dark:text-white">Logo</label>
                         <div className="mt-1 flex items-center gap-3">
-                            {logoUrl ? <img src={logoUrl} alt="" className="h-12 w-12 rounded-full object-cover" /> : <div className="h-12 w-12 rounded-full bg-gray-200" />}
-                            <label className="rounded-md border border-gray-300 px-3 py-1.5 text-sm cursor-pointer">
+                            {logoUrl ? (
+                                <img src={logoUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+                            ) : (
+                                <div className="h-12 w-12 rounded-full bg-surface-card dark:bg-surface-dark-elevated" />
+                            )}
+                            <label className="btn-secondary cursor-pointer px-3 py-1.5 text-sm">
                                 {uploadingLogo ? 'Uploading…' : 'Upload logo'}
                                 <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
                             </label>
@@ -131,28 +151,51 @@ export default function VenueSettingsPage({ params }: { params: { venueId: strin
                     </div>
                     <div className="flex gap-4">
                         <div>
-                            <label className="block text-sm font-medium">Brand color</label>
-                            <input type="color" className="mt-1 h-10 w-16 rounded border border-gray-300" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} />
+                            <label className="block text-sm font-medium text-ink dark:text-white">Brand color</label>
+                            <input
+                                type="color"
+                                className="mt-1 h-10 w-16 rounded border border-hairline dark:border-gray-700"
+                                value={brandColor}
+                                onChange={(e) => setBrandColor(e.target.value)}
+                            />
                         </div>
                         <div className="flex-1">
-                            <label className="block text-sm font-medium">Currency</label>
-                            <select className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                                {['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD'].map((c) => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                            <label className="block text-sm font-medium text-ink dark:text-white">Currency</label>
+                            <Select value={currency} onValueChange={setCurrency}>
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD'].map((c) => (
+                                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="flex-1">
-                            <label className="block text-sm font-medium">Timezone</label>
-                            <input className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Europe/Zurich" />
+                            <label className="block text-sm font-medium text-ink dark:text-white">Timezone</label>
+                            <input
+                                className="input mt-1"
+                                value={timezone}
+                                onChange={(e) => setTimezone(e.target.value)}
+                                placeholder="Europe/Zurich"
+                            />
                         </div>
                     </div>
                     <div className="flex gap-4">
                         <div>
-                            <label className="block text-sm font-medium">Tax rate % (optional)</label>
-                            <input type="number" step="0.1" className="mt-1 w-24 rounded-md border border-gray-300 px-3 py-2 text-sm" value={taxRatePercent} onChange={(e) => setTaxRatePercent(e.target.value)} />
+                            <label className="block text-sm font-medium text-ink dark:text-white">Tax rate % (optional)</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                className="input mt-1 w-24"
+                                value={taxRatePercent}
+                                onChange={(e) => setTaxRatePercent(e.target.value)}
+                            />
                         </div>
                         <div className="flex items-end pb-2">
-                            <label className="flex items-center gap-2 text-sm">
-                                <input type="checkbox" checked={taxInclusive} onChange={(e) => setTaxInclusive(e.target.checked)} />
+                            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
+                                <Checkbox checked={taxInclusive} onCheckedChange={(c) => setTaxInclusive(c === true)} />
                                 Prices include tax
                             </label>
                         </div>
@@ -160,44 +203,64 @@ export default function VenueSettingsPage({ params }: { params: { venueId: strin
                 </div>
             </div>
 
-            <form onSubmit={save} className="space-y-5 border-t border-gray-200 pt-6">
-                <h2 className="text-lg font-semibold">Notification settings</h2>
+            <form onSubmit={save} className="space-y-5 border-t border-hairline pt-6 dark:border-gray-800">
+                <h2 className="text-lg">Notification settings</h2>
                 <div>
-                    <label className="block text-sm font-medium">Staff alert webhook URL</label>
-                    <p className="text-xs text-gray-500 mb-1">A Slack "Incoming Webhook" URL. Staff get pinged here when an order or table request sits unattended past the threshold below.</p>
-                    <input type="url" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="https://hooks.slack.com/services/…" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
+                    <label className="block text-sm font-medium text-ink dark:text-white">Staff alert webhook URL</label>
+                    <p className="mb-1 text-xs text-muted">
+                        A Slack "Incoming Webhook" URL. Staff get pinged here when an order or table request sits unattended past the threshold below.
+                    </p>
+                    <input
+                        type="url"
+                        className="input"
+                        placeholder="https://hooks.slack.com/services/…"
+                        value={webhookUrl}
+                        onChange={(e) => setWebhookUrl(e.target.value)}
+                    />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium">Late order threshold (minutes)</label>
-                    <input type="number" min={1} className="w-24 rounded-md border border-gray-300 px-3 py-2 text-sm" value={thresholdMinutes} onChange={(e) => setThresholdMinutes(Number(e.target.value))} />
+                    <label className="block text-sm font-medium text-ink dark:text-white">Late order threshold (minutes)</label>
+                    <input
+                        type="number"
+                        min={1}
+                        className="input w-24"
+                        value={thresholdMinutes}
+                        onChange={(e) => setThresholdMinutes(Number(e.target.value))}
+                    />
                 </div>
 
-                <div className="border-t border-gray-200 pt-4">
-                    <h3 className="text-sm font-semibold">Kitchen printing</h3>
-                    <label className="mt-2 flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={autoPrintTickets} onChange={(e) => setAutoPrintTickets(e.target.checked)} />
+                <div className="border-t border-hairline pt-4 dark:border-gray-800">
+                    <h3 className="text-sm font-semibold text-ink dark:text-white">Kitchen printing</h3>
+                    <label className="mt-2 flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
+                        <Checkbox checked={autoPrintTickets} onCheckedChange={(c) => setAutoPrintTickets(c === true)} />
                         Auto-open a print ticket for every new order
                     </label>
                     <div className="mt-3">
-                        <label className="block text-sm font-medium">ESC/POS bridge URL <span className="text-gray-400 font-normal">(advanced, optional)</span></label>
-                        <input className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="http://192.168.1.50:10100" value={printerBridgeUrl} onChange={(e) => setPrinterBridgeUrl(e.target.value)} />
+                        <label className="block text-sm font-medium text-ink dark:text-white">
+                            ESC/POS bridge URL <span className="font-normal text-muted-soft">(advanced, optional)</span>
+                        </label>
+                        <input
+                            className="input mt-1"
+                            placeholder="http://192.168.1.50:10100"
+                            value={printerBridgeUrl}
+                            onChange={(e) => setPrinterBridgeUrl(e.target.value)}
+                        />
                     </div>
                 </div>
 
-                <button type="submit" disabled={updateMutation.isPending} className="min-h-[44px] rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                <button type="submit" disabled={updateMutation.isPending} className="btn-primary">
                     {updateMutation.isPending ? 'Saving…' : 'Save'}
                 </button>
-                {saved && <p className="text-sm text-green-600">Saved.</p>}
             </form>
 
-            <div className="border-t border-gray-200 pt-6">
-                <h2 className="text-lg font-semibold">Plan & billing</h2>
-                <p className="text-sm text-gray-500 mt-1">Free plan includes up to 10 tables and 30 days of analytics history.</p>
+            <div className="border-t border-hairline pt-6 dark:border-gray-800">
+                <h2 className="text-lg">Plan & billing</h2>
+                <p className="mt-1 text-sm text-muted">Free plan includes up to 10 tables and 30 days of analytics history.</p>
                 <div className="mt-3 flex gap-3">
-                    <button onClick={() => upgrade('PRO')} disabled={checkoutMutation.isPending} className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                    <button onClick={() => upgrade('PRO')} disabled={checkoutMutation.isPending} className="btn-primary">
                         Upgrade to Pro
                     </button>
-                    <button onClick={manageBilling} disabled={portalMutation.isPending} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50">
+                    <button onClick={manageBilling} disabled={portalMutation.isPending} className="btn-secondary">
                         Manage billing
                     </button>
                 </div>

@@ -19,13 +19,13 @@ export function useMenuTags(venueId: string) {
     });
 }
 
-/** Every menu mutation invalidates the same categories query — simpler than
- * hand-writing a bespoke cache update per mutation type, and cheap here
- * since the categories list is small and infrequently changed compared to
- * orders. */
 function useInvalidateMenu(venueId: string) {
     const queryClient = useQueryClient();
     return () => queryClient.invalidateQueries({ queryKey: queryKeys.menuCategories(venueId) });
+}
+function useInvalidateTags(venueId: string) {
+    const queryClient = useQueryClient();
+    return () => queryClient.invalidateQueries({ queryKey: queryKeys.menuTags(venueId) });
 }
 
 export function useCreateCategory(venueId: string) {
@@ -62,13 +62,32 @@ export function useDeleteItem(venueId: string) {
     });
 }
 
+/** Handles both create (no itemId) and update (itemId present) — one
+ * mutation, one invalidation path, matching how the backend already
+ * branches on the same distinction. */
 export function useSaveItem(venueId: string) {
     const invalidate = useInvalidateMenu(venueId);
     return useMutation({
-        mutationFn: ({ itemId, payload }: { itemId?: string; payload: any }) =>
+        mutationFn: ({ itemId, payload }: { itemId?: string; payload: Record<string, unknown> }) =>
             itemId
                 ? api.patch(`/venues/${venueId}/menu/items/${itemId}`, payload)
                 : api.post(`/venues/${venueId}/menu/items`, payload),
+        onSuccess: invalidate,
+    });
+}
+
+export function useCreateTag(venueId: string) {
+    const invalidate = useInvalidateTags(venueId);
+    return useMutation({
+        mutationFn: (data: { label: string; kind: string }) => api.post(`/venues/${venueId}/menu/tags`, data),
+        onSuccess: invalidate,
+    });
+}
+
+export function useDeleteTag(venueId: string) {
+    const invalidate = useInvalidateTags(venueId);
+    return useMutation({
+        mutationFn: (tagId: string) => api.delete(`/venues/${venueId}/menu/tags/${tagId}`),
         onSuccess: invalidate,
     });
 }

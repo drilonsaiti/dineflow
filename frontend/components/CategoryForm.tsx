@@ -1,36 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { api } from '@/lib/api';
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
+import { useCreateCategory } from '@/hooks/useMenu';
+import { useToast } from '@/components/ui/Toast';
 
-export function CategoryForm({
-                                 venueId,
-                                 onCreated,
-                             }: {
-    venueId: string;
-    onCreated: () => void;
-}) {
+export function CategoryForm({ venueId }: { venueId: string }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [submitting, setSubmitting] = useState(false);
     const [station, setStation] = useState('');
+    const createMutation = useCreateCategory(venueId);
+    const showToast = useToast();
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
         if (!name.trim()) return;
-        setSubmitting(true);
         try {
-            await api.post(`/venues/${venueId}/menu/categories`, {
-                name,
-                description: description || undefined,
-                station: station || undefined,
-            });
+            await createMutation.mutateAsync({ name, description: description || undefined, station: station || undefined });
             setName('');
             setDescription('');
-            onCreated();
-        } finally {
-            setSubmitting(false);
+            setStation('');
+        } catch (err: unknown) {
+            showToast(err instanceof Error ? err.message : 'Failed to create category', 'error');
         }
     }
 
@@ -38,34 +29,27 @@ export function CategoryForm({
         <form onSubmit={submit} className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700">
             <div className="flex-1 min-w-[160px]">
                 <label className="block text-xs font-medium text-muted">Category name</label>
-                <input
-                    className="input mt-1"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Starters"
-                />
+                <input className="input mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="Starters" />
             </div>
             <div className="flex-1 min-w-[160px]">
                 <label className="block text-xs font-medium text-muted">Description (optional)</label>
-                <input
-                    className="input mt-1"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                />
+                <input className="input mt-1" value={description} onChange={(e) => setDescription(e.target.value)} />
             </div>
-
-            <Select value={station} onValueChange={setStation}>
-                <SelectTrigger className="w-36">
-                    <SelectValue placeholder="All stations" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="">All stations</SelectItem>
-                    <SelectItem value="kitchen">Kitchen</SelectItem>
-                    <SelectItem value="bar">Bar</SelectItem>
-                </SelectContent>
-            </Select>
-            <button type="submit" disabled={submitting} className="btn-primary">
-                Add category
+            <div>
+                <label className="block text-xs font-medium text-muted">Station (optional)</label>
+                <Select value={station} onValueChange={(v) => setStation(v === 'all' ? '' : v)}>
+                    <SelectTrigger className="mt-1 w-36">
+                        <SelectValue placeholder="All stations" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All stations</SelectItem>
+                        <SelectItem value="kitchen">Kitchen</SelectItem>
+                        <SelectItem value="bar">Bar</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+            <button type="submit" disabled={createMutation.isPending} className="btn-primary">
+                {createMutation.isPending ? 'Adding…' : 'Add category'}
             </button>
         </form>
     );

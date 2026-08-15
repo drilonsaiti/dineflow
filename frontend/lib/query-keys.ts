@@ -28,4 +28,6 @@ export const queryKeys = {
     publicOrder: (orderId: string) => ['public-order', orderId] as const,
     activeTableRequests: (token: string) => ['active-table-requests', token] as const,
     estimatedWait: (venueSlug: string) => ['estimated-wait', venueSlug] as const,
+    publicMenu: (venueSlug: string) => ['public-menu', venueSlug] as const,
+    zReport: (venueId: string, date: string) => ['z-report', venueId, date] as const,
 };
