@@ -1,13 +1,8 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { PrismaService } from '../prisma/prisma.service';
-import { ROLES_KEY } from './roles.decorator';
-import { VenueRole } from '@prisma/client';
+import {CanActivate, ExecutionContext, ForbiddenException, Injectable,} from '@nestjs/common';
+import {Reflector} from '@nestjs/core';
+import {PrismaService} from '../prisma/prisma.service';
+import {ROLES_KEY} from './roles.decorator';
+import {VenueRole} from '@prisma/client';
 
 /**
  * The single guard every venue-scoped route runs through (section 12).
@@ -28,47 +23,48 @@ import { VenueRole } from '@prisma/client';
  */
 @Injectable()
 export class VenueScopeGuard implements CanActivate {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly reflector: Reflector,
-  ) {}
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest();
-    const venueId: string | undefined = req.params?.venueId;
-    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const user = req.user;
-
-    if (!venueId) {
-      throw new ForbiddenException('Route is missing a venueId param');
-    }
-    if (venueId && !UUID_RE.test(venueId)) {
-      throw new ForbiddenException('Malformed venue id');
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly reflector: Reflector,
+    ) {
     }
 
-    if (!user) {
-      // Should be unreachable — JwtAuthGuard runs first — but never assume.
-      throw new ForbiddenException('No authenticated user');
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+        const req = context.switchToHttp().getRequest();
+        const venueId: string | undefined = req.params?.venueId;
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const user = req.user;
+
+        if (!venueId) {
+            throw new ForbiddenException('Route is missing a venueId param');
+        }
+        if (venueId && !UUID_RE.test(venueId)) {
+            throw new ForbiddenException('Malformed venue id');
+        }
+
+        if (!user) {
+            // Should be unreachable — JwtAuthGuard runs first — but never assume.
+            throw new ForbiddenException('No authenticated user');
+        }
+
+        const membership = await this.prisma.venueMembership.findUnique({
+            where: {userId_venueId: {userId: user.id, venueId}},
+        });
+
+        if (!membership) {
+            throw new ForbiddenException('Not a member of this venue');
+        }
+
+        const requiredRoles = this.reflector.getAllAndOverride<VenueRole[]>(ROLES_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+
+        if (requiredRoles?.length && !requiredRoles.includes(membership.role)) {
+            throw new ForbiddenException(`Requires one of: ${requiredRoles.join(', ')}`);
+        }
+
+        req.venueScope = {venueId, role: membership.role};
+        return true;
     }
-
-    const membership = await this.prisma.venueMembership.findUnique({
-      where: { userId_venueId: { userId: user.id, venueId } },
-    });
-
-    if (!membership) {
-      throw new ForbiddenException('Not a member of this venue');
-    }
-
-    const requiredRoles = this.reflector.getAllAndOverride<VenueRole[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
-
-    if (requiredRoles?.length && !requiredRoles.includes(membership.role)) {
-      throw new ForbiddenException(`Requires one of: ${requiredRoles.join(', ')}`);
-    }
-
-    req.venueScope = { venueId, role: membership.role };
-    return true;
-  }
 }

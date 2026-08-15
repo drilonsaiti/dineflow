@@ -1,8 +1,8 @@
 "use client";
 
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { forwardRef } from "react";
-import type { ComponentPropsWithoutRef, ElementRef } from "react";
+import type {ComponentPropsWithoutRef, ElementRef} from "react";
+import {forwardRef} from "react";
 
 export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
@@ -10,7 +10,7 @@ export const SelectValue = SelectPrimitive.Value;
 export const SelectTrigger = forwardRef<
     ElementRef<typeof SelectPrimitive.Trigger>,
     ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className = "", children, ...props }, ref) => (
+>(({className = "", children, ...props}, ref) => (
     <SelectPrimitive.Trigger
         ref={ref}
         className={`input flex items-center justify-between gap-2 [&>span]:truncate
@@ -34,7 +34,7 @@ export const SelectTrigger = forwardRef<
                 aria-hidden="true"
                 className="shrink-0 opacity-60"
             >
-                <path d="m6 9 6 6 6-6" />
+                <path d="m6 9 6 6 6-6"/>
             </svg>
         </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
@@ -45,7 +45,7 @@ SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 export const SelectContent = forwardRef<
     ElementRef<typeof SelectPrimitive.Content>,
     ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className = "", children, ...props }, ref) => (
+>(({className = "", children, ...props}, ref) => (
     <SelectPrimitive.Portal>
         <SelectPrimitive.Content
             ref={ref}
@@ -68,7 +68,7 @@ SelectContent.displayName = SelectPrimitive.Content.displayName;
 export const SelectItem = forwardRef<
     ElementRef<typeof SelectPrimitive.Item>,
     ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className = "", children, ...props }, ref) => (
+>(({className = "", children, ...props}, ref) => (
     <SelectPrimitive.Item
         ref={ref}
         className={`relative flex min-h-[36px] cursor-pointer select-none items-center rounded-md px-3 py-1.5 pr-8 text-sm text-ink
@@ -95,7 +95,7 @@ export const SelectItem = forwardRef<
                 strokeLinejoin="round"
                 aria-hidden="true"
             >
-                <path d="M5 12l4 4L19 8" />
+                <path d="M5 12l4 4L19 8"/>
             </svg>
         </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>

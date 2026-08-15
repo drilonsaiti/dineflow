@@ -24,29 +24,37 @@ alter table "VenueMembership" enable row level security;
 -- erroring if unset" — a query that forgets to set the scope simply sees
 -- zero rows rather than crashing, which is the safe failure direction.
 
-create policy tenant_isolation_venue on "Venue"
+create
+policy tenant_isolation_venue on "Venue"
   using (id = current_setting('app.current_venue_id', true)::uuid);
 
-create policy tenant_isolation_menu_category on "MenuCategory"
+create
+policy tenant_isolation_menu_category on "MenuCategory"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
-create policy tenant_isolation_menu_item on "MenuItem"
+create
+policy tenant_isolation_menu_item on "MenuItem"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
-create policy tenant_isolation_tag on "Tag"
+create
+policy tenant_isolation_tag on "Tag"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
-create policy tenant_isolation_area on "Area"
+create
+policy tenant_isolation_area on "Area"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
-create policy tenant_isolation_table on "Table"
+create
+policy tenant_isolation_table on "Table"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
-create policy tenant_isolation_order on "Order"
+create
+policy tenant_isolation_order on "Order"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
 -- OrderItem has no venueId column directly — scope via its parent Order.
-create policy tenant_isolation_order_item on "OrderItem"
+create
+policy tenant_isolation_order_item on "OrderItem"
   using (
     exists (
       select 1 from "Order" o
@@ -55,7 +63,8 @@ create policy tenant_isolation_order_item on "OrderItem"
     )
   );
 
-create policy tenant_isolation_membership on "VenueMembership"
+create
+policy tenant_isolation_membership on "VenueMembership"
   using ("venueId" = current_setting('app.current_venue_id', true)::uuid);
 
 -- NOTE: venue creation (VenuesService.create) and the public customer flow

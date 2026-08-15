@@ -1,5 +1,5 @@
-import { IsEmail, IsEnum, Length, Matches } from 'class-validator';
-import { VenueRole } from '@prisma/client';
+import {IsEmail, IsEnum, Matches} from 'class-validator';
+import {VenueRole} from '@prisma/client';
 
 export class InviteStaffDto {
     @IsEmail()
@@ -13,6 +13,6 @@ export class InviteStaffDto {
     // on purpose: it's meant to be typed on a phone in three seconds, not
     // memorized as a secure password (the account it protects has no billing
     // access and is scoped to one venue's floor operations).
-    @Matches(/^\d{4,6}$/, { message: 'PIN must be 4-6 digits' })
+    @Matches(/^\d{4,6}$/, {message: 'PIN must be 4-6 digits'})
     pin!: string;
 }

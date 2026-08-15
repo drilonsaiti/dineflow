@@ -1,11 +1,11 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import {NestFactory} from '@nestjs/core';
+import {ValidationPipe} from '@nestjs/common';
 import helmet from 'helmet';
 import compression from 'compression';
-import { AppModule } from './app.module';
+import {AppModule} from './app.module';
 
 async function bootstrap() {
-    const app = await NestFactory.create(AppModule, { rawBody: true }); // rawBody needed for Stripe webhook signature verification
+    const app = await NestFactory.create(AppModule, {rawBody: true}); // rawBody needed for Stripe webhook signature verification
 
     app.use(helmet());
     app.use(compression());
@@ -28,4 +28,5 @@ async function bootstrap() {
     // eslint-disable-next-line no-console
     console.log(`QR SaaS backend listening on :${port}`);
 }
+
 bootstrap();

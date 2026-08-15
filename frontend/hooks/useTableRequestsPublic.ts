@@ -1,8 +1,8 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-keys';
-import { getSessionToken } from '@/lib/session';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {queryKeys} from '@/lib/query-keys';
+import {getSessionToken} from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -21,15 +21,19 @@ export function useActiveTableRequests(tableToken: string) {
 export function useCreateTableRequest(tableToken: string) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: async (data: { type: 'CALL_WAITER' | 'REQUEST_BILL_CASH'; guestCount?: number; tipPercent?: number }) => {
+        mutationFn: async (data: {
+            type: 'CALL_WAITER' | 'REQUEST_BILL_CASH';
+            guestCount?: number;
+            tipPercent?: number
+        }) => {
             const res = await fetch(`${API_URL}/public/table-requests`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableToken, sessionToken: getSessionToken(tableToken), ...data }),
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tableToken, sessionToken: getSessionToken(tableToken), ...data}),
             });
             return res.json();
         },
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.activeTableRequests(tableToken) }),
+        onSuccess: () => queryClient.invalidateQueries({queryKey: queryKeys.activeTableRequests(tableToken)}),
     });
 }
 

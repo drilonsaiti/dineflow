@@ -1,10 +1,10 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { Roles } from '../common/roles.decorator';
-import { CurrentUser, CurrentVenue } from '../common/current-user.decorator';
-import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
-import { VenueRole } from '@prisma/client';
-import { IsIn } from 'class-validator';
+import {Body, Controller, Post, UseGuards} from '@nestjs/common';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {Roles} from '../common/roles.decorator';
+import {CurrentUser, CurrentVenue} from '../common/current-user.decorator';
+import {AuthenticatedUser} from '../auth/supabase-jwt.strategy';
+import {VenueRole} from '@prisma/client';
+import {IsIn} from 'class-validator';
 import {BillingService} from "./biling.service";
 
 class CreateCheckoutDto {
@@ -16,7 +16,8 @@ class CreateCheckoutDto {
 @UseGuards(VenueScopeGuard)
 @Roles(VenueRole.OWNER) // billing is owner-only, per section 3
 export class BillingController {
-    constructor(private readonly billingService: BillingService) {}
+    constructor(private readonly billingService: BillingService) {
+    }
 
     @Post('checkout-session')
     createCheckout(

@@ -1,79 +1,80 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { OrdersService } from './orders.service';
-import { PlaceOrderDto } from './dto/place-order.dto';
-import { Public } from '../auth/public.decorator';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { CurrentUser, CurrentVenue } from '../common/current-user.decorator';
-import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
-import { OrderStatus } from '@prisma/client';
-import { IsIn } from 'class-validator';
-import { Throttle } from '@nestjs/throttler';
+import {Body, Controller, Get, Param, Patch, Post, Query, UseGuards} from '@nestjs/common';
+import {OrdersService} from './orders.service';
+import {PlaceOrderDto} from './dto/place-order.dto';
+import {Public} from '../auth/public.decorator';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {CurrentUser, CurrentVenue} from '../common/current-user.decorator';
+import {AuthenticatedUser} from '../auth/supabase-jwt.strategy';
+import {OrderStatus} from '@prisma/client';
+import {IsIn} from 'class-validator';
+import {Throttle} from '@nestjs/throttler';
 import {SubmitFeedbackDto} from "./submit-feedback.dto";
 
 class AdvanceStatusDto {
-  @IsIn(Object.values(OrderStatus))
-  status!: OrderStatus;
+    @IsIn(Object.values(OrderStatus))
+    status!: OrderStatus;
 }
 
 @Controller()
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+    constructor(private readonly ordersService: OrdersService) {
+    }
 
-  // ----- Public customer flow (no auth — zero login by design) -----
+    // ----- Public customer flow (no auth — zero login by design) -----
 
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  @Public()
-  @Post('public/orders')
-  placeOrder(@Body() dto: PlaceOrderDto) {
-    return this.ordersService.placeOrder(dto);
-  }
+    @Throttle({default: {limit: 30, ttl: 60_000}})
+    @Public()
+    @Post('public/orders')
+    placeOrder(@Body() dto: PlaceOrderDto) {
+        return this.ordersService.placeOrder(dto);
+    }
 
-  @Public()
-  @Get('public/orders/:orderId')
-  trackOrder(@Param('orderId') orderId: string, @Query('table') tableToken: string) {
-    return this.ordersService.getForCustomer(orderId, tableToken);
-  }
+    @Public()
+    @Get('public/orders/:orderId')
+    trackOrder(@Param('orderId') orderId: string, @Query('table') tableToken: string) {
+        return this.ordersService.getForCustomer(orderId, tableToken);
+    }
 
-  // ----- Staff dashboard (authenticated, venue-scoped) -----
+    // ----- Staff dashboard (authenticated, venue-scoped) -----
 
-  @Get('venues/:venueId/orders')
-  @UseGuards(VenueScopeGuard)
-  listForVenue(@CurrentVenue() scope: { venueId: string }, @Query('station') station?: string) {
-    return this.ordersService.listForVenue(scope.venueId, station);
-  }
+    @Get('venues/:venueId/orders')
+    @UseGuards(VenueScopeGuard)
+    listForVenue(@CurrentVenue() scope: { venueId: string }, @Query('station') station?: string) {
+        return this.ordersService.listForVenue(scope.venueId, station);
+    }
 
-  @Patch('venues/:venueId/orders/:orderId/status')
-  @UseGuards(VenueScopeGuard)
-  advanceStatus(
-      @CurrentVenue() scope: { venueId: string; role: string },
-      @Param('orderId') orderId: string,
-      @Body() dto: AdvanceStatusDto,
-      @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.ordersService.advanceStatus(scope.venueId, orderId, dto.status, user.id, scope.role);
-  }
+    @Patch('venues/:venueId/orders/:orderId/status')
+    @UseGuards(VenueScopeGuard)
+    advanceStatus(
+        @CurrentVenue() scope: { venueId: string; role: string },
+        @Param('orderId') orderId: string,
+        @Body() dto: AdvanceStatusDto,
+        @CurrentUser() user: AuthenticatedUser,
+    ) {
+        return this.ordersService.advanceStatus(scope.venueId, orderId, dto.status, user.id, scope.role);
+    }
 
-  @Get('venues/:venueId/tables/:tableId/orders')
-  @UseGuards(VenueScopeGuard)
-  listForTable(@CurrentVenue() scope: { venueId: string }, @Param('tableId') tableId: string) {
-    return this.ordersService.listForTable(scope.venueId, tableId);
-  }
+    @Get('venues/:venueId/tables/:tableId/orders')
+    @UseGuards(VenueScopeGuard)
+    listForTable(@CurrentVenue() scope: { venueId: string }, @Param('tableId') tableId: string) {
+        return this.ordersService.listForTable(scope.venueId, tableId);
+    }
 
-  @Public()
-  @Post('public/orders/:orderId/feedback')
-  submitFeedback(@Param('orderId') orderId: string, @Body() dto: SubmitFeedbackDto) {
-    return this.ordersService.submitFeedback(orderId, dto);
-  }
+    @Public()
+    @Post('public/orders/:orderId/feedback')
+    submitFeedback(@Param('orderId') orderId: string, @Body() dto: SubmitFeedbackDto) {
+        return this.ordersService.submitFeedback(orderId, dto);
+    }
 
-  @Public()
-  @Get('public/tables/:token/tab')
-  getTableTab(@Param('token') token: string, @Query('session') session: string) {
-    return this.ordersService.getTableTab(token, session);
-  }
+    @Public()
+    @Get('public/tables/:token/tab')
+    getTableTab(@Param('token') token: string, @Query('session') session: string) {
+        return this.ordersService.getTableTab(token, session);
+    }
 
-  @Get('venues/:venueId/orders/:orderId')
-  @UseGuards(VenueScopeGuard)
-  getOne(@CurrentVenue() scope: { venueId: string }, @Param('orderId') orderId: string) {
-    return this.ordersService.getOneForVenue(scope.venueId, orderId);
-  }
+    @Get('venues/:venueId/orders/:orderId')
+    @UseGuards(VenueScopeGuard)
+    getOne(@CurrentVenue() scope: { venueId: string }, @Param('orderId') orderId: string) {
+        return this.ordersService.getOneForVenue(scope.venueId, orderId);
+    }
 }

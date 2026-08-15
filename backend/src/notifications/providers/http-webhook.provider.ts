@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { WebhookProvider } from '../notification-provider.interface';
+import {Injectable, Logger} from '@nestjs/common';
+import {WebhookProvider} from '../notification-provider.interface';
 
 /**
  * Unlike SMS, a generic webhook POST (Slack incoming webhook, Discord,
@@ -17,16 +17,16 @@ export class HttpWebhookProvider implements WebhookProvider {
         try {
             const res = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload),
             });
             if (!res.ok) {
-                return { ok: false, detail: `Webhook returned ${res.status}` };
+                return {ok: false, detail: `Webhook returned ${res.status}`};
             }
-            return { ok: true };
+            return {ok: true};
         } catch (err) {
             this.logger.warn(`Webhook delivery failed: ${(err as Error).message}`);
-            return { ok: false, detail: (err as Error).message };
+            return {ok: false, detail: (err as Error).message};
         }
     }
 }

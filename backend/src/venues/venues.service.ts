@@ -1,95 +1,96 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateVenueDto } from './dto/create-venue.dto';
-import { VenueRole } from '@prisma/client';
+import {ConflictException, Injectable, NotFoundException} from '@nestjs/common';
+import {PrismaService} from '../prisma/prisma.service';
+import {CreateVenueDto} from './dto/create-venue.dto';
+import {VenueRole} from '@prisma/client';
 
 const MAX_FREE_VENUES = 1;
 
 function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+    return input
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
 }
 
 @Injectable()
 export class VenuesService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  /** Creates a venue and makes the calling user its OWNER, atomically.
-   * This is the one place venue creation happens outside the venue-scoped
-   * guard (there's no venue yet to scope to) — every other route on this
-   * venue requires the membership row created here. */
-  async create(userId: string, dto: CreateVenueDto) {
-    const ownedCount = await this.prisma.venueMembership.count({
-      where: { userId, role: VenueRole.OWNER },
-    });
-    if (ownedCount >= MAX_FREE_VENUES) {
-      const paidVenue = await this.prisma.venue.findFirst({
-        where: { memberships: { some: { userId, role: VenueRole.OWNER } }, plan: { not: 'FREE' } },
-      });
-      if (!paidVenue) {
-        throw new ConflictException(
-            `Your account already has a venue on the free plan. Upgrade that venue's plan to add another.`,
-        );
-      }
+    constructor(private readonly prisma: PrismaService) {
     }
 
-    const slug = dto.slug ? slugify(dto.slug) : slugify(dto.name);
-    const existing = await this.prisma.venue.findUnique({ where: { slug } });
-    if (existing) throw new ConflictException(`Slug "${slug}" is already taken`);
+    /** Creates a venue and makes the calling user its OWNER, atomically.
+     * This is the one place venue creation happens outside the venue-scoped
+     * guard (there's no venue yet to scope to) — every other route on this
+     * venue requires the membership row created here. */
+    async create(userId: string, dto: CreateVenueDto) {
+        const ownedCount = await this.prisma.venueMembership.count({
+            where: {userId, role: VenueRole.OWNER},
+        });
+        if (ownedCount >= MAX_FREE_VENUES) {
+            const paidVenue = await this.prisma.venue.findFirst({
+                where: {memberships: {some: {userId, role: VenueRole.OWNER}}, plan: {not: 'FREE'}},
+            });
+            if (!paidVenue) {
+                throw new ConflictException(
+                    `Your account already has a venue on the free plan. Upgrade that venue's plan to add another.`,
+                );
+            }
+        }
 
-    return this.prisma.venue.create({
-      data: {
-        name: dto.name,
-        slug,
-        type: dto.type,
-        brandColor: dto.brandColor,
-        currency: dto.currency ?? 'USD',
-        timezone: dto.timezone ?? 'UTC',
-        memberships: { create: { userId, role: VenueRole.OWNER } },
-      },
-    });
-  }
+        const slug = dto.slug ? slugify(dto.slug) : slugify(dto.name);
+        const existing = await this.prisma.venue.findUnique({where: {slug}});
+        if (existing) throw new ConflictException(`Slug "${slug}" is already taken`);
 
-  /** Venues the caller belongs to, across all their memberships (section 3:
-   * a user can belong to multiple venues). */
-  async listForUser(userId: string) {
-    return this.prisma.venue.findMany({
-      where: { memberships: { some: { userId } } },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+        return this.prisma.venue.create({
+            data: {
+                name: dto.name,
+                slug,
+                type: dto.type,
+                brandColor: dto.brandColor,
+                currency: dto.currency ?? 'USD',
+                timezone: dto.timezone ?? 'UTC',
+                memberships: {create: {userId, role: VenueRole.OWNER}},
+            },
+        });
+    }
 
-  /** Already-guarded by VenueScopeGuard by the time this runs — venueId is trusted. */
-  async getById(venueId: string) {
-    const venue = await this.prisma.venue.findUnique({ where: { id: venueId } });
-    if (!venue) throw new NotFoundException('Venue not found');
-    return venue;
-  }
+    /** Venues the caller belongs to, across all their memberships (section 3:
+     * a user can belong to multiple venues). */
+    async listForUser(userId: string) {
+        return this.prisma.venue.findMany({
+            where: {memberships: {some: {userId}}},
+            orderBy: {createdAt: 'desc'},
+        });
+    }
 
-  async updateSettings(venueId: string, dto: { staffAlertWebhookUrl?: string; lateOrderThresholdMinutes?: number }) {
-    return this.prisma.venue.update({ where: { id: venueId }, data: dto });
-  }
+    /** Already-guarded by VenueScopeGuard by the time this runs — venueId is trusted. */
+    async getById(venueId: string) {
+        const venue = await this.prisma.venue.findUnique({where: {id: venueId}});
+        if (!venue) throw new NotFoundException('Venue not found');
+        return venue;
+    }
 
-  async getBasics(venueId: string) {
-    const venue = await this.getById(venueId);
-    return {
-      id: venue.id,
-      name: venue.name,
-      slug: venue.slug,
-      type: venue.type,
-      logoUrl: venue.logoUrl,
-      brandColor: venue.brandColor,
-      currency: venue.currency,
-      timezone: venue.timezone,
-      plan: venue.plan,
-      autoPrintTickets: venue.autoPrintTickets,
-      // Deliberately omitted: staffAlertWebhookUrl, stripeCustomerId,
-      // stripeSubscriptionId, subscriptionStatus, maxTables, maxStaff,
-      // analyticsHistoryDays — billing/ops internals, owner/manager only,
-      // via the full getOne() route instead.
-    };
-  }
+    async updateSettings(venueId: string, dto: { staffAlertWebhookUrl?: string; lateOrderThresholdMinutes?: number }) {
+        return this.prisma.venue.update({where: {id: venueId}, data: dto});
+    }
+
+    async getBasics(venueId: string) {
+        const venue = await this.getById(venueId);
+        return {
+            id: venue.id,
+            name: venue.name,
+            slug: venue.slug,
+            type: venue.type,
+            logoUrl: venue.logoUrl,
+            brandColor: venue.brandColor,
+            currency: venue.currency,
+            timezone: venue.timezone,
+            plan: venue.plan,
+            autoPrintTickets: venue.autoPrintTickets,
+            // Deliberately omitted: staffAlertWebhookUrl, stripeCustomerId,
+            // stripeSubscriptionId, subscriptionStatus, maxTables, maxStaff,
+            // analyticsHistoryDays — billing/ops internals, owner/manager only,
+            // via the full getOne() route instead.
+        };
+    }
 }

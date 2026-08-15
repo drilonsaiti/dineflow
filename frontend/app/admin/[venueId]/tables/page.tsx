@@ -1,24 +1,24 @@
 'use client';
 
-import { use, useState } from 'react';
+import {use, useState} from 'react';
 import Link from 'next/link';
 import {
-    useTables,
     useAreas,
     useCreateArea,
     useCreateTable,
     useDeactivateTable,
     useReactivateTable,
     useRegenerateTableToken,
+    useTables,
 } from '@/hooks/useTables';
-import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { useToast } from '@/components/ui/Toast';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/Select';
+import {ConfirmDialog} from '@/components/ui/ConfirmDialog';
+import {useToast} from '@/components/ui/Toast';
 
-export default function TablesAdminPage({ params }: { params: Promise<{ venueId: string }> }) {
-    const { venueId } = use(params);
-    const { data: tables = [], isLoading } = useTables(venueId);
-    const { data: areas = [] } = useAreas(venueId);
+export default function TablesAdminPage({params}: { params: Promise<{ venueId: string }> }) {
+    const {venueId} = use(params);
+    const {data: tables = [], isLoading} = useTables(venueId);
+    const {data: areas = []} = useAreas(venueId);
 
     const createAreaMutation = useCreateArea(venueId);
     const createTableMutation = useCreateTable(venueId);
@@ -39,7 +39,7 @@ export default function TablesAdminPage({ params }: { params: Promise<{ venueId:
         if (!newLabel.trim()) return;
         setCreateError(null);
         try {
-            await createTableMutation.mutateAsync({ label: newLabel, areaId: newAreaId || undefined });
+            await createTableMutation.mutateAsync({label: newLabel, areaId: newAreaId || undefined});
             setNewLabel('');
             showToast('Table created', 'success');
         } catch (err: any) {
@@ -73,7 +73,8 @@ export default function TablesAdminPage({ params }: { params: Promise<{ venueId:
                 </div>
             </div>
 
-            <form onSubmit={createArea} className="flex items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700">
+            <form onSubmit={createArea}
+                  className="flex items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700">
                 <div className="flex-1">
                     <label className="block text-xs font-medium text-muted">New area (optional grouping)</label>
                     <input
@@ -88,7 +89,8 @@ export default function TablesAdminPage({ params }: { params: Promise<{ venueId:
                 </button>
             </form>
 
-            <form onSubmit={createTable} className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700">
+            <form onSubmit={createTable}
+                  className="flex flex-wrap items-end gap-3 rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700">
                 <div className="flex-1 min-w-[160px]">
                     <label className="block text-xs font-medium text-muted">Table label</label>
                     <input
@@ -102,7 +104,7 @@ export default function TablesAdminPage({ params }: { params: Promise<{ venueId:
                     <label className="block text-xs font-medium text-muted">Area (optional)</label>
                     <Select value={newAreaId} onValueChange={setNewAreaId}>
                         <SelectTrigger className="mt-1">
-                            <SelectValue placeholder="No area" />
+                            <SelectValue placeholder="No area"/>
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="">No area</SelectItem>
@@ -132,16 +134,22 @@ export default function TablesAdminPage({ params }: { params: Promise<{ venueId:
                                 {table.area && <p className="text-xs text-muted">{table.area.name}</p>}
                                 {!table.isActive && <p className="text-xs text-error">Inactive</p>}
                             </div>
-                            <img src={table.qrDataUrl} alt={`QR for ${table.label}`} className="h-20 w-20" />
+                            <img src={table.qrDataUrl} alt={`QR for ${table.label}`} className="h-20 w-20"/>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-3 text-xs">
-                            <a href={`${API_URL}/venues/${venueId}/tables/${table.id}/qr.png`} className="font-medium text-ink hover:underline dark:text-white">PNG</a>
-                            <a href={`${API_URL}/venues/${venueId}/tables/${table.id}/qr.svg`} className="font-medium text-ink hover:underline dark:text-white">SVG</a>
-                            <button className="font-medium text-ink hover:underline dark:text-white" onClick={() => setConfirmRegenerate(table.id)}>Regenerate</button>
+                            <a href={`${API_URL}/venues/${venueId}/tables/${table.id}/qr.png`}
+                               className="font-medium text-ink hover:underline dark:text-white">PNG</a>
+                            <a href={`${API_URL}/venues/${venueId}/tables/${table.id}/qr.svg`}
+                               className="font-medium text-ink hover:underline dark:text-white">SVG</a>
+                            <button className="font-medium text-ink hover:underline dark:text-white"
+                                    onClick={() => setConfirmRegenerate(table.id)}>Regenerate
+                            </button>
                             {table.isActive ? (
-                                <button className="font-medium text-error hover:underline" onClick={() => setConfirmDeactivate(table.id)}>Deactivate</button>
+                                <button className="font-medium text-error hover:underline"
+                                        onClick={() => setConfirmDeactivate(table.id)}>Deactivate</button>
                             ) : (
-                                <button className="font-medium text-success hover:underline" onClick={() => reactivateMutation.mutate(table.id)}>Reactivate</button>
+                                <button className="font-medium text-success hover:underline"
+                                        onClick={() => reactivateMutation.mutate(table.id)}>Reactivate</button>
                             )}
                         </div>
                     </div>

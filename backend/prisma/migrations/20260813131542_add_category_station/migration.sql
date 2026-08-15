@@ -1,2 +1,3 @@
 -- AlterTable
-ALTER TABLE "MenuCategory" ADD COLUMN     "station" TEXT;
+ALTER TABLE "MenuCategory"
+    ADD COLUMN "station" TEXT;

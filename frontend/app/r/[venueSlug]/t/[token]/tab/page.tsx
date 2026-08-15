@@ -1,14 +1,14 @@
 'use client';
 
-import { use } from 'react';
-import { useTableTab } from '@/hooks/useTableRequestsPublic';
-import { useVenueCurrencyPublic } from '../layout';
-import { formatCents } from '@/lib/money';
+import {use} from 'react';
+import {useTableTab} from '@/hooks/useTableRequestsPublic';
+import {useVenueCurrencyPublic} from '../layout';
+import {formatCents} from '@/lib/money';
 
-export default function TableTabPage({ params }: { params: Promise<{ venueSlug: string; token: string }> }) {
-    const { token } = use(params);
+export default function TableTabPage({params}: { params: Promise<{ venueSlug: string; token: string }> }) {
+    const {token} = use(params);
     const currency = useVenueCurrencyPublic();
-    const { data: tab, isLoading, error } = useTableTab(token);
+    const {data: tab, isLoading, error} = useTableTab(token);
 
     if (error) return <div className="p-8 text-center text-muted">{(error as Error).message}</div>;
     if (isLoading || !tab) return <div className="p-8 text-center text-muted-soft">Loading…</div>;
@@ -44,7 +44,8 @@ export default function TableTabPage({ params }: { params: Promise<{ venueSlug: 
                 ))}
             </div>
 
-            <div className="mt-4 flex items-center justify-between rounded-xl bg-surface-card p-4 text-lg font-semibold text-ink dark:bg-surface-dark-elevated dark:text-white">
+            <div
+                className="mt-4 flex items-center justify-between rounded-xl bg-surface-card p-4 text-lg font-semibold text-ink dark:bg-surface-dark-elevated dark:text-white">
                 <span>Table total</span>
                 <span>{formatCents(tab.grandTotalCents, currency)}</span>
             </div>

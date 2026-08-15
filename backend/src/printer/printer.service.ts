@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import {Injectable, Logger} from '@nestjs/common';
+import {PrismaService} from '../prisma/prisma.service';
 
 /**
  * Pushes a ticket to the venue's configured ESC/POS bridge, if set.
@@ -16,22 +16,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PrinterService {
     private readonly logger = new Logger(PrinterService.name);
 
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) {
+    }
 
     async printOrderTicket(venueId: string, orderId: string) {
-        const venue = await this.prisma.venue.findUnique({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUnique({where: {id: venueId}});
         if (!venue?.printerBridgeUrl) return;
 
         const order = await this.prisma.order.findUnique({
-            where: { id: orderId },
-            include: { items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } }, table: true },
+            where: {id: orderId},
+            include: {items: {include: {menuItem: true, modifiers: {include: {modifierOption: true}}}}, table: true},
         });
         if (!order) return;
 
         try {
             await fetch(venue.printerBridgeUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     orderNumber: order.dailyNumber,
                     table: order.table.label,

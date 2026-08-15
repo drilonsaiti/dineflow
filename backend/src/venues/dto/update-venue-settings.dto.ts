@@ -1,4 +1,4 @@
-import { IsHexColor, IsIn, IsInt, IsOptional, IsString, IsUrl, Min } from 'class-validator';
+import {IsHexColor, IsIn, IsInt, IsOptional, IsString, IsUrl, Min} from 'class-validator';
 
 export class UpdateVenueSettingsDto {
     @IsOptional()

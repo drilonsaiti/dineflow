@@ -26,6 +26,7 @@ export interface CartLine {
 function cartKey(token: string) {
     return `qr-saas:cart:${token}`;
 }
+
 function roundsKey(token: string) {
     return `qr-saas:rounds:${token}`;
 }

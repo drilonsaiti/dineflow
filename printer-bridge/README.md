@@ -1,12 +1,11 @@
 # Printer bridge (reference implementation)
 
-This is NOT part of the NestJS backend or Next.js frontend — it's a small,
-separate always-on program you run on a computer on your venue's local
-network (the same network as your thermal printer), because browsers and
-cloud-hosted backends cannot open a raw socket to a printer's port 9100.
+This is NOT part of the NestJS backend or Next.js frontend — it's a small, separate always-on program you run on a
+computer on your venue's local network (the same network as your thermal printer), because browsers and cloud-hosted
+backends cannot open a raw socket to a printer's port 9100.
 
-It receives the JSON ticket the backend POSTs to `printerBridgeUrl` and
-translates it into ESC/POS commands using the `node-thermal-printer`
+It receives the JSON ticket the backend POSTs to `printerBridgeUrl` and translates it into ESC/POS commands using the
+`node-thermal-printer`
 package, sent directly to the printer's IP.
 
 ## Setup
@@ -58,6 +57,5 @@ app.post('/', async (req, res) => {
 app.listen(9100 + 1000, () => console.log('Printer bridge listening on :10100'));
 ```
 
-Run it (`node index.js`) on a machine on the same network as the printer,
-then set that machine's local IP + port as `printerBridgeUrl` in the
-venue's Settings page (e.g. `http://192.168.1.50:10100`).
+Run it (`node index.js`) on a machine on the same network as the printer, then set that machine's local IP + port as
+`printerBridgeUrl` in the venue's Settings page (e.g. `http://192.168.1.50:10100`).

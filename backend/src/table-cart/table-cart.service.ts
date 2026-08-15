@@ -1,14 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { TablesService } from '../tables/tables.service';
-import { AddCartItemDto, UpdateCartItemDto } from './dto/table-cart.dto';
+import {BadRequestException, Injectable, NotFoundException} from '@nestjs/common';
+import {PrismaService} from '../prisma/prisma.service';
+import {TablesService} from '../tables/tables.service';
+import {AddCartItemDto, UpdateCartItemDto} from './dto/table-cart.dto';
 
 @Injectable()
 export class TableCartService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly tablesService: TablesService,
-    ) {}
+    ) {
+    }
 
     /** Resolves current display prices fresh on every read — deliberately not
      * cached on the cart item itself, since a menu price can change mid-shift
@@ -17,14 +18,14 @@ export class TableCartService {
         const table = await this.tablesService.resolveByToken(tableToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const items = await tx.tableCartItem.findMany({
-                where: { tableId: table.id },
-                orderBy: { createdAt: 'asc' },
+                where: {tableId: table.id},
+                orderBy: {createdAt: 'asc'},
             });
             if (items.length === 0) return [];
 
             const menuItems = await tx.menuItem.findMany({
-                where: { id: { in: items.map((i) => i.menuItemId) } },
-                include: { modifierGroups: { include: { options: true } } },
+                where: {id: {in: items.map((i) => i.menuItemId)}},
+                include: {modifierGroups: {include: {options: true}}},
             });
             const menuItemsById = new Map(menuItems.map((m) => [m.id, m]));
 
@@ -34,7 +35,7 @@ export class TableCartService {
                 const modifiers = item.modifierOptionIds
                     .map((id) => allOptions.find((o) => o.id === id))
                     .filter((o): o is NonNullable<typeof o> => !!o)
-                    .map((o) => ({ modifierOptionId: o.id, name: o.name, priceDeltaCents: o.priceDeltaCents }));
+                    .map((o) => ({modifierOptionId: o.id, name: o.name, priceDeltaCents: o.priceDeltaCents}));
 
                 const unitPriceCents = (menuItem?.priceCents ?? 0) + modifiers.reduce((s, m) => s + m.priceDeltaCents, 0);
 
@@ -60,8 +61,8 @@ export class TableCartService {
         await this.tablesService.assertSessionValid(table.id, dto.sessionToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const menuItem = await tx.menuItem.findUnique({
-                where: { id: dto.menuItemId },
-                include: { modifierGroups: { include: { options: true } } },
+                where: {id: dto.menuItemId},
+                include: {modifierGroups: {include: {options: true}}},
             });
             if (!menuItem || menuItem.venueId !== table.venueId) {
                 throw new NotFoundException('Menu item not found');
@@ -89,16 +90,16 @@ export class TableCartService {
         const table = await this.tablesService.resolveByToken(tableToken);
         await this.tablesService.assertSessionValid(table.id, sessionToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
-            const item = await tx.tableCartItem.findUnique({ where: { id: itemId } });
+            const item = await tx.tableCartItem.findUnique({where: {id: itemId}});
             if (!item || item.tableId !== table.id) throw new NotFoundException('Cart item not found');
 
             if (dto.quantity === 0) {
-                await tx.tableCartItem.delete({ where: { id: itemId } });
-                return { deleted: true };
+                await tx.tableCartItem.delete({where: {id: itemId}});
+                return {deleted: true};
             }
             return tx.tableCartItem.update({
-                where: { id: itemId },
-                data: { quantity: dto.quantity, note: dto.note },
+                where: {id: itemId},
+                data: {quantity: dto.quantity, note: dto.note},
             });
         });
     }
@@ -107,10 +108,10 @@ export class TableCartService {
         const table = await this.tablesService.resolveByToken(tableToken);
         await this.tablesService.assertSessionValid(table.id, sessionToken);
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
-            const item = await tx.tableCartItem.findUnique({ where: { id: itemId } });
+            const item = await tx.tableCartItem.findUnique({where: {id: itemId}});
             if (!item || item.tableId !== table.id) throw new NotFoundException('Cart item not found');
-            await tx.tableCartItem.delete({ where: { id: itemId } });
-            return { deleted: true };
+            await tx.tableCartItem.delete({where: {id: itemId}});
+            return {deleted: true};
         });
     }
 
@@ -121,7 +122,7 @@ export class TableCartService {
         const table = await this.tablesService.resolveByToken(tableToken);
         await this.tablesService.assertSessionValid(table.id, sessionToken);
         return this.prisma.withVenueScope(table.venueId, (tx) =>
-            tx.tableCartItem.deleteMany({ where: { tableId: table.id, menuItemId: { in: menuItemIds } } }),
+            tx.tableCartItem.deleteMany({where: {tableId: table.id, menuItemId: {in: menuItemIds}}}),
         );
     }
 }

@@ -1,16 +1,16 @@
 'use client';
 
-import { use, useState } from 'react';
-import { useStaff, useInviteStaff, useRemoveStaff } from '@/hooks/useStaff';
-import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { useToast } from '@/components/ui/Toast';
+import {use, useState} from 'react';
+import {useInviteStaff, useRemoveStaff, useStaff} from '@/hooks/useStaff';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/Select';
+import {ConfirmDialog} from '@/components/ui/ConfirmDialog';
+import {useToast} from '@/components/ui/Toast';
 
 const ROLES = ['MANAGER', 'STAFF', 'KITCHEN', 'BAR'];
 
-export default function StaffPage({ params }: { params: Promise<{ venueId: string }> }) {
-    const { venueId } = use(params);
-    const { data: members = [], isLoading } = useStaff(venueId);
+export default function StaffPage({params}: { params: Promise<{ venueId: string }> }) {
+    const {venueId} = use(params);
+    const {data: members = [], isLoading} = useStaff(venueId);
     const inviteMutation = useInviteStaff(venueId);
     const removeMutation = useRemoveStaff(venueId);
     const showToast = useToast();
@@ -25,7 +25,7 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
         e.preventDefault();
         setError(null);
         try {
-            await inviteMutation.mutateAsync({ email, role, pin });
+            await inviteMutation.mutateAsync({email, role, pin});
             setEmail('');
             setPin('');
             showToast('Invite sent', 'success');
@@ -48,14 +48,16 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
             <h1 className="text-2xl">Staff</h1>
 
             <p className="text-xs text-muted">
-                Pick a PIN and tell the employee directly (in person, by text) — this is what they'll use to sign in at{' '}
+                Pick a PIN and tell the employee directly (in person, by text) — this is what they'll use to sign in
+                at{' '}
                 <code>/staff-login</code>.
             </p>
 
             <form onSubmit={invite} className="card-soft flex flex-wrap items-end gap-3">
                 <div className="flex-1 min-w-[180px]">
                     <label className="block text-xs font-medium text-muted">Email</label>
-                    <input type="email" required className="input mt-1" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="waiter@venue.com" />
+                    <input type="email" required className="input mt-1" value={email}
+                           onChange={(e) => setEmail(e.target.value)} placeholder="waiter@venue.com"/>
                 </div>
                 <div>
                     <label className="block text-xs font-medium text-muted">PIN (4-6 digits)</label>
@@ -73,7 +75,7 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
                     <label className="block text-xs font-medium text-muted">Role</label>
                     <Select value={role} onValueChange={setRole}>
                         <SelectTrigger className="mt-1 w-36">
-                            <SelectValue />
+                            <SelectValue/>
                         </SelectTrigger>
                         <SelectContent>
                             {ROLES.map((r) => (
@@ -97,7 +99,10 @@ export default function StaffPage({ params }: { params: Promise<{ venueId: strin
                         </div>
                         {m.role !== 'OWNER' && (
                             <button
-                                onClick={() => setPendingRemove({ id: m.user.id, label: m.user.fullName ?? m.user.email })}
+                                onClick={() => setPendingRemove({
+                                    id: m.user.id,
+                                    label: m.user.fullName ?? m.user.email
+                                })}
                                 className="btn-ghost-danger"
                             >
                                 Remove

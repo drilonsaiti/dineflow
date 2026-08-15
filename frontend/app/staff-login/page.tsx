@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import {useState} from 'react';
+import {useRouter} from 'next/navigation';
+import {supabase} from '@/lib/supabase';
 
 // One step: email + PIN, submit, in. No email round-trip. This is a real
 // Supabase password sign-in (the PIN is the account's password) — not a
@@ -19,7 +19,7 @@ export default function StaffLoginPage() {
         e.preventDefault();
         setLoading(true);
         setError(null);
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pin });
+        const {error} = await supabase.auth.signInWithPassword({email, password: pin});
         if (error) {
             setError('Email or PIN not recognized. Ask your manager to double-check it.');
             setLoading(false);

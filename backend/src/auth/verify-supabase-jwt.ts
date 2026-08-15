@@ -1,4 +1,4 @@
-import { JwksClient } from 'jwks-rsa';
+import {JwksClient} from 'jwks-rsa';
 import * as jwt from 'jsonwebtoken';
 
 let client: JwksClient | null = null;
@@ -21,12 +21,12 @@ export async function verifySupabaseJwt(
     token: string,
     supabaseUrl: string,
 ): Promise<{ sub: string; email: string }> {
-    const decoded = jwt.decode(token, { complete: true });
+    const decoded = jwt.decode(token, {complete: true});
     if (!decoded || typeof decoded === 'string' || !decoded.header.kid) {
         throw new Error('Invalid token');
     }
     const key = await getClient(supabaseUrl).getSigningKey(decoded.header.kid);
-    const payload = jwt.verify(token, key.getPublicKey(), { algorithms: ['ES256', 'RS256'] });
+    const payload = jwt.verify(token, key.getPublicKey(), {algorithms: ['ES256', 'RS256']});
     if (typeof payload === 'string') throw new Error('Invalid token payload');
-    return { sub: payload.sub as string, email: payload.email as string };
+    return {sub: payload.sub as string, email: payload.email as string};
 }

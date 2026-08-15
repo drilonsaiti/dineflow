@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { OrderStatus } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import {Injectable} from '@nestjs/common';
+import {OrderStatus} from '@prisma/client';
+import {PrismaService} from '../prisma/prisma.service';
 
 function startOfDay(d = new Date()) {
     const x = new Date(d);
     x.setHours(0, 0, 0, 0);
     return x;
 }
+
 function startOfWeek(d = new Date()) {
     const x = startOfDay(d);
     const day = x.getDay(); // 0 = Sunday
@@ -16,13 +17,14 @@ function startOfWeek(d = new Date()) {
 
 @Injectable()
 export class AnalyticsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(private readonly prisma: PrismaService) {
+    }
 
     /** Clamps any caller-requested range to the venue's plan-gated analytics
      * history window (section 16 — the seam Stripe Billing plugs into later:
      * upgrading a plan raises `analyticsHistoryDays`, nothing else changes). */
     private async clampSince(venueId: string, requestedSince?: Date): Promise<Date> {
-        const venue = await this.prisma.venue.findUniqueOrThrow({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUniqueOrThrow({where: {id: venueId}});
         const earliestAllowed = new Date();
         earliestAllowed.setDate(earliestAllowed.getDate() - venue.analyticsHistoryDays);
         if (!requestedSince || requestedSince < earliestAllowed) return earliestAllowed;
@@ -33,18 +35,18 @@ export class AnalyticsService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const today = startOfDay();
             const weekStart = startOfWeek();
-            const completedFilter = { status: { notIn: [OrderStatus.CANCELLED] } };
+            const completedFilter = {status: {notIn: [OrderStatus.CANCELLED]}};
 
             const [todayAgg, weekAgg] = await Promise.all([
                 tx.order.aggregate({
-                    where: { venueId, createdAt: { gte: today }, ...completedFilter },
+                    where: {venueId, createdAt: {gte: today}, ...completedFilter},
                     _count: true,
-                    _sum: { totalCents: true },
+                    _sum: {totalCents: true},
                 }),
                 tx.order.aggregate({
-                    where: { venueId, createdAt: { gte: weekStart }, ...completedFilter },
+                    where: {venueId, createdAt: {gte: weekStart}, ...completedFilter},
                     _count: true,
-                    _sum: { totalCents: true },
+                    _sum: {totalCents: true},
                 }),
             ]);
 
@@ -65,9 +67,9 @@ export class AnalyticsService {
 
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const orders = await tx.order.findMany({
-                where: { venueId, createdAt: { gte: clampedSince }, status: { notIn: ['CANCELLED'] } },
+                where: {venueId, createdAt: {gte: clampedSince}, status: {notIn: ['CANCELLED']}},
                 select: {
-                    statusEvents: { select: { status: true, changedAt: true } },
+                    statusEvents: {select: {status: true, changedAt: true}},
                 },
             });
 
@@ -81,9 +83,9 @@ export class AnalyticsService {
                 }
             }
 
-            if (durationsMinutes.length === 0) return { avgMinutes: null, sampleSize: 0 };
+            if (durationsMinutes.length === 0) return {avgMinutes: null, sampleSize: 0};
             const avg = durationsMinutes.reduce((a, b) => a + b, 0) / durationsMinutes.length;
-            return { avgMinutes: Math.round(avg * 10) / 10, sampleSize: durationsMinutes.length };
+            return {avgMinutes: Math.round(avg * 10) / 10, sampleSize: durationsMinutes.length};
         });
     }
 
@@ -94,16 +96,16 @@ export class AnalyticsService {
             const grouped = await tx.orderItem.groupBy({
                 by: ['menuItemId'],
                 where: {
-                    order: { venueId, createdAt: { gte: clampedSince }, status: { notIn: ['CANCELLED'] } },
+                    order: {venueId, createdAt: {gte: clampedSince}, status: {notIn: ['CANCELLED']}},
                 },
-                _sum: { quantity: true, lineTotalCents: true },
-                orderBy: { _sum: { quantity: 'desc' } },
+                _sum: {quantity: true, lineTotalCents: true},
+                orderBy: {_sum: {quantity: 'desc'}},
                 take: limit,
             });
 
             const menuItems = await tx.menuItem.findMany({
-                where: { id: { in: grouped.map((g) => g.menuItemId) } },
-                select: { id: true, name: true },
+                where: {id: {in: grouped.map((g) => g.menuItemId)}},
+                select: {id: true, name: true},
             });
             const nameById = new Map(menuItems.map((m) => [m.id, m.name]));
 
@@ -122,15 +124,15 @@ export class AnalyticsService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const grouped = await tx.order.groupBy({
                 by: ['tableId'],
-                where: { venueId, createdAt: { gte: clampedSince }, status: { notIn: ['CANCELLED'] } },
+                where: {venueId, createdAt: {gte: clampedSince}, status: {notIn: ['CANCELLED']}},
                 _count: true,
-                orderBy: { _count: { tableId: 'desc' } },
+                orderBy: {_count: {tableId: 'desc'}},
                 take: limit,
             });
 
             const tables = await tx.table.findMany({
-                where: { id: { in: grouped.map((g) => g.tableId) } },
-                select: { id: true, label: true },
+                where: {id: {in: grouped.map((g) => g.tableId)}},
+                select: {id: true, label: true},
             });
             const labelById = new Map(tables.map((t) => [t.id, t.label]));
 
@@ -162,7 +164,7 @@ export class AnalyticsService {
             // Fill every hour 0-23 so the frontend can render a full 24-bar chart
             // without gaps for quiet hours.
             const byHour = new Map(rows.map((r) => [r.hour, Number(r.count)]));
-            return Array.from({ length: 24 }, (_, hour) => ({ hour, count: byHour.get(hour) ?? 0 }));
+            return Array.from({length: 24}, (_, hour) => ({hour, count: byHour.get(hour) ?? 0}));
         });
     }
 
@@ -170,9 +172,9 @@ export class AnalyticsService {
         const clampedSince = await this.clampSince(venueId, since);
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const feedback = await tx.orderFeedback.findMany({
-                where: { order: { venueId, createdAt: { gte: clampedSince } } },
-                include: { order: { select: { dailyNumber: true } } },
-                orderBy: { createdAt: 'desc' },
+                where: {order: {venueId, createdAt: {gte: clampedSince}}},
+                include: {order: {select: {dailyNumber: true}}},
+                orderBy: {createdAt: 'desc'},
                 take: 50,
             });
             const avgRating = feedback.length
@@ -192,7 +194,7 @@ export class AnalyticsService {
     }
 
     async getZReport(venueId: string, date?: Date) {
-        const venue = await this.prisma.venue.findUniqueOrThrow({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUniqueOrThrow({where: {id: venueId}});
         const day = date ?? new Date();
         const start = new Date(day);
         start.setHours(0, 0, 0, 0);
@@ -202,16 +204,16 @@ export class AnalyticsService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const [nonCancelled, cancelled, bestSeller, busiestHourRow] = await Promise.all([
                 tx.order.aggregate({
-                    where: { venueId, createdAt: { gte: start, lt: end }, status: { not: 'CANCELLED' } },
+                    where: {venueId, createdAt: {gte: start, lt: end}, status: {not: 'CANCELLED'}},
                     _count: true,
-                    _sum: { totalCents: true },
+                    _sum: {totalCents: true},
                 }),
-                tx.order.count({ where: { venueId, createdAt: { gte: start, lt: end }, status: 'CANCELLED' } }),
+                tx.order.count({where: {venueId, createdAt: {gte: start, lt: end}, status: 'CANCELLED'}}),
                 tx.orderItem.groupBy({
                     by: ['menuItemId'],
-                    where: { order: { venueId, createdAt: { gte: start, lt: end }, status: { not: 'CANCELLED' } } },
-                    _sum: { quantity: true },
-                    orderBy: { _sum: { quantity: 'desc' } },
+                    where: {order: {venueId, createdAt: {gte: start, lt: end}, status: {not: 'CANCELLED'}}},
+                    _sum: {quantity: true},
+                    orderBy: {_sum: {quantity: 'desc'}},
                     take: 1,
                 }),
                 tx.$queryRaw<{ hour: number; count: bigint }[]>`
@@ -236,7 +238,10 @@ export class AnalyticsService {
 
             let bestSellerName: string | null = null;
             if (bestSeller[0]) {
-                const item = await tx.menuItem.findUnique({ where: { id: bestSeller[0].menuItemId }, select: { name: true } });
+                const item = await tx.menuItem.findUnique({
+                    where: {id: bestSeller[0].menuItemId},
+                    select: {name: true}
+                });
                 bestSellerName = item?.name ?? null;
             }
 

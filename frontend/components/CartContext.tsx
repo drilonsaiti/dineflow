@@ -1,12 +1,12 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {createContext, ReactNode, useContext, useEffect, useState} from 'react';
 import {
-    useTableCart,
-    useAddCartItem,
-    useUpdateCartItem,
-    useRemoveCartItem,
     SharedCartLine,
+    useAddCartItem,
+    useRemoveCartItem,
+    useTableCart,
+    useUpdateCartItem,
 } from '@/hooks/useTableCart';
 
 interface AddLineInput {
@@ -35,8 +35,8 @@ function guestNameKey(token: string) {
     return `qr-saas:guest-name:${token}`;
 }
 
-export function CartProvider({ token, children }: { token: string; children: ReactNode }) {
-    const { data: lines = [], isLoading } = useTableCart(token);
+export function CartProvider({token, children}: { token: string; children: ReactNode }) {
+    const {data: lines = [], isLoading} = useTableCart(token);
     const addMutation = useAddCartItem(token);
     const updateMutation = useUpdateCartItem(token);
     const removeMutation = useRemoveCartItem(token);
@@ -52,14 +52,17 @@ export function CartProvider({ token, children }: { token: string; children: Rea
     }
 
     async function addLine(line: AddLineInput) {
-        await addMutation.mutateAsync({ ...line, addedByLabel: guestName || undefined });
+        await addMutation.mutateAsync({...line, addedByLabel: guestName || undefined});
     }
+
     async function updateQuantity(itemId: string, quantity: number) {
-        await updateMutation.mutateAsync({ itemId, quantity });
+        await updateMutation.mutateAsync({itemId, quantity});
     }
+
     async function updateNote(itemId: string, note: string) {
-        await updateMutation.mutateAsync({ itemId, note });
+        await updateMutation.mutateAsync({itemId, note});
     }
+
     async function removeLine(itemId: string) {
         await removeMutation.mutateAsync(itemId);
     }
@@ -69,7 +72,18 @@ export function CartProvider({ token, children }: { token: string; children: Rea
 
     return (
         <CartContext.Provider
-            value={{ lines, loading: isLoading, guestName, setGuestName, addLine, updateQuantity, updateNote, removeLine, subtotalCents, count }}
+            value={{
+                lines,
+                loading: isLoading,
+                guestName,
+                setGuestName,
+                addLine,
+                updateQuantity,
+                updateNote,
+                removeLine,
+                subtotalCents,
+                count
+            }}
         >
             {children}
         </CartContext.Provider>

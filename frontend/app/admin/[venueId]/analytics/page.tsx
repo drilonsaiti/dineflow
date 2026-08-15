@@ -1,26 +1,19 @@
 'use client';
 
-import { use } from 'react';
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-} from 'recharts';
-import { Star } from 'lucide-react';
+import {use} from 'react';
+import {Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,} from 'recharts';
+import {Star} from 'lucide-react';
 
-import { useAnalytics } from '@/hooks/useAnalytics';
-import { useVenueCurrency } from '@/hooks/useVenueCurrency';
-import { formatCents } from '@/lib/money';
+import {useAnalytics} from '@/hooks/useAnalytics';
+import {useVenueCurrency} from '@/hooks/useVenueCurrency';
+import {formatCents} from '@/lib/money';
 
 export default function AnalyticsPage({
                                           params,
                                       }: {
     params: Promise<{ venueId: string }>;
 }) {
-    const { venueId } = use(params);
+    const {venueId} = use(params);
 
     const currency = useVenueCurrency(venueId);
 
@@ -117,7 +110,7 @@ export default function AnalyticsPage({
 
                     <Star
                         className="h-6 w-6 text-warning"
-                        style={{ fill: 'currentColor' }}
+                        style={{fill: 'currentColor'}}
                         aria-hidden
                     />
                 </div>
@@ -142,7 +135,7 @@ export default function AnalyticsPage({
                                         </span>
 
                                         <span className="flex items-center gap-0.5">
-                                            {Array.from({ length: 5 }).map(
+                                            {Array.from({length: 5}).map(
                                                 (_, starIndex) => (
                                                     <Star
                                                         key={starIndex}

@@ -1,27 +1,18 @@
-import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Res,
-    UseGuards,
-} from '@nestjs/common';
-import { Response } from 'express';
-import { TablesService } from './tables.service';
-import { CreateAreaDto, CreateTableDto, UpdateTableDto } from './dto/table.dto';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { Roles } from '../common/roles.decorator';
-import { CurrentVenue } from '../common/current-user.decorator';
-import { Public } from '../auth/public.decorator';
-import { VenueRole } from '@prisma/client';
+import {Body, Controller, Delete, Get, Param, Patch, Post, Res, UseGuards,} from '@nestjs/common';
+import {Response} from 'express';
+import {TablesService} from './tables.service';
+import {CreateAreaDto, CreateTableDto, UpdateTableDto} from './dto/table.dto';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {Roles} from '../common/roles.decorator';
+import {CurrentVenue} from '../common/current-user.decorator';
+import {Public} from '../auth/public.decorator';
+import {VenueRole} from '@prisma/client';
 
 @Controller('venues/:venueId')
 @UseGuards(VenueScopeGuard)
 export class TablesController {
-    constructor(private readonly tablesService: TablesService) {}
+    constructor(private readonly tablesService: TablesService) {
+    }
 
     @Get('areas')
     listAreas(@CurrentVenue() scope: { venueId: string }) {
@@ -86,8 +77,8 @@ export class TablesController {
         @Param('tableId') tableId: string,
         @Res() res: Response,
     ) {
-        const { buffer, filename } = await this.tablesService.getQrPng(scope.venueId, tableId);
-        res.set({ 'Content-Type': 'image/png', 'Content-Disposition': `attachment; filename="${filename}"` });
+        const {buffer, filename} = await this.tablesService.getQrPng(scope.venueId, tableId);
+        res.set({'Content-Type': 'image/png', 'Content-Disposition': `attachment; filename="${filename}"`});
         res.send(buffer);
     }
 
@@ -98,8 +89,8 @@ export class TablesController {
         @Param('tableId') tableId: string,
         @Res() res: Response,
     ) {
-        const { svg, filename } = await this.tablesService.getQrSvg(scope.venueId, tableId);
-        res.set({ 'Content-Type': 'image/svg+xml', 'Content-Disposition': `attachment; filename="${filename}"` });
+        const {svg, filename} = await this.tablesService.getQrSvg(scope.venueId, tableId);
+        res.set({'Content-Type': 'image/svg+xml', 'Content-Disposition': `attachment; filename="${filename}"`});
         res.send(svg);
     }
 
@@ -120,7 +111,8 @@ export class TablesController {
 // venueId param, no VenueScopeGuard — the token itself is the authority.
 @Controller('public/tables')
 export class PublicTablesController {
-    constructor(private readonly tablesService: TablesService) {}
+    constructor(private readonly tablesService: TablesService) {
+    }
 
     @Public()
     @Get(':token')
@@ -128,7 +120,7 @@ export class PublicTablesController {
         const table = await this.tablesService.resolveByToken(token);
         const session = await this.tablesService.getOrCreateSession(table.id, table.venueId);
         return {
-            table: { id: table.id, label: table.label },
+            table: {id: table.id, label: table.label},
             venue: {
                 slug: table.venue.slug,
                 name: table.venue.name,
@@ -136,7 +128,7 @@ export class PublicTablesController {
                 brandColor: table.venue.brandColor,
                 currency: table.venue.currency,
             },
-            area: table.area ? { name: table.area.name } : null,
+            area: table.area ? {name: table.area.name} : null,
             sessionToken: session.sessionToken,
         };
     }

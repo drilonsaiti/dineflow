@@ -1,21 +1,22 @@
 'use client';
 
 import * as ToastPrimitive from '@radix-ui/react-toast';
-import { createContext, useCallback, useContext, useState } from 'react';
+import {createContext, useCallback, useContext, useState} from 'react';
 
 type ToastMessage = { id: number; title: string; variant: 'default' | 'error' | 'success' };
-const ToastCtx = createContext<(title: string, variant?: ToastMessage['variant']) => void>(() => {});
+const ToastCtx = createContext<(title: string, variant?: ToastMessage['variant']) => void>(() => {
+});
 
 export function useToast() {
     return useContext(ToastCtx);
 }
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
+export function ToastProvider({children}: { children: React.ReactNode }) {
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
     const showToast = useCallback((title: string, variant: ToastMessage['variant'] = 'default') => {
         const id = Date.now();
-        setToasts((prev) => [...prev, { id, title, variant }]);
+        setToasts((prev) => [...prev, {id, title, variant}]);
     }, []);
 
     return (
@@ -39,7 +40,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                         <ToastPrimitive.Title>{t.title}</ToastPrimitive.Title>
                     </ToastPrimitive.Root>
                 ))}
-                <ToastPrimitive.Viewport className="fixed bottom-4 right-4 z-50 flex w-80 flex-col gap-2 outline-none" />
+                <ToastPrimitive.Viewport className="fixed bottom-4 right-4 z-50 flex w-80 flex-col gap-2 outline-none"/>
             </ToastPrimitive.Provider>
         </ToastCtx.Provider>
     );

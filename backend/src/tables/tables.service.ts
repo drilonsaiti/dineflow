@@ -1,22 +1,18 @@
-import {
-    BadRequestException,
-    GoneException,
-    Injectable,
-    NotFoundException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import {BadRequestException, GoneException, Injectable, NotFoundException,} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
 import * as QRCode from 'qrcode';
 import archiver from 'archiver';
-import { PassThrough } from 'stream';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateAreaDto, CreateTableDto, UpdateTableDto } from './dto/table.dto';
+import {PassThrough} from 'stream';
+import {PrismaService} from '../prisma/prisma.service';
+import {CreateAreaDto, CreateTableDto, UpdateTableDto} from './dto/table.dto';
 
 @Injectable()
 export class TablesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
-    ) {}
+    ) {
+    }
 
     // ---------- URL construction ----------
 
@@ -41,25 +37,25 @@ export class TablesService {
 
     listAreas(venueId: string) {
         return this.prisma.withVenueScope(venueId, (tx) =>
-            tx.area.findMany({ where: { venueId }, orderBy: { name: 'asc' } }),
+            tx.area.findMany({where: {venueId}, orderBy: {name: 'asc'}}),
         );
     }
 
     createArea(venueId: string, dto: CreateAreaDto) {
         return this.prisma.withVenueScope(venueId, (tx) =>
-            tx.area.create({ data: { venueId, name: dto.name } }),
+            tx.area.create({data: {venueId, name: dto.name}}),
         );
     }
 
     async deleteArea(venueId: string, areaId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
-            const area = await tx.area.findUnique({ where: { id: areaId } });
+            const area = await tx.area.findUnique({where: {id: areaId}});
             if (!area || area.venueId !== venueId) throw new NotFoundException('Area not found');
             // Un-group any tables rather than blocking the delete or cascading
             // into deleting tables (section 6 areas are organizational, not
             // load-bearing for a table's identity/order history).
-            await tx.table.updateMany({ where: { areaId }, data: { areaId: null } });
-            return tx.area.delete({ where: { id: areaId } });
+            await tx.table.updateMany({where: {areaId}, data: {areaId: null}});
+            return tx.area.delete({where: {id: areaId}});
         });
     }
 
@@ -67,11 +63,11 @@ export class TablesService {
 
     async listTables(venueId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
-            const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
+            const venue = await tx.venue.findUniqueOrThrow({where: {id: venueId}});
             const tables = await tx.table.findMany({
-                where: { venueId },
-                include: { area: true },
-                orderBy: { label: 'asc' },
+                where: {venueId},
+                include: {area: true},
+                orderBy: {label: 'asc'},
             });
             return Promise.all(
                 tables.map(async (t) => ({
@@ -85,11 +81,11 @@ export class TablesService {
 
     async createTable(venueId: string, dto: CreateTableDto) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
-            const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
+            const venue = await tx.venue.findUniqueOrThrow({where: {id: venueId}});
 
             // Plan-gated seam from section 16, made real rather than decorative:
             // FREE plan caps active tables at venue.maxTables.
-            const activeCount = await tx.table.count({ where: { venueId, isActive: true } });
+            const activeCount = await tx.table.count({where: {venueId, isActive: true}});
             if (activeCount >= venue.maxTables) {
                 throw new BadRequestException(
                     `Your plan (${venue.plan}) allows up to ${venue.maxTables} tables. ` +
@@ -98,14 +94,14 @@ export class TablesService {
             }
 
             if (dto.areaId) {
-                const area = await tx.area.findUnique({ where: { id: dto.areaId } });
+                const area = await tx.area.findUnique({where: {id: dto.areaId}});
                 if (!area || area.venueId !== venueId) throw new NotFoundException('Area not found');
             }
 
             const table = await tx.table.create({
-                data: { venueId, label: dto.label, areaId: dto.areaId },
+                data: {venueId, label: dto.label, areaId: dto.areaId},
             });
-            return { ...table, orderingUrl: this.buildTableUrl(venue.slug, table.token) };
+            return {...table, orderingUrl: this.buildTableUrl(venue.slug, table.token)};
         });
     }
 
@@ -113,12 +109,12 @@ export class TablesService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
             if (dto.areaId) {
-                const area = await tx.area.findUnique({ where: { id: dto.areaId } });
+                const area = await tx.area.findUnique({where: {id: dto.areaId}});
                 if (!area || area.venueId !== venueId) throw new NotFoundException('Area not found');
             }
             return tx.table.update({
-                where: { id: tableId },
-                data: { label: dto.label, areaId: dto.areaId },
+                where: {id: tableId},
+                data: {label: dto.label, areaId: dto.areaId},
             });
         });
     }
@@ -129,14 +125,14 @@ export class TablesService {
     async deactivateTable(venueId: string, tableId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
-            return tx.table.update({ where: { id: tableId }, data: { isActive: false } });
+            return tx.table.update({where: {id: tableId}, data: {isActive: false}});
         });
     }
 
     async reactivateTable(venueId: string, tableId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
-            return tx.table.update({ where: { id: tableId }, data: { isActive: true } });
+            return tx.table.update({where: {id: tableId}, data: {isActive: true}});
         });
     }
 
@@ -146,10 +142,10 @@ export class TablesService {
     async regenerateToken(venueId: string, tableId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
-            const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
+            const venue = await tx.venue.findUniqueOrThrow({where: {id: venueId}});
             const table = await tx.table.update({
-                where: { id: tableId },
-                data: { token: crypto.randomUUID() },
+                where: {id: tableId},
+                data: {token: crypto.randomUUID()},
             });
             return {
                 ...table,
@@ -160,7 +156,7 @@ export class TablesService {
     }
 
     private async assertTableInVenue(tx: any, venueId: string, tableId: string) {
-        const table = await tx.table.findUnique({ where: { id: tableId } });
+        const table = await tx.table.findUnique({where: {id: tableId}});
         if (!table || table.venueId !== venueId) throw new NotFoundException('Table not found');
     }
 
@@ -169,26 +165,26 @@ export class TablesService {
     async getQrPng(venueId: string, tableId: string): Promise<{ buffer: Buffer; filename: string }> {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
-            const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
-            const table = await tx.table.findUniqueOrThrow({ where: { id: tableId }, include: { area: true } });
+            const venue = await tx.venue.findUniqueOrThrow({where: {id: venueId}});
+            const table = await tx.table.findUniqueOrThrow({where: {id: tableId}, include: {area: true}});
             const buffer = await QRCode.toBuffer(this.buildTableUrl(venue.slug, table.token), {
                 margin: 1,
                 width: 800,
             });
-            return { buffer, filename: this.qrFilename(table, 'png') };
+            return {buffer, filename: this.qrFilename(table, 'png')};
         });
     }
 
     async getQrSvg(venueId: string, tableId: string): Promise<{ svg: string; filename: string }> {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertTableInVenue(tx, venueId, tableId);
-            const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
-            const table = await tx.table.findUniqueOrThrow({ where: { id: tableId }, include: { area: true } });
+            const venue = await tx.venue.findUniqueOrThrow({where: {id: venueId}});
+            const table = await tx.table.findUniqueOrThrow({where: {id: tableId}, include: {area: true}});
             const svg = await QRCode.toString(this.buildTableUrl(venue.slug, table.token), {
                 type: 'svg',
                 margin: 1,
             });
-            return { svg, filename: this.qrFilename(table, 'svg') };
+            return {svg, filename: this.qrFilename(table, 'svg')};
         });
     }
 
@@ -198,11 +194,11 @@ export class TablesService {
      * the whole archive in memory. */
     async getBulkQrZipStream(venueId: string): Promise<PassThrough> {
         return this.prisma.withVenueScope(venueId, async (tx) => {
-            const venue = await tx.venue.findUniqueOrThrow({ where: { id: venueId } });
-            const tables = await tx.table.findMany({ where: { venueId, isActive: true } });
+            const venue = await tx.venue.findUniqueOrThrow({where: {id: venueId}});
+            const tables = await tx.table.findMany({where: {venueId, isActive: true}});
 
             const output = new PassThrough();
-            const archive = archiver('zip', { zlib: { level: 9 } });
+            const archive = archiver('zip', {zlib: {level: 9}});
             archive.pipe(output);
 
             for (const table of tables) {
@@ -211,7 +207,7 @@ export class TablesService {
                     width: 800,
                 });
                 const safeName = table.label.replace(/[^a-z0-9-_]+/gi, '_');
-                archive.append(png, { name: `${safeName}.png` });
+                archive.append(png, {name: `${safeName}.png`});
             }
 
             archive.finalize();
@@ -227,8 +223,8 @@ export class TablesService {
      * once, not duplicated. */
     async resolveByToken(token: string) {
         const table = await this.prisma.table.findUnique({
-            where: { token },
-            include: { venue: true, area: true },
+            where: {token},
+            include: {venue: true, area: true},
         });
         if (!table) throw new NotFoundException('This QR code is not recognized.');
         if (!table.isActive) {
@@ -244,7 +240,7 @@ export class TablesService {
      * requires them to do anything differently. */
     async getOrCreateSession(tableId: string, venueId: string) {
         const existing = await this.prisma.tableSession.findFirst({
-            where: { tableId, status: 'ACTIVE' },
+            where: {tableId, status: 'ACTIVE'},
         });
 
         if (existing) {
@@ -252,8 +248,8 @@ export class TablesService {
             // Expired but never explicitly closed (e.g. nobody requested the
             // bill) — close it now so a stale session never lingers as "active".
             await this.prisma.tableSession.update({
-                where: { id: existing.id },
-                data: { status: 'CLOSED', closedAt: new Date() },
+                where: {id: existing.id},
+                data: {status: 'CLOSED', closedAt: new Date()},
             });
         }
 
@@ -274,7 +270,7 @@ export class TablesService {
         if (!sessionToken) {
             throw new GoneException('Your ordering session has expired. Please rescan the table QR code.');
         }
-        const session = await this.prisma.tableSession.findUnique({ where: { sessionToken } });
+        const session = await this.prisma.tableSession.findUnique({where: {sessionToken}});
         const expired = session?.expiresAt && session.expiresAt < new Date();
         if (!session || session.tableId !== tableId || session.status !== 'ACTIVE' || expired) {
             throw new GoneException('Your ordering session has expired. Please rescan the table QR code.');
@@ -286,8 +282,8 @@ export class TablesService {
      * this point on, and the next diners get a brand-new session. */
     async closeActiveSession(tableId: string) {
         await this.prisma.tableSession.updateMany({
-            where: { tableId, status: 'ACTIVE' },
-            data: { status: 'CLOSED', closedAt: new Date() },
+            where: {tableId, status: 'ACTIVE'},
+            data: {status: 'CLOSED', closedAt: new Date()},
         });
     }
 

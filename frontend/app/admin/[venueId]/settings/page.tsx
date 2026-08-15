@@ -1,19 +1,19 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import {use, useEffect, useState} from 'react';
 import {
-    useVenueSettings,
-    useUpdateVenueSettings,
     useCreateCheckoutSession,
     useCreatePortalSession,
+    useUpdateVenueSettings,
+    useVenueSettings,
 } from '@/hooks/useVenueSettings';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Select, SelectValue, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
-import { useToast } from '@/components/ui/Toast';
+import {Checkbox} from '@/components/ui/Checkbox';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/Select';
+import {useToast} from '@/components/ui/Toast';
 
-export default function VenueSettingsPage({ params }: { params: Promise<{ venueId: string }> }) {
-    const { venueId } = use(params);
-    const { data: venue, isLoading } = useVenueSettings(venueId);
+export default function VenueSettingsPage({params}: { params: Promise<{ venueId: string }> }) {
+    const {venueId} = use(params);
+    const {data: venue, isLoading} = useVenueSettings(venueId);
     const updateMutation = useUpdateVenueSettings(venueId);
     const checkoutMutation = useCreateCheckoutSession(venueId);
     const portalMutation = useCreatePortalSession(venueId);
@@ -60,11 +60,11 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
             formData.append('file', file);
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/venues/${venueId}/uploads/image`, {
                 method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: {Authorization: `Bearer ${token}`},
                 body: formData,
             });
             if (!res.ok) throw new Error((await res.json()).message ?? 'Upload failed');
-            const { url } = await res.json();
+            const {url} = await res.json();
             setLogoUrl(url);
             showToast('Logo uploaded', 'success');
         } catch (err: any) {
@@ -98,7 +98,7 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
 
     async function upgrade(plan: 'PRO' | 'BUSINESS') {
         try {
-            const { url } = await checkoutMutation.mutateAsync(plan);
+            const {url} = await checkoutMutation.mutateAsync(plan);
             window.location.href = url;
         } catch (err: any) {
             showToast(err.message ?? 'Failed to start checkout', 'error');
@@ -107,7 +107,7 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
 
     async function manageBilling() {
         try {
-            const { url } = await portalMutation.mutateAsync();
+            const {url} = await portalMutation.mutateAsync();
             window.location.href = url;
         } catch (err: any) {
             showToast(err.message ?? 'Failed to open billing portal', 'error');
@@ -125,7 +125,7 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                         <label className="block text-sm font-medium text-ink dark:text-white">Venue type</label>
                         <Select value={type} onValueChange={setType}>
                             <SelectTrigger className="mt-1">
-                                <SelectValue />
+                                <SelectValue/>
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="restaurant">Restaurant</SelectItem>
@@ -139,13 +139,13 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                         <label className="block text-sm font-medium text-ink dark:text-white">Logo</label>
                         <div className="mt-1 flex items-center gap-3">
                             {logoUrl ? (
-                                <img src={logoUrl} alt="" className="h-12 w-12 rounded-full object-cover" />
+                                <img src={logoUrl} alt="" className="h-12 w-12 rounded-full object-cover"/>
                             ) : (
-                                <div className="h-12 w-12 rounded-full bg-surface-card dark:bg-surface-dark-elevated" />
+                                <div className="h-12 w-12 rounded-full bg-surface-card dark:bg-surface-dark-elevated"/>
                             )}
                             <label className="btn-secondary cursor-pointer px-3 py-1.5 text-sm">
                                 {uploadingLogo ? 'Uploading…' : 'Upload logo'}
-                                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                                <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload}/>
                             </label>
                         </div>
                     </div>
@@ -163,7 +163,7 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                             <label className="block text-sm font-medium text-ink dark:text-white">Currency</label>
                             <Select value={currency} onValueChange={setCurrency}>
                                 <SelectTrigger className="mt-1">
-                                    <SelectValue />
+                                    <SelectValue/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     {['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD'].map((c) => (
@@ -184,7 +184,8 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                     </div>
                     <div className="flex gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-ink dark:text-white">Tax rate % (optional)</label>
+                            <label className="block text-sm font-medium text-ink dark:text-white">Tax rate %
+                                (optional)</label>
                             <input
                                 type="number"
                                 step="0.1"
@@ -194,8 +195,9 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                             />
                         </div>
                         <div className="flex items-end pb-2">
-                            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
-                                <Checkbox checked={taxInclusive} onCheckedChange={(c) => setTaxInclusive(c === true)} />
+                            <label
+                                className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
+                                <Checkbox checked={taxInclusive} onCheckedChange={(c) => setTaxInclusive(c === true)}/>
                                 Prices include tax
                             </label>
                         </div>
@@ -206,9 +208,11 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
             <form onSubmit={save} className="space-y-5 border-t border-hairline pt-6 dark:border-gray-800">
                 <h2 className="text-lg">Notification settings</h2>
                 <div>
-                    <label className="block text-sm font-medium text-ink dark:text-white">Staff alert webhook URL</label>
+                    <label className="block text-sm font-medium text-ink dark:text-white">Staff alert webhook
+                        URL</label>
                     <p className="mb-1 text-xs text-muted">
-                        A Slack "Incoming Webhook" URL. Staff get pinged here when an order or table request sits unattended past the threshold below.
+                        A Slack "Incoming Webhook" URL. Staff get pinged here when an order or table request sits
+                        unattended past the threshold below.
                     </p>
                     <input
                         type="url"
@@ -219,7 +223,8 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-ink dark:text-white">Late order threshold (minutes)</label>
+                    <label className="block text-sm font-medium text-ink dark:text-white">Late order threshold
+                        (minutes)</label>
                     <input
                         type="number"
                         min={1}
@@ -231,8 +236,9 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
 
                 <div className="border-t border-hairline pt-4 dark:border-gray-800">
                     <h3 className="text-sm font-semibold text-ink dark:text-white">Kitchen printing</h3>
-                    <label className="mt-2 flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
-                        <Checkbox checked={autoPrintTickets} onCheckedChange={(c) => setAutoPrintTickets(c === true)} />
+                    <label
+                        className="mt-2 flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
+                        <Checkbox checked={autoPrintTickets} onCheckedChange={(c) => setAutoPrintTickets(c === true)}/>
                         Auto-open a print ticket for every new order
                     </label>
                     <div className="mt-3">
@@ -255,9 +261,11 @@ export default function VenueSettingsPage({ params }: { params: Promise<{ venueI
 
             <div className="border-t border-hairline pt-6 dark:border-gray-800">
                 <h2 className="text-lg">Plan & billing</h2>
-                <p className="mt-1 text-sm text-muted">Free plan includes up to 10 tables and 30 days of analytics history.</p>
+                <p className="mt-1 text-sm text-muted">Free plan includes up to 10 tables and 30 days of analytics
+                    history.</p>
                 <div className="mt-3 flex gap-3">
-                    <button onClick={() => upgrade('PRO')} disabled={checkoutMutation.isPending} className="btn-primary">
+                    <button onClick={() => upgrade('PRO')} disabled={checkoutMutation.isPending}
+                            className="btn-primary">
                         Upgrade to Pro
                     </button>
                     <button onClick={manageBilling} disabled={portalMutation.isPending} className="btn-secondary">

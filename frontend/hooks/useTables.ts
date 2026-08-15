@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { queryKeys } from '@/lib/query-keys';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {api} from '@/lib/api';
+import {queryKeys} from '@/lib/query-keys';
 import {Area, TableRow} from "@/types/table";
 
 export function useTables(venueId: string) {
@@ -21,17 +21,18 @@ export function useAreas(venueId: string) {
 
 function useInvalidateTables(venueId: string) {
     const queryClient = useQueryClient();
-    return () => queryClient.invalidateQueries({ queryKey: queryKeys.tables(venueId) });
+    return () => queryClient.invalidateQueries({queryKey: queryKeys.tables(venueId)});
 }
+
 function useInvalidateAreas(venueId: string) {
     const queryClient = useQueryClient();
-    return () => queryClient.invalidateQueries({ queryKey: queryKeys.areas(venueId) });
+    return () => queryClient.invalidateQueries({queryKey: queryKeys.areas(venueId)});
 }
 
 export function useCreateArea(venueId: string) {
     const invalidate = useInvalidateAreas(venueId);
     return useMutation({
-        mutationFn: (name: string) => api.post(`/venues/${venueId}/areas`, { name }),
+        mutationFn: (name: string) => api.post(`/venues/${venueId}/areas`, {name}),
         onSuccess: invalidate,
     });
 }

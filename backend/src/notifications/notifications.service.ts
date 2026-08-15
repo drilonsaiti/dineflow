@@ -1,7 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { SMS_PROVIDER, WEBHOOK_PROVIDER, SmsProvider, WebhookProvider } from './notification-provider.interface';
-import { NotificationChannel, NotificationKind } from '@prisma/client';
+import {Inject, Injectable} from '@nestjs/common';
+import {PrismaService} from '../prisma/prisma.service';
+import {SMS_PROVIDER, SmsProvider, WEBHOOK_PROVIDER, WebhookProvider} from './notification-provider.interface';
+import {NotificationChannel, NotificationKind} from '@prisma/client';
 
 @Injectable()
 export class NotificationsService {
@@ -9,7 +9,8 @@ export class NotificationsService {
         private readonly prisma: PrismaService,
         @Inject(SMS_PROVIDER) private readonly smsProvider: SmsProvider,
         @Inject(WEBHOOK_PROVIDER) private readonly webhookProvider: WebhookProvider,
-    ) {}
+    ) {
+    }
 
     /** Trigger point: OrdersService.advanceStatus calls this whenever an
      * order transitions into READY. Section 15: "SMS/push notification to
@@ -18,8 +19,8 @@ export class NotificationsService {
      * from placeOrder; this only fires if the customer actually gave one. */
     async notifyCustomerOrderReady(venueId: string, orderId: string) {
         const order = await this.prisma.order.findUnique({
-            where: { id: orderId },
-            include: { table: true },
+            where: {id: orderId},
+            include: {table: true},
         });
 
         if (!order?.customerPhone) {
@@ -35,7 +36,7 @@ export class NotificationsService {
             orderId,
             'CUSTOMER_ORDER_READY',
             'SMS',
-            order.customerPhone,
+            this.maskPhone(order.customerPhone),
             result.ok ? 'sent' : 'failed',
             result.detail,
         );
@@ -48,14 +49,14 @@ export class NotificationsService {
      * implemented (no provider bound for it below) — only the webhook path
      * is live, since it needs no third-party account to actually work. */
     async notifyStaffOrderLate(venueId: string, orderId: string) {
-        const venue = await this.prisma.venue.findUnique({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUnique({where: {id: venueId}});
 
         if (!venue?.staffAlertWebhookUrl) {
             await this.log(venueId, orderId, 'STAFF_ORDER_LATE', 'WEBHOOK', 'n/a', 'skipped_not_configured');
             return;
         }
 
-        const order = await this.prisma.order.findUnique({ where: { id: orderId }, include: { table: true } });
+        const order = await this.prisma.order.findUnique({where: {id: orderId}, include: {table: true}});
         const result = await this.webhookProvider.post(venue.staffAlertWebhookUrl, {
             text: `⏰ Order #${order?.dailyNumber} at ${order?.table.label} has been unattended for over ${venue.lateOrderThresholdMinutes} minutes.`,
         });
@@ -81,12 +82,12 @@ export class NotificationsService {
         detail?: string,
     ) {
         await this.prisma.notificationLog.create({
-            data: { venueId, orderId: orderId ?? undefined, kind, channel, recipient, status, detail },
+            data: {venueId, orderId: orderId ?? undefined, kind, channel, recipient, status, detail},
         });
     }
 
     async notifyStaffTableRequestStale(venueId: string, requestId: string, tableLabel: string, type: string) {
-        const venue = await this.prisma.venue.findUnique({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUnique({where: {id: venueId}});
         if (!venue?.staffAlertWebhookUrl) {
             await this.log(venueId, requestId, 'STAFF_ORDER_LATE', 'WEBHOOK', 'n/a', 'skipped_not_configured');
             return;
@@ -106,5 +107,15 @@ export class NotificationsService {
             result.ok ? 'sent' : 'failed',
             result.detail,
         );
+    }
+
+    /** Never stores the full phone number in the audit log — the log exists
+     * to answer "did we attempt delivery and did it succeed", not to be a
+     * second copy of customer PII. Masks to the last 4 digits, same pattern
+     * as a receipt/card statement. */
+    private maskPhone(phone: string): string {
+        const digits = phone.replace(/\D/g, '');
+        if (digits.length <= 4) return '***';
+        return `***${digits.slice(-4)}`;
     }
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { queryKeys } from '@/lib/query-keys';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {api} from '@/lib/api';
+import {queryKeys} from '@/lib/query-keys';
 
 interface Assignment {
     tableId: string;
@@ -21,8 +21,8 @@ export function useTableAssignments(venueId: string) {
 export function useClaimTable(venueId: string) {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (tableId: string) => api.post(`/venues/${venueId}/table-assignments`, { tableId }),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tableAssignments(venueId) }),
+        mutationFn: (tableId: string) => api.post(`/venues/${venueId}/table-assignments`, {tableId}),
+        onSuccess: () => queryClient.invalidateQueries({queryKey: queryKeys.tableAssignments(venueId)}),
     });
 }
 
@@ -30,6 +30,6 @@ export function useReleaseTable(venueId: string) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (tableId: string) => api.delete(`/venues/${venueId}/table-assignments/${tableId}`),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.tableAssignments(venueId) }),
+        onSuccess: () => queryClient.invalidateQueries({queryKey: queryKeys.tableAssignments(venueId)}),
     });
 }

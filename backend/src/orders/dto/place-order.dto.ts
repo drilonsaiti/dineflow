@@ -1,21 +1,21 @@
-import { IsOptional, IsString } from 'class-validator';
+import {IsOptional, IsString} from 'class-validator';
 
 export class PlaceOrderDto {
-  @IsString()
-  tableToken!: string;
+    @IsString()
+    tableToken!: string;
 
-  @IsOptional()
-  @IsString()
-  customerName?: string;
+    @IsOptional()
+    @IsString()
+    customerName?: string;
 
-  @IsOptional()
-  @IsString()
-  customerPhone?: string;
+    @IsOptional()
+    @IsString()
+    customerPhone?: string;
 
-  @IsOptional()
-  @IsString()
-  note?: string;
+    @IsOptional()
+    @IsString()
+    note?: string;
 
-  @IsString()
-  sessionToken!: string;
+    @IsString()
+    sessionToken!: string;
 }

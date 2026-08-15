@@ -1,19 +1,20 @@
-import { Injectable } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
-import { passportJwtSecret } from 'jwks-rsa';
-import { PrismaService } from '../prisma/prisma.service';
+import {Injectable} from '@nestjs/common';
+import {PassportStrategy} from '@nestjs/passport';
+import {ExtractJwt, Strategy} from 'passport-jwt';
+import {ConfigService} from '@nestjs/config';
+import {passportJwtSecret} from 'jwks-rsa';
+import {PrismaService} from '../prisma/prisma.service';
 
 export interface SupabaseJwtPayload {
-  sub: string;
-  email: string;
-  [key: string]: unknown;
+    sub: string;
+    email: string;
+
+    [key: string]: unknown;
 }
 
 export interface AuthenticatedUser {
-  id: string;
-  email: string;
+    id: string;
+    email: string;
 }
 
 /**
@@ -25,31 +26,31 @@ export interface AuthenticatedUser {
  */
 @Injectable()
 export class SupabaseJwtStrategy extends PassportStrategy(Strategy, 'supabase-jwt') {
-  constructor(
-      config: ConfigService,
-      private readonly prisma: PrismaService,
-  ) {
-    const supabaseUrl = config.getOrThrow<string>('SUPABASE_URL');
+    constructor(
+        config: ConfigService,
+        private readonly prisma: PrismaService,
+    ) {
+        const supabaseUrl = config.getOrThrow<string>('SUPABASE_URL');
 
-    super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      algorithms: ['ES256', 'RS256'],
-      secretOrKeyProvider: passportJwtSecret({
-        cache: true,
-        rateLimit: true,
-        jwksRequestsPerMinute: 5,
-        jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
-      }),
-    });
-  }
+        super({
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+            ignoreExpiration: false,
+            algorithms: ['ES256', 'RS256'],
+            secretOrKeyProvider: passportJwtSecret({
+                cache: true,
+                rateLimit: true,
+                jwksRequestsPerMinute: 5,
+                jwksUri: `${supabaseUrl}/auth/v1/.well-known/jwks.json`,
+            }),
+        });
+    }
 
-  async validate(payload: SupabaseJwtPayload): Promise<AuthenticatedUser> {
-    await this.prisma.user.upsert({
-      where: { id: payload.sub },
-      update: { email: payload.email },
-      create: { id: payload.sub, email: payload.email },
-    });
-    return { id: payload.sub, email: payload.email };
-  }
+    async validate(payload: SupabaseJwtPayload): Promise<AuthenticatedUser> {
+        await this.prisma.user.upsert({
+            where: {id: payload.sub},
+            update: {email: payload.email},
+            create: {id: payload.sub, email: payload.email},
+        });
+        return {id: payload.sub, email: payload.email};
+    }
 }

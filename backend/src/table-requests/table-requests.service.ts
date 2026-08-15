@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { TablesService } from '../tables/tables.service';
-import { OrdersGateway } from '../orders/orders.gateway';
+import {Injectable} from '@nestjs/common';
+import {PrismaService} from '../prisma/prisma.service';
+import {TablesService} from '../tables/tables.service';
+import {OrdersGateway} from '../orders/orders.gateway';
 
 @Injectable()
 export class TableRequestsService {
@@ -9,7 +9,8 @@ export class TableRequestsService {
         private readonly prisma: PrismaService,
         private readonly tablesService: TablesService,
         private readonly gateway: OrdersGateway,
-    ) {}
+    ) {
+    }
 
     async create(
         tableToken: string,
@@ -28,16 +29,16 @@ export class TableRequestsService {
             // second one.
             if (type === 'REQUEST_BILL_CASH') {
                 const existing = await tx.tableRequest.findFirst({
-                    where: { tableId: table.id, type: 'REQUEST_BILL_CASH', status: { not: 'RESOLVED' } },
+                    where: {tableId: table.id, type: 'REQUEST_BILL_CASH', status: {not: 'RESOLVED'}},
                 });
                 if (existing) {
                     const mergedGuestCount = guestCount ?? existing.guestCount ?? undefined;
                     const totalCents = existing.totalCentsAtRequest ?? 0;
                     const perPersonCentsAtRequest = mergedGuestCount ? Math.round(totalCents / mergedGuestCount) : null;
                     const updated = await tx.tableRequest.update({
-                        where: { id: existing.id },
-                        data: { guestCount: mergedGuestCount, perPersonCentsAtRequest },
-                        include: { table: true },
+                        where: {id: existing.id},
+                        data: {guestCount: mergedGuestCount, perPersonCentsAtRequest},
+                        include: {table: true},
                     });
                     this.gateway.emitTableRequestEvent(table.venueId, 'table_request_updated', updated);
                     return updated;
@@ -51,8 +52,13 @@ export class TableRequestsService {
                 const startOfDay = new Date();
                 startOfDay.setHours(0, 0, 0, 0);
                 const agg = await tx.order.aggregate({
-                    where: { venueId: table.venueId, tableId: table.id, createdAt: { gte: startOfDay }, status: { not: 'CANCELLED' } },
-                    _sum: { totalCents: true },
+                    where: {
+                        venueId: table.venueId,
+                        tableId: table.id,
+                        createdAt: {gte: startOfDay},
+                        status: {not: 'CANCELLED'}
+                    },
+                    _sum: {totalCents: true},
                 });
                 const baseTotal = agg._sum.totalCents ?? 0;
                 totalCentsAtRequest = tipPercent ? Math.round(baseTotal * (1 + tipPercent / 100)) : baseTotal;
@@ -60,8 +66,15 @@ export class TableRequestsService {
             }
 
             const request = await tx.tableRequest.create({
-                data: { venueId: table.venueId, tableId: table.id, type, guestCount, totalCentsAtRequest, perPersonCentsAtRequest },
-                include: { table: true },
+                data: {
+                    venueId: table.venueId,
+                    tableId: table.id,
+                    type,
+                    guestCount,
+                    totalCentsAtRequest,
+                    perPersonCentsAtRequest
+                },
+                include: {table: true},
             });
             this.gateway.emitTableRequestEvent(table.venueId, 'table_request_created', request);
             return request;
@@ -74,16 +87,16 @@ export class TableRequestsService {
     async getActiveForTable(tableToken: string) {
         const table = await this.tablesService.resolveByToken(tableToken);
         return this.prisma.withVenueScope(table.venueId, (tx) =>
-            tx.tableRequest.findMany({ where: { tableId: table.id, status: { not: 'RESOLVED' } } }),
+            tx.tableRequest.findMany({where: {tableId: table.id, status: {not: 'RESOLVED'}}}),
         );
     }
 
     async listActive(venueId: string) {
         return this.prisma.withVenueScope(venueId, (tx) =>
             tx.tableRequest.findMany({
-                where: { venueId, status: { not: 'RESOLVED' } },
-                include: { table: true },
-                orderBy: { createdAt: 'asc' },
+                where: {venueId, status: {not: 'RESOLVED'}},
+                include: {table: true},
+                orderBy: {createdAt: 'asc'},
             }),
         );
     }
@@ -91,9 +104,9 @@ export class TableRequestsService {
     async acknowledge(venueId: string, requestId: string, userId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const updated = await tx.tableRequest.update({
-                where: { id: requestId },
-                data: { status: 'ACKNOWLEDGED', acknowledgedAt: new Date(), acknowledgedByUserId: userId },
-                include: { table: true },
+                where: {id: requestId},
+                data: {status: 'ACKNOWLEDGED', acknowledgedAt: new Date(), acknowledgedByUserId: userId},
+                include: {table: true},
             });
             this.gateway.emitTableRequestEvent(venueId, 'table_request_updated', updated);
             return updated;
@@ -103,9 +116,9 @@ export class TableRequestsService {
     async resolve(venueId: string, requestId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const updated = await tx.tableRequest.update({
-                where: { id: requestId },
-                data: { status: 'RESOLVED', resolvedAt: new Date() },
-                include: { table: true },
+                where: {id: requestId},
+                data: {status: 'RESOLVED', resolvedAt: new Date()},
+                include: {table: true},
             });
             if (updated.type === 'REQUEST_BILL_CASH') {
                 // The visit is over — end the session so any link/screenshot from

@@ -1,9 +1,9 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { queryKeys } from '@/lib/query-keys';
-import { StaffOrder } from '@/app/admin/[venueId]/dashboard/page';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {api} from '@/lib/api';
+import {queryKeys} from '@/lib/query-keys';
+import {StaffOrder} from '@/app/admin/[venueId]/dashboard/page';
 
 export function useOrders(venueId: string, station?: string) {
     return useQuery({
@@ -16,19 +16,19 @@ export function useAdvanceOrderStatus(venueId: string, station?: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: ({ orderId, status }: { orderId: string; status: string }) =>
-            api.patch<StaffOrder>(`/venues/${venueId}/orders/${orderId}/status`, { status }),
+        mutationFn: ({orderId, status}: { orderId: string; status: string }) =>
+            api.patch<StaffOrder>(`/venues/${venueId}/orders/${orderId}/status`, {status}),
 
         // Optimistic update: same UX as before (card moves instantly), but
         // now expressed as React Query's built-in optimistic-update pattern
         // instead of a hand-rolled setOrders() + manual rollback.
-        onMutate: async ({ orderId, status }) => {
-            await queryClient.cancelQueries({ queryKey: queryKeys.orders(venueId, station) });
+        onMutate: async ({orderId, status}) => {
+            await queryClient.cancelQueries({queryKey: queryKeys.orders(venueId, station)});
             const previous = queryClient.getQueryData<StaffOrder[]>(queryKeys.orders(venueId, station));
             queryClient.setQueryData<StaffOrder[]>(queryKeys.orders(venueId, station), (old) =>
-                old?.map((o) => (o.id === orderId ? { ...o, status: status as StaffOrder['status'] } : o)),
+                old?.map((o) => (o.id === orderId ? {...o, status: status as StaffOrder['status']} : o)),
             );
-            return { previous };
+            return {previous};
         },
         onError: (_err, _vars, context) => {
             // Server rejected the transition (e.g. claim-gated serve, invalid
@@ -36,7 +36,7 @@ export function useAdvanceOrderStatus(venueId: string, station?: string) {
             if (context?.previous) queryClient.setQueryData(queryKeys.orders(venueId, station), context.previous);
         },
         onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: queryKeys.orders(venueId, station) });
+            queryClient.invalidateQueries({queryKey: queryKeys.orders(venueId, station)});
         },
     });
 }

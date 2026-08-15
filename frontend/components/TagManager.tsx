@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select';
-import { useMenuTags, useCreateTag, useDeleteTag } from '@/hooks/useMenu';
-import { useToast } from '@/components/ui/Toast';
+import {useState} from 'react';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/Select';
+import {useCreateTag, useDeleteTag, useMenuTags} from '@/hooks/useMenu';
+import {useToast} from '@/components/ui/Toast';
 
-export function TagManager({ venueId }: { venueId: string }) {
-    const { data: tags = [] } = useMenuTags(venueId);
+export function TagManager({venueId}: { venueId: string }) {
+    const {data: tags = []} = useMenuTags(venueId);
     const createMutation = useCreateTag(venueId);
     const deleteMutation = useDeleteTag(venueId);
     const showToast = useToast();
@@ -18,7 +18,7 @@ export function TagManager({ venueId }: { venueId: string }) {
         e.preventDefault();
         if (!label.trim()) return;
         try {
-            await createMutation.mutateAsync({ label, kind });
+            await createMutation.mutateAsync({label, kind});
             setLabel('');
         } catch (err: unknown) {
             showToast(err instanceof Error ? err.message : 'Failed to add tag', 'error');
@@ -37,7 +37,7 @@ export function TagManager({ venueId }: { venueId: string }) {
                 />
                 <Select value={kind} onValueChange={setKind}>
                     <SelectTrigger className="w-32">
-                        <SelectValue />
+                        <SelectValue/>
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="dietary">Dietary</SelectItem>
@@ -51,7 +51,8 @@ export function TagManager({ venueId }: { venueId: string }) {
             </form>
             <div className="mt-2 flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
-                    <span key={tag.id} className="flex items-center gap-1 rounded-full bg-surface-strong px-2.5 py-1 text-xs dark:bg-gray-700">
+                    <span key={tag.id}
+                          className="flex items-center gap-1 rounded-full bg-surface-strong px-2.5 py-1 text-xs dark:bg-gray-700">
             {tag.label}
                         <button
                             onClick={() => deleteMutation.mutate(tag.id)}

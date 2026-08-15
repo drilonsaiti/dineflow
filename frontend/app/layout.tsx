@@ -1,8 +1,8 @@
 import "./globals.css";
-import type { ReactNode } from "react";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import type {ReactNode} from "react";
+import {ThemeProvider} from "@/components/ThemeProvider";
 import {ToastProvider} from "@/components/ui/Toast";
-import { PWARegister } from '@/components/PWARegister';
+import {PWARegister} from '@/components/PWARegister';
 import {QueryProvider} from "@/components/QueryProvider";
 
 export const metadata = {
@@ -39,10 +39,10 @@ export default function RootLayout({
                     __html: themeInitScript,
                 }}
             />
-            <PWARegister />
+            <PWARegister/>
 
-            <link rel="apple-touch-icon" href="/icon-192.png" />
-            <meta name="theme-color" content="#111111" />
+            <link rel="apple-touch-icon" href="/icon-192.png"/>
+            <meta name="theme-color" content="#111111"/>
         </head>
 
         <body>

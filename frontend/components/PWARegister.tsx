@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { registerServiceWorker } from '@/lib/registerSW';
+import {useEffect} from 'react';
+import {registerServiceWorker} from '@/lib/registerSW';
 
 export function PWARegister() {
     useEffect(() => {

@@ -1,38 +1,42 @@
 'use client';
 
-import { useEffect } from 'react';
-import { formatElapsed } from '@/lib/elapsed';
-import { playNotificationSound } from '@/lib/notification-sound';
-import { getSocket } from '@/lib/socket';
+import {useEffect} from 'react';
+import {formatElapsed} from '@/lib/elapsed';
+import {playNotificationSound} from '@/lib/notification-sound';
+import {acquireSocket} from '@/lib/socket';
 import {
-    useTableRequests,
     useAcknowledgeTableRequest,
     useResolveTableRequest,
+    useTableRequests,
     useTableRequestSocketSync,
 } from '@/hooks/useTableRequests';
 
-const LABELS = { CALL_WAITER: '🙋 Called waiter', REQUEST_BILL_CASH: '💵 Wants to pay cash' };
+const LABELS = {CALL_WAITER: '🙋 Called waiter', REQUEST_BILL_CASH: '💵 Wants to pay cash'};
 
-export function TableRequestsPanel({ venueId }: { venueId: string }) {
-    const { data: requests = [] } = useTableRequests(venueId);
+export function TableRequestsPanel({venueId}: { venueId: string }) {
+    const {data: requests = []} = useTableRequests(venueId);
     const acknowledgeMutation = useAcknowledgeTableRequest(venueId);
     const resolveMutation = useResolveTableRequest(venueId);
-    const { onCreated, onUpdated } = useTableRequestSocketSync(venueId);
+    const {onCreated, onUpdated} = useTableRequestSocketSync(venueId);
 
     useEffect(() => {
-        const socket = getSocket();
+        const {socket, release} = acquireSocket();
+
         function handleCreated(req: any) {
             onCreated(req);
             playNotificationSound('table-request');
         }
+
         function handleUpdated(req: any) {
             onUpdated(req);
         }
+
         socket.on('table_request_created', handleCreated);
         socket.on('table_request_updated', handleUpdated);
         return () => {
             socket.off('table_request_created', handleCreated);
             socket.off('table_request_updated', handleUpdated);
+            release();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [venueId]);

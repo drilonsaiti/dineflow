@@ -1,11 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { api } from '@/lib/api';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import {usePathname, useRouter} from 'next/navigation';
+import {supabase} from '@/lib/supabase';
+import {ThemeToggle} from '@/components/ThemeToggle';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/Select";
 import {useVenuesMine} from "@/hooks/useVenues";
 
@@ -22,7 +20,7 @@ export function AdminNav() {
     const match = pathname?.match(/^\/admin\/([^/]+)/);
     const venueId = match && !['login', 'onboarding'].includes(match[1]) ? match[1] : null;
 
-    const { data: venues = [] } = useVenuesMine();
+    const {data: venues = []} = useVenuesMine();
 
     async function signOut() {
         await supabase.auth.signOut();
@@ -31,14 +29,14 @@ export function AdminNav() {
 
     const links = venueId
         ? [
-            { href: `/admin/${venueId}/dashboard`, label: 'Orders' },
-            { href: `/admin/${venueId}/menu`, label: 'Menu' },
-            { href: `/admin/${venueId}/tables-live`, label: 'Tables' },
-            { href: `/admin/${venueId}/tables`, label: 'Tables & QR' },
-            { href: `/admin/${venueId}/analytics`, label: 'Analytics' },
-            { href: `/admin/${venueId}/settings`, label: 'Settings' },
-            { href: `/admin/${venueId}/staff`, label: 'Staff' },
-            { href: `/admin/${venueId}/z-report`, label: 'Z-report' },
+            {href: `/admin/${venueId}/dashboard`, label: 'Orders'},
+            {href: `/admin/${venueId}/menu`, label: 'Menu'},
+            {href: `/admin/${venueId}/tables-live`, label: 'Tables'},
+            {href: `/admin/${venueId}/tables`, label: 'Tables & QR'},
+            {href: `/admin/${venueId}/analytics`, label: 'Analytics'},
+            {href: `/admin/${venueId}/settings`, label: 'Settings'},
+            {href: `/admin/${venueId}/staff`, label: 'Staff'},
+            {href: `/admin/${venueId}/z-report`, label: 'Z-report'},
         ]
         : [];
 
@@ -55,7 +53,7 @@ export function AdminNav() {
                             onValueChange={(id) => router.push(`/admin/${id}/dashboard`)}
                         >
                             <SelectTrigger className="w-44">
-                                <SelectValue placeholder="Switch venue…" />
+                                <SelectValue placeholder="Switch venue…"/>
                             </SelectTrigger>
                             <SelectContent>
                                 {venues.map((v) => (
@@ -81,8 +79,9 @@ export function AdminNav() {
                     </nav>
                 </div>
                 <div className="flex items-center gap-3">
-                    <ThemeToggle />
-                    <button onClick={signOut} className="text-sm font-medium text-muted hover:text-ink dark:hover:text-white">
+                    <ThemeToggle/>
+                    <button onClick={signOut}
+                            className="text-sm font-medium text-muted hover:text-ink dark:hover:text-white">
                         Sign out
                     </button>
                 </div>

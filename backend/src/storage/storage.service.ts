@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import {Injectable} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
+import {createClient, SupabaseClient} from '@supabase/supabase-js';
 
 @Injectable()
 export class StorageService {
@@ -41,13 +41,13 @@ export class StorageService {
         // keeps uploads organized and collision-free.
         const path = `${venueId}/${crypto.randomUUID()}.${ext}`;
 
-        const { error } = await this.client.storage
+        const {error} = await this.client.storage
             .from(this.bucket)
-            .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
+            .upload(path, file.buffer, {contentType: file.mimetype, upsert: false});
 
         if (error) throw new Error(`Upload failed: ${error.message}`);
 
-        const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
+        const {data} = this.client.storage.from(this.bucket).getPublicUrl(path);
         return data.publicUrl;
     }
 

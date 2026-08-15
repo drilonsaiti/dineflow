@@ -1,6 +1,6 @@
 'use client';
 
-import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogClose } from './Dialog';
+import {Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle} from './Dialog';
 
 export function ConfirmDialog({
                                   open,

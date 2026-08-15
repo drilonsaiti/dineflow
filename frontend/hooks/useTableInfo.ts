@@ -1,9 +1,9 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { queryKeys } from '@/lib/query-keys';
-import { setSessionToken } from '@/lib/session';
+import {useQuery} from '@tanstack/react-query';
+import {useEffect} from 'react';
+import {queryKeys} from '@/lib/query-keys';
+import {setSessionToken} from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 

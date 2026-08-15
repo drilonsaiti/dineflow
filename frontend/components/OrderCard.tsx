@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { formatElapsed, elapsedMinutes } from '@/lib/elapsed';
+import {useEffect, useState} from 'react';
+import {elapsedMinutes, formatElapsed} from '@/lib/elapsed';
 import {StaffOrder} from "@/app/admin/[venueId]/dashboard/page";
-import { NEXT, PREV } from '@/lib/order-transitions';
+import {NEXT, PREV} from '@/lib/order-transitions';
 
 
 export function OrderCard({
@@ -59,7 +59,8 @@ export function OrderCard({
             <ul className="mt-2 space-y-1 text-sm">
                 {order.items.map((item) => (
                     <li key={item.id}>
-                        <span className="font-medium text-ink dark:text-white">{item.quantity}× {item?.menuItem?.name ?? ''}</span>
+                        <span
+                            className="font-medium text-ink dark:text-white">{item.quantity}× {item?.menuItem?.name ?? ''}</span>
                         {item.modifiers.length > 0 && (
                             <span className="text-muted">
                 {' '}

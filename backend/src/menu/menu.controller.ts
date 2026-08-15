@@ -1,13 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { MenuService } from './menu.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
-import { CreateMenuItemDto, UpdateMenuItemDto, ReorderDto } from './dto/menu-item.dto';
-import { CreateTagDto } from './dto/tag.dto';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { Roles } from '../common/roles.decorator';
-import { CurrentVenue } from '../common/current-user.decorator';
-import { Public } from '../auth/public.decorator';
-import { VenueRole } from '@prisma/client';
+import {Body, Controller, Delete, Get, Param, Patch, Post, UseGuards} from '@nestjs/common';
+import {MenuService} from './menu.service';
+import {CreateCategoryDto, UpdateCategoryDto} from './dto/category.dto';
+import {CreateMenuItemDto, ReorderDto, UpdateMenuItemDto} from './dto/menu-item.dto';
+import {CreateTagDto} from './dto/tag.dto';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {Roles} from '../common/roles.decorator';
+import {CurrentVenue} from '../common/current-user.decorator';
+import {Public} from '../auth/public.decorator';
+import {VenueRole} from '@prisma/client';
 
 // All management routes require OWNER or MANAGER (section 3: staff/kitchen
 // "cannot edit menu/tables"). Read is available to any member implicitly
@@ -15,7 +15,8 @@ import { VenueRole } from '@prisma/client';
 @Controller('venues/:venueId/menu')
 @UseGuards(VenueScopeGuard)
 export class MenuController {
-    constructor(private readonly menuService: MenuService) {}
+    constructor(private readonly menuService: MenuService) {
+    }
 
     @Get('categories')
     listCategories(@CurrentVenue() scope: { venueId: string }) {
@@ -116,7 +117,8 @@ export class MenuController {
 // public customer-facing menu read, keyed by slug instead (section 7).
 @Controller('public/menu')
 export class PublicMenuController {
-    constructor(private readonly menuService: MenuService) {}
+    constructor(private readonly menuService: MenuService) {
+    }
 
     @Public()
     @Get(':venueSlug')

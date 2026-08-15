@@ -1,21 +1,27 @@
 'use client';
 
-import { use, useState } from 'react';
-import { useMenuCategories, useMenuTags, useToggleItemAvailability, useDeleteCategory, useDeleteItem } from '@/hooks/useMenu';
-import { formatCents } from '@/lib/money';
-import { useVenueCurrency } from '@/hooks/useVenueCurrency';
-import { useToast } from '@/components/ui/Toast';
+import {use, useState} from 'react';
+import {
+    useDeleteCategory,
+    useDeleteItem,
+    useMenuCategories,
+    useMenuTags,
+    useToggleItemAvailability
+} from '@/hooks/useMenu';
+import {formatCents} from '@/lib/money';
+import {useVenueCurrency} from '@/hooks/useVenueCurrency';
+import {useToast} from '@/components/ui/Toast';
 import {CategoryForm} from "@/components/CategoryForm";
 import {TagManager} from "@/components/TagManager";
 import {ItemForm} from "@/components/ItemForm";
 
-export default function MenuAdminPage({ params }: { params: Promise<{ venueId: string }> }) {
-    const { venueId } = use(params);
+export default function MenuAdminPage({params}: { params: Promise<{ venueId: string }> }) {
+    const {venueId} = use(params);
     const currency = useVenueCurrency(venueId);
     const showToast = useToast();
 
-    const { data: categories = [], isLoading } = useMenuCategories(venueId);
-    const { data: venueTags = [] } = useMenuTags(venueId);
+    const {data: categories = [], isLoading} = useMenuCategories(venueId);
+    const {data: venueTags = []} = useMenuTags(venueId);
 
     const toggleAvailabilityMutation = useToggleItemAvailability(venueId);
     const deleteCategoryMutation = useDeleteCategory(venueId);
@@ -25,7 +31,7 @@ export default function MenuAdminPage({ params }: { params: Promise<{ venueId: s
     const [editingItem, setEditingItem] = useState<{ categoryId: string; item: any } | null>(null);
 
     function toggleAvailability(itemId: string, isAvailable: boolean) {
-        toggleAvailabilityMutation.mutate({ itemId, isAvailable: !isAvailable });
+        toggleAvailabilityMutation.mutate({itemId, isAvailable: !isAvailable});
     }
 
     async function deleteItem(itemId: string) {
@@ -64,10 +70,11 @@ export default function MenuAdminPage({ params }: { params: Promise<{ venueId: s
                 </div>
             )}
 
-            <CategoryForm venueId={venueId} />
-            <TagManager venueId={venueId} />
+            <CategoryForm venueId={venueId}/>
+            <TagManager venueId={venueId}/>
 
-            {categories.length === 0 && <p className="text-muted-soft">No categories yet — add one above to get started.</p>}
+            {categories.length === 0 &&
+                <p className="text-muted-soft">No categories yet — add one above to get started.</p>}
 
             <div className="space-y-6">
                 {categories.map((category) => (
@@ -75,17 +82,20 @@ export default function MenuAdminPage({ params }: { params: Promise<{ venueId: s
                         <div className="flex items-center justify-between">
                             <h2 className="text-lg font-display font-semibold">{category.name}</h2>
                             <div className="flex items-center gap-3">
-                                <button className="btn-secondary !min-h-[36px] !px-3 !py-1.5" onClick={() => setAddingItemTo(category.id)}>
+                                <button className="btn-secondary !min-h-[36px] !px-3 !py-1.5"
+                                        onClick={() => setAddingItemTo(category.id)}>
                                     + Add item
                                 </button>
-                                <button className="text-sm text-error hover:underline" onClick={() => deleteCategory(category.id)}>
+                                <button className="text-sm text-error hover:underline"
+                                        onClick={() => deleteCategory(category.id)}>
                                     Delete category
                                 </button>
                             </div>
                         </div>
 
                         {addingItemTo === category.id && (
-                            <ItemForm venueId={venueId} categoryId={category.id} venueTags={venueTags} onDone={() => setAddingItemTo(null)} />
+                            <ItemForm venueId={venueId} categoryId={category.id} venueTags={venueTags}
+                                      onDone={() => setAddingItemTo(null)}/>
                         )}
 
                         <ul className="mt-4 divide-y divide-hairline dark:divide-gray-800">
@@ -103,22 +113,27 @@ export default function MenuAdminPage({ params }: { params: Promise<{ venueId: s
                                         <div className="flex items-center justify-between gap-4">
                                             <div className={!item.isAvailable ? 'opacity-50' : ''}>
                                                 <p className="font-medium">
-                                                    {item.name} <span className="font-normal text-muted">{formatCents(item.priceCents, currency)}</span>
+                                                    {item.name} <span
+                                                    className="font-normal text-muted">{formatCents(item.priceCents, currency)}</span>
                                                 </p>
-                                                {item.description && <p className="text-sm text-muted">{item.description}</p>}
+                                                {item.description &&
+                                                    <p className="text-sm text-muted">{item.description}</p>}
                                                 {item.modifierGroups.length > 0 && (
                                                     <p className="mt-1 text-xs text-muted-soft">{item.modifierGroups.map((g: any) => g.name).join(' · ')}</p>
                                                 )}
                                             </div>
                                             <div className="flex shrink-0 items-center gap-3 text-sm">
                                                 <label className="flex cursor-pointer select-none items-center gap-1.5">
-                                                    <input type="checkbox" checked={item.isAvailable} onChange={() => toggleAvailability(item.id, item.isAvailable)} />
+                                                    <input type="checkbox" checked={item.isAvailable}
+                                                           onChange={() => toggleAvailability(item.id, item.isAvailable)}/>
                                                     Available
                                                 </label>
-                                                <button className="text-ink hover:underline dark:text-white" onClick={() => setEditingItem({ categoryId: category.id, item })}>
+                                                <button className="text-ink hover:underline dark:text-white"
+                                                        onClick={() => setEditingItem({categoryId: category.id, item})}>
                                                     Edit
                                                 </button>
-                                                <button className="text-error hover:underline" onClick={() => deleteItem(item.id)}>
+                                                <button className="text-error hover:underline"
+                                                        onClick={() => deleteItem(item.id)}>
                                                     Delete
                                                 </button>
                                             </div>
@@ -126,7 +141,8 @@ export default function MenuAdminPage({ params }: { params: Promise<{ venueId: s
                                     )}
                                 </li>
                             ))}
-                            {category.items.length === 0 && <p className="py-2 text-sm text-muted-soft">No items in this category yet.</p>}
+                            {category.items.length === 0 &&
+                                <p className="py-2 text-sm text-muted-soft">No items in this category yet.</p>}
                         </ul>
                     </div>
                 ))}

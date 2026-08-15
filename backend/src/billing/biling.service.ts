@@ -1,13 +1,13 @@
-import { BadRequestException, Injectable, RawBodyRequest } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Request } from 'express';
+import {BadRequestException, Injectable, RawBodyRequest} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
+import {Request} from 'express';
 import Stripe from 'stripe';
-import { PrismaService } from '../prisma/prisma.service';
+import {PrismaService} from '../prisma/prisma.service';
 
 const PLAN_LIMITS = {
-    FREE: { maxTables: 10, analyticsHistoryDays: 30 },
-    PRO: { maxTables: 30, analyticsHistoryDays: 90 },
-    BUSINESS: { maxTables: 100, analyticsHistoryDays: 365 },
+    FREE: {maxTables: 10, analyticsHistoryDays: 30},
+    PRO: {maxTables: 30, analyticsHistoryDays: 90},
+    BUSINESS: {maxTables: 100, analyticsHistoryDays: 365},
 } as const;
 
 @Injectable()
@@ -27,27 +27,27 @@ export class BillingService {
     }
 
     async createCheckoutSession(venueId: string, plan: 'PRO' | 'BUSINESS', userEmail: string) {
-        const venue = await this.prisma.venue.findUniqueOrThrow({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUniqueOrThrow({where: {id: venueId}});
         const frontendUrl = this.config.get('PUBLIC_APP_URL') ?? 'http://localhost:3000';
 
         const session = await this.stripe.checkout.sessions.create({
             mode: 'subscription',
             customer: venue.stripeCustomerId ?? undefined,
             customer_email: venue.stripeCustomerId ? undefined : userEmail,
-            line_items: [{ price: this.priceIdFor(plan), quantity: 1 }],
+            line_items: [{price: this.priceIdFor(plan), quantity: 1}],
             // metadata lands on the session AND (via subscription_data) on the
             // subscription itself, so the webhook can resolve venueId either way.
-            metadata: { venueId },
-            subscription_data: { metadata: { venueId } },
+            metadata: {venueId},
+            subscription_data: {metadata: {venueId}},
             success_url: `${frontendUrl}/admin/${venueId}/settings?billing=success`,
             cancel_url: `${frontendUrl}/admin/${venueId}/settings?billing=cancelled`,
         });
 
-        return { url: session.url };
+        return {url: session.url};
     }
 
     async createPortalSession(venueId: string) {
-        const venue = await this.prisma.venue.findUniqueOrThrow({ where: { id: venueId } });
+        const venue = await this.prisma.venue.findUniqueOrThrow({where: {id: venueId}});
         if (!venue.stripeCustomerId) {
             throw new BadRequestException('No billing account yet — upgrade first.');
         }
@@ -56,7 +56,7 @@ export class BillingService {
             customer: venue.stripeCustomerId,
             return_url: `${frontendUrl}/admin/${venueId}/settings`,
         });
-        return { url: session.url };
+        return {url: session.url};
     }
 
     async handleWebhook(req: RawBodyRequest<Request>, signature: string) {
@@ -79,7 +79,7 @@ export class BillingService {
                 const venueId = session.metadata?.venueId;
                 if (venueId && session.customer && session.subscription) {
                     await this.prisma.venue.update({
-                        where: { id: venueId },
+                        where: {id: venueId},
                         data: {
                             stripeCustomerId: session.customer as string,
                             stripeSubscriptionId: session.subscription as string,
@@ -96,8 +96,8 @@ export class BillingService {
             case 'customer.subscription.deleted': {
                 const sub = event.data.object as Stripe.Subscription;
                 await this.prisma.venue.updateMany({
-                    where: { stripeSubscriptionId: sub.id },
-                    data: { plan: 'FREE', subscriptionStatus: 'CANCELLED', ...PLAN_LIMITS.FREE },
+                    where: {stripeSubscriptionId: sub.id},
+                    data: {plan: 'FREE', subscriptionStatus: 'CANCELLED', ...PLAN_LIMITS.FREE},
                 });
                 break;
             }
@@ -105,7 +105,7 @@ export class BillingService {
                 break; // ignore event types we don't act on
         }
 
-        return { received: true };
+        return {received: true};
     }
 
     private async syncSubscription(sub: Stripe.Subscription) {
@@ -121,8 +121,8 @@ export class BillingService {
             sub.status === 'active' ? 'ACTIVE' : sub.status === 'past_due' ? 'PAST_DUE' : 'TRIALING';
 
         await this.prisma.venue.updateMany({
-            where: { stripeSubscriptionId: sub.id },
-            data: { plan, subscriptionStatus, ...PLAN_LIMITS[plan] },
+            where: {stripeSubscriptionId: sub.id},
+            data: {plan, subscriptionStatus, ...PLAN_LIMITS[plan]},
         });
     }
 }

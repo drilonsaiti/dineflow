@@ -1,32 +1,32 @@
 'use client';
 
-import { use, useState } from 'react';
-import { X } from 'lucide-react';
-import { useTables } from '@/hooks/useTables';
-import { useOrders, useOrdersForTable } from '@/hooks/useOrders';
-import { useTableAssignments, useClaimTable, useReleaseTable } from '@/hooks/useTableAssignments';
-import { useCurrentUserId } from '@/hooks/useCurrentUser';
-import { useVenueCurrency } from '@/hooks/useVenueCurrency';
-import { formatCents } from '@/lib/money';
-import { formatElapsed } from '@/lib/elapsed';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/Dialog';
+import {use, useState} from 'react';
+import {X} from 'lucide-react';
+import {useTables} from '@/hooks/useTables';
+import {useOrders, useOrdersForTable} from '@/hooks/useOrders';
+import {useClaimTable, useReleaseTable, useTableAssignments} from '@/hooks/useTableAssignments';
+import {useCurrentUserId} from '@/hooks/useCurrentUser';
+import {useVenueCurrency} from '@/hooks/useVenueCurrency';
+import {formatCents} from '@/lib/money';
+import {formatElapsed} from '@/lib/elapsed';
+import {Checkbox} from '@/components/ui/Checkbox';
+import {Dialog, DialogContent, DialogTitle} from '@/components/ui/Dialog';
 
-export default function TablesLivePage({ params }: { params: Promise<{ venueId: string }> }) {
-    const { venueId } = use(params);
+export default function TablesLivePage({params}: { params: Promise<{ venueId: string }> }) {
+    const {venueId} = use(params);
     const currency = useVenueCurrency(venueId);
     const currentUserId = useCurrentUserId();
 
-    const { data: allTables = [] } = useTables(venueId);
+    const {data: allTables = []} = useTables(venueId);
     const tables = allTables.filter((t) => t.isActive);
-    const { data: activeOrders = [] } = useOrders(venueId); // React Query polls/refetches automatically per its default staleTime — no manual setInterval needed
-    const { data: assignments = [] } = useTableAssignments(venueId);
+    const {data: activeOrders = []} = useOrders(venueId); // React Query polls/refetches automatically per its default staleTime — no manual setInterval needed
+    const {data: assignments = []} = useTableAssignments(venueId);
     const claimMutation = useClaimTable(venueId);
     const releaseMutation = useReleaseTable(venueId);
 
     const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
     const [myTablesOnly, setMyTablesOnly] = useState(false);
-    const { data: tableOrders = [] } = useOrdersForTable(venueId, selectedTableId);
+    const {data: tableOrders = []} = useOrdersForTable(venueId, selectedTableId);
 
     const activeCountByTable = activeOrders.reduce<Record<string, number>>((acc, o: any) => {
         acc[o.tableId] = (acc[o.tableId] ?? 0) + 1;
@@ -81,11 +81,13 @@ export default function TablesLivePage({ params }: { params: Promise<{ venueId: 
                                     {assignment ? `Claimed: ${assignment.user.fullName ?? assignment.user.email}` : 'Unclaimed'}
                                 </span>
                                 {assignment?.userId === currentUserId ? (
-                                    <button onClick={() => releaseMutation.mutate(table.id)} className="font-medium text-error hover:underline">
+                                    <button onClick={() => releaseMutation.mutate(table.id)}
+                                            className="font-medium text-error hover:underline">
                                         Release
                                     </button>
                                 ) : (
-                                    <button onClick={() => claimMutation.mutate(table.id)} className="font-medium text-ink hover:underline dark:text-white">
+                                    <button onClick={() => claimMutation.mutate(table.id)}
+                                            className="font-medium text-ink hover:underline dark:text-white">
                                         Claim
                                     </button>
                                 )}
@@ -104,16 +106,18 @@ export default function TablesLivePage({ params }: { params: Promise<{ venueId: 
                             className="flex h-9 w-9 items-center justify-center rounded-full text-muted hover:bg-surface-card dark:hover:bg-surface-dark"
                             aria-label="Close"
                         >
-                            <X className="h-4 w-4" aria-hidden />
+                            <X className="h-4 w-4" aria-hidden/>
                         </button>
                     </div>
 
                     <div className="mt-4 space-y-4">
-                        {tableOrders.length === 0 && <p className="text-sm text-muted-soft">No orders yet for this table.</p>}
+                        {tableOrders.length === 0 &&
+                            <p className="text-sm text-muted-soft">No orders yet for this table.</p>}
                         {tableOrders.map((order: any) => (
                             <div key={order.id} className="card !p-3">
                                 <div className="flex items-center justify-between">
-                                    <span className="font-semibold text-ink dark:text-white">#{order.dailyNumber} · {order.status}</span>
+                                    <span
+                                        className="font-semibold text-ink dark:text-white">#{order.dailyNumber} · {order.status}</span>
                                     <span className="text-xs text-muted-soft">{formatElapsed(order.createdAt)}</span>
                                 </div>
                                 {order.customerName && <p className="text-sm text-muted">{order.customerName}</p>}
@@ -122,7 +126,8 @@ export default function TablesLivePage({ params }: { params: Promise<{ venueId: 
                                         <li key={item.id}>
                                             {item.quantity}× {item.menuItem.name}
                                             {item.modifiers.length > 0 && (
-                                                <span className="text-muted"> ({item.modifiers.map((m: any) => m.modifierOption?.name).filter(Boolean).join(', ')})</span>
+                                                <span
+                                                    className="text-muted"> ({item.modifiers.map((m: any) => m.modifierOption?.name).filter(Boolean).join(', ')})</span>
                                             )}
                                             {item.note && <div className="text-xs text-warning">Note: {item.note}</div>}
                                         </li>

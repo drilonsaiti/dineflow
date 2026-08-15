@@ -1,11 +1,11 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import {ReactNode, useEffect, useState} from 'react';
+import {usePathname, useRouter} from 'next/navigation';
+import {supabase} from '@/lib/supabase';
 import {AdminNav} from "@/components/AdminNav";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({children}: { children: ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const [checked, setChecked] = useState(false);
@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         // persists the session the first time anything touches the client —
         // getSession() is enough to trigger it. We then strip the hash so a
         // raw access token doesn't sit visibly in the address bar/history.
-        supabase.auth.getSession().then(({ data }) => {
+        supabase.auth.getSession().then(({data}) => {
             if (window.location.hash.includes('access_token')) {
                 window.history.replaceState(null, '', window.location.pathname);
             }
@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             setChecked(true);
         });
 
-        const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+        const {data: sub} = supabase.auth.onAuthStateChange((_event, session) => {
             if (!session && !isLoginPage) router.replace('/admin/login');
         });
         return () => sub.subscription.unsubscribe();
@@ -37,12 +37,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
     if (isLoginPage) return <>{children}</>;
     if (!checked) {
-        return <div className="flex min-h-screen items-center justify-center text-muted-soft dark:bg-surface-dark">Loading…</div>;
+        return <div
+            className="flex min-h-screen items-center justify-center text-muted-soft dark:bg-surface-dark">Loading…</div>;
     }
 
     return (
         <div className="min-h-screen bg-surface-soft dark:bg-surface-dark">
-            <AdminNav />
+            <AdminNav/>
             {children}
         </div>
     );

@@ -1,14 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { TableAssignmentsService } from './table-assignments.service';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { CurrentUser, CurrentVenue } from '../common/current-user.decorator';
-import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
-import { VenueRole } from '@prisma/client';
+import {Body, Controller, Delete, Get, Param, Post, UseGuards} from '@nestjs/common';
+import {TableAssignmentsService} from './table-assignments.service';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {CurrentUser, CurrentVenue} from '../common/current-user.decorator';
+import {AuthenticatedUser} from '../auth/supabase-jwt.strategy';
+import {VenueRole} from '@prisma/client';
 
 @Controller('venues/:venueId/table-assignments')
 @UseGuards(VenueScopeGuard)
 export class TableAssignmentsController {
-    constructor(private readonly service: TableAssignmentsService) {}
+    constructor(private readonly service: TableAssignmentsService) {
+    }
 
     @Get()
     list(@CurrentVenue() scope: { venueId: string }) {

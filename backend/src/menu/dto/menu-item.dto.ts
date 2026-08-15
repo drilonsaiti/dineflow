@@ -1,11 +1,11 @@
-import { Type } from 'class-transformer';
+import {Type} from 'class-transformer';
 import {
     IsArray,
     IsBoolean,
     IsInt,
     IsOptional,
-    IsString, Matches,
-    Max,
+    IsString,
+    Matches,
     MaxLength,
     Min,
     ValidateNested,
@@ -55,7 +55,7 @@ class ModifierGroupDto {
     displayOrder?: number;
 
     @IsArray()
-    @ValidateNested({ each: true })
+    @ValidateNested({each: true})
     @Type(() => ModifierOptionDto)
     options!: ModifierOptionDto[];
 }
@@ -98,7 +98,7 @@ export class CreateMenuItemDto {
 
     @IsOptional()
     @IsArray()
-    @IsString({ each: true })
+    @IsString({each: true})
     tagIds?: string[];
 
     // Whole modifier-group tree replaces the item's existing groups on
@@ -106,7 +106,7 @@ export class CreateMenuItemDto {
     // replace-in-place strategy was chosen over diffing.
     @IsOptional()
     @IsArray()
-    @ValidateNested({ each: true })
+    @ValidateNested({each: true})
     @Type(() => ModifierGroupDto)
     modifierGroups?: ModifierGroupDto[];
 
@@ -121,11 +121,11 @@ export class CreateMenuItemDto {
     lowStockThreshold?: number;
 
     @IsOptional()
-    @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'availableFrom must be HH:MM' })
+    @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {message: 'availableFrom must be HH:MM'})
     availableFrom?: string;
 
     @IsOptional()
-    @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, { message: 'availableTo must be HH:MM' })
+    @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {message: 'availableTo must be HH:MM'})
     availableTo?: string;
 }
 
@@ -149,6 +149,6 @@ export class UpdateMenuItemDto extends CreateMenuItemDto {
 
 export class ReorderDto {
     @IsArray()
-    @IsString({ each: true })
+    @IsString({each: true})
     orderedIds!: string[];
 }

@@ -1,7 +1,7 @@
 'use client';
 
-import { use, useState } from 'react';
-import { usePublicMenu } from '@/hooks/usePublicMenu';
+import {use, useState} from 'react';
+import {usePublicMenu} from '@/hooks/usePublicMenu';
 import {ItemDetailModal} from "@/components/ItemDetailModal";
 
 interface MenuPageProps {
@@ -26,9 +26,9 @@ export interface PublicMenuItem {
     }[];
 }
 
-export default function MenuPage({ params }: MenuPageProps) {
-    const { venueSlug } = use(params);
-    const { data: menu, error } = usePublicMenu(venueSlug);
+export default function MenuPage({params}: MenuPageProps) {
+    const {venueSlug} = use(params);
+    const {data: menu, error} = usePublicMenu(venueSlug);
 
     const [activeItem, setActiveItem] = useState<PublicMenuItem | null>(null);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export default function MenuPage({ params }: MenuPageProps) {
 
     function handleCategoryClick(categoryId: string) {
         setActiveCategory(categoryId);
-        document.getElementById(`cat-${categoryId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById(`cat-${categoryId}`)?.scrollIntoView({behavior: 'smooth', block: 'start'});
     }
 
     const allTags = Array.from(
@@ -76,7 +76,8 @@ export default function MenuPage({ params }: MenuPageProps) {
 
     return (
         <div>
-            <div className="sticky top-[52px] z-10 flex gap-2 overflow-x-auto bg-canvas px-4 py-3 shadow-sm dark:bg-surface-dark">
+            <div
+                className="sticky top-[52px] z-10 flex gap-2 overflow-x-auto bg-canvas px-4 py-3 shadow-sm dark:bg-surface-dark">
                 {menu.categories.map((c: any) => (
                     <button
                         key={c.id}
@@ -99,7 +100,8 @@ export default function MenuPage({ params }: MenuPageProps) {
                         🔍 Dietary filters {activeFilterCount > 0 && `(${activeFilterCount})`}
                     </button>
                     {showFilters && (
-                        <div className="mt-2 space-y-2 rounded-lg border border-hairline bg-canvas p-3 dark:border-gray-700 dark:bg-surface-dark-elevated">
+                        <div
+                            className="mt-2 space-y-2 rounded-lg border border-hairline bg-canvas p-3 dark:border-gray-700 dark:bg-surface-dark-elevated">
                             {dietaryTags.length > 0 && (
                                 <div>
                                     <p className="text-xs font-medium text-muted">Show only</p>
@@ -160,16 +162,20 @@ export default function MenuPage({ params }: MenuPageProps) {
                                     }`}
                                 >
                                     {item.photoUrl ? (
-                                        <img src={item.photoUrl} alt={item.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+                                        <img src={item.photoUrl} alt={item.name}
+                                             className="h-16 w-16 shrink-0 rounded-lg object-cover"/>
                                     ) : (
-                                        <div className="h-16 w-16 shrink-0 rounded-lg bg-surface-strong" />
+                                        <div className="h-16 w-16 shrink-0 rounded-lg bg-surface-strong"/>
                                     )}
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate font-medium">{item.name}</p>
-                                        {item.description && <p className="line-clamp-2 text-sm text-muted">{item.description}</p>}
+                                        {item.description &&
+                                            <p className="line-clamp-2 text-sm text-muted">{item.description}</p>}
                                         <div className="mt-1 flex items-center gap-2">
-                                            <span className="text-sm font-semibold">{(item.priceCents / 100).toFixed(2)}</span>
-                                            {!item.isAvailable && <span className="text-xs font-medium text-error">Unavailable</span>}
+                                            <span
+                                                className="text-sm font-semibold">{(item.priceCents / 100).toFixed(2)}</span>
+                                            {!item.isAvailable &&
+                                                <span className="text-xs font-medium text-error">Unavailable</span>}
                                         </div>
                                     </div>
                                 </button>
@@ -180,7 +186,7 @@ export default function MenuPage({ params }: MenuPageProps) {
             </div>
 
             {activeItem && (
-                <ItemDetailModal item={activeItem} currency={menu.venue.currency} onClose={() => setActiveItem(null)} />
+                <ItemDetailModal item={activeItem} currency={menu.venue.currency} onClose={() => setActiveItem(null)}/>
             )}
         </div>
     );

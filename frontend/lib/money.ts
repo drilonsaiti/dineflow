@@ -2,7 +2,7 @@
 // only place the UI converts to/from a human-typed decimal string.
 
 export function formatCents(cents: number, currency = 'USD'): string {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+    return new Intl.NumberFormat('en-US', {style: 'currency', currency}).format(cents / 100);
 }
 
 export function centsToInput(cents: number): string {

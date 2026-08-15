@@ -1,14 +1,14 @@
 import {Inject, Injectable, NotFoundException} from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
-import { CreateMenuItemDto, UpdateMenuItemDto, ReorderDto } from './dto/menu-item.dto';
-import { CreateTagDto } from './dto/tag.dto';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import {PrismaService} from '../prisma/prisma.service';
+import {CreateCategoryDto, UpdateCategoryDto} from './dto/category.dto';
+import {CreateMenuItemDto, ReorderDto, UpdateMenuItemDto} from './dto/menu-item.dto';
+import {CreateTagDto} from './dto/tag.dto';
+import {CACHE_MANAGER} from '@nestjs/cache-manager';
+import {Cache} from 'cache-manager';
 
 const ITEM_INCLUDE = {
-    tags: { include: { tag: true } },
-    modifierGroups: { include: { options: true }, orderBy: { displayOrder: 'asc' as const } },
+    tags: {include: {tag: true}},
+    modifierGroups: {include: {options: true}, orderBy: {displayOrder: 'asc' as const}},
 };
 
 @Injectable()
@@ -16,26 +16,28 @@ export class MenuService {
     constructor(
         private readonly prisma: PrismaService,
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
-    ) {}
+    ) {
+    }
+
     // ---------- Categories ----------
 
     listCategories(venueId: string) {
         return this.prisma.withVenueScope(venueId, (tx) =>
             tx.menuCategory.findMany({
-                where: { venueId },
+                where: {venueId},
                 include: {
                     items: {
                         include: {
-                            tags: { include: { tag: true } },
+                            tags: {include: {tag: true}},
                             modifierGroups: {
-                                include: { options: true },
-                                orderBy: { displayOrder: 'asc' },
+                                include: {options: true},
+                                orderBy: {displayOrder: 'asc'},
                             },
                         },
-                        orderBy: { displayOrder: 'asc' },
+                        orderBy: {displayOrder: 'asc'},
                     },
                 },
-                orderBy: { displayOrder: 'asc' },
+                orderBy: {displayOrder: 'asc'},
             }),
         );
     }
@@ -43,8 +45,8 @@ export class MenuService {
     async createCategory(venueId: string, dto: CreateCategoryDto) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             const maxOrder = await tx.menuCategory.aggregate({
-                where: { venueId },
-                _max: { displayOrder: true },
+                where: {venueId},
+                _max: {displayOrder: true},
             });
             await this.invalidatePublicMenuCache(venueId);
             return tx.menuCategory.create({
@@ -63,7 +65,7 @@ export class MenuService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertCategoryInVenue(tx, venueId, categoryId);
             await this.invalidatePublicMenuCache(venueId);
-            return tx.menuCategory.update({ where: { id: categoryId }, data: dto });
+            return tx.menuCategory.update({where: {id: categoryId}, data: dto});
         });
     }
 
@@ -74,7 +76,7 @@ export class MenuService {
             // items first; we don't cascade-delete menu items from a category
             // deletion, that's too destructive for a misclick.
             await this.invalidatePublicMenuCache(venueId);
-            return tx.menuCategory.delete({ where: { id: categoryId } });
+            return tx.menuCategory.delete({where: {id: categoryId}});
         });
     }
 
@@ -83,18 +85,18 @@ export class MenuService {
             await Promise.all(
                 dto.orderedIds.map((id, index) =>
                     tx.menuCategory.updateMany({
-                        where: { id, venueId },
-                        data: { displayOrder: index },
+                        where: {id, venueId},
+                        data: {displayOrder: index},
                     }),
                 ),
             );
             await this.invalidatePublicMenuCache(venueId);
-            return { ok: true };
+            return {ok: true};
         });
     }
 
     private async assertCategoryInVenue(tx: any, venueId: string, categoryId: string) {
-        const category = await tx.menuCategory.findUnique({ where: { id: categoryId } });
+        const category = await tx.menuCategory.findUnique({where: {id: categoryId}});
         if (!category || category.venueId !== venueId) {
             throw new NotFoundException('Category not found');
         }
@@ -118,7 +120,7 @@ export class MenuService {
                     displayOrder: dto.displayOrder ?? 0,
                     dineInOnly: dto.dineInOnly ?? false,
                     takeawayOnly: dto.takeawayOnly ?? false,
-                    tags: dto.tagIds ? { create: dto.tagIds.map((tagId) => ({ tagId })) } : undefined,
+                    tags: dto.tagIds ? {create: dto.tagIds.map((tagId) => ({tagId}))} : undefined,
                     stockCount: dto.stockCount,
                     lowStockThreshold: dto.lowStockThreshold,
                 },
@@ -128,7 +130,7 @@ export class MenuService {
                 await this.replaceModifierGroups(tx, item.id, dto.modifierGroups);
             }
             await this.invalidatePublicMenuCache(venueId);
-            return tx.menuItem.findUnique({ where: { id: item.id }, include: ITEM_INCLUDE });
+            return tx.menuItem.findUnique({where: {id: item.id}, include: ITEM_INCLUDE});
         });
     }
 
@@ -138,7 +140,7 @@ export class MenuService {
             if (dto.categoryId) await this.assertCategoryInVenue(tx, venueId, dto.categoryId);
 
             await tx.menuItem.update({
-                where: { id: itemId },
+                where: {id: itemId},
                 data: {
                     categoryId: dto.categoryId,
                     name: dto.name,
@@ -155,9 +157,9 @@ export class MenuService {
             });
 
             if (dto.tagIds) {
-                await tx.menuItemTag.deleteMany({ where: { menuItemId: itemId } });
+                await tx.menuItemTag.deleteMany({where: {menuItemId: itemId}});
                 await tx.menuItemTag.createMany({
-                    data: dto.tagIds.map((tagId) => ({ menuItemId: itemId, tagId })),
+                    data: dto.tagIds.map((tagId) => ({menuItemId: itemId, tagId})),
                 });
             }
 
@@ -165,7 +167,7 @@ export class MenuService {
                 await this.replaceModifierGroups(tx, itemId, dto.modifierGroups);
             }
             await this.invalidatePublicMenuCache(venueId);
-            return tx.menuItem.findUnique({ where: { id: itemId }, include: ITEM_INCLUDE });
+            return tx.menuItem.findUnique({where: {id: itemId}, include: ITEM_INCLUDE});
         });
     }
 
@@ -175,7 +177,7 @@ export class MenuService {
     async setAvailability(venueId: string, itemId: string, isAvailable: boolean) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await this.assertItemInVenue(tx, venueId, itemId);
-            const item = await tx.menuItem.update({ where: { id: itemId }, data: { isAvailable } });
+            const item = await tx.menuItem.update({where: {id: itemId}, data: {isAvailable}});
             await this.invalidatePublicMenuCache(venueId);
             return item;
         });
@@ -190,7 +192,7 @@ export class MenuService {
             // setAvailability(false) for "retire this item" in the UI; this
             // delete is really only for items created by mistake, never ordered.
             await this.invalidatePublicMenuCache(venueId);
-            return tx.menuItem.delete({ where: { id: itemId } });
+            return tx.menuItem.delete({where: {id: itemId}});
         });
     }
 
@@ -198,16 +200,16 @@ export class MenuService {
         return this.prisma.withVenueScope(venueId, async (tx) => {
             await Promise.all(
                 dto.orderedIds.map((id, index) =>
-                    tx.menuItem.updateMany({ where: { id, venueId }, data: { displayOrder: index } }),
+                    tx.menuItem.updateMany({where: {id, venueId}, data: {displayOrder: index}}),
                 ),
             );
             await this.invalidatePublicMenuCache(venueId);
-            return { ok: true };
+            return {ok: true};
         });
     }
 
     private async assertItemInVenue(tx: any, venueId: string, itemId: string) {
-        const item = await tx.menuItem.findUnique({ where: { id: itemId } });
+        const item = await tx.menuItem.findUnique({where: {id: itemId}});
         if (!item || item.venueId !== venueId) {
             throw new NotFoundException('Menu item not found');
         }
@@ -220,7 +222,7 @@ export class MenuService {
      * OrderItemModifier snapshots price/name at order time and doesn't
      * depend on the option id surviving. */
     private async replaceModifierGroups(tx: any, itemId: string, groups: any[]) {
-        await tx.modifierGroup.deleteMany({ where: { menuItemId: itemId } });
+        await tx.modifierGroup.deleteMany({where: {menuItemId: itemId}});
         for (const [index, group] of groups.entries()) {
             await tx.modifierGroup.create({
                 data: {
@@ -245,22 +247,22 @@ export class MenuService {
     // ---------- Tags ----------
 
     listTags(venueId: string) {
-        return this.prisma.withVenueScope(venueId, (tx) => tx.tag.findMany({ where: { venueId } }));
+        return this.prisma.withVenueScope(venueId, (tx) => tx.tag.findMany({where: {venueId}}));
     }
 
     async createTag(venueId: string, dto: CreateTagDto) {
         await this.invalidatePublicMenuCache(venueId);
         return this.prisma.withVenueScope(venueId, (tx) =>
-            tx.tag.create({ data: { venueId, label: dto.label, kind: dto.kind ?? 'dietary' } }),
+            tx.tag.create({data: {venueId, label: dto.label, kind: dto.kind ?? 'dietary'}}),
         );
     }
 
     async deleteTag(venueId: string, tagId: string) {
         return this.prisma.withVenueScope(venueId, async (tx) => {
-            const tag = await tx.tag.findUnique({ where: { id: tagId } });
+            const tag = await tx.tag.findUnique({where: {id: tagId}});
             if (!tag || tag.venueId !== venueId) throw new NotFoundException('Tag not found');
             await this.invalidatePublicMenuCache(venueId);
-            return tx.tag.delete({ where: { id: tagId } });
+            return tx.tag.delete({where: {id: tagId}});
         });
     }
 
@@ -275,16 +277,16 @@ export class MenuService {
         const cached = await this.cache.get(cacheKey);
         if (cached) return cached;
 
-        const venue = await this.prisma.venue.findUnique({ where: { slug: venueSlug } });
+        const venue = await this.prisma.venue.findUnique({where: {slug: venueSlug}});
         if (!venue) throw new NotFoundException('Venue not found');
 
         const result = await this.prisma.withVenueScope(venue.id, async (tx) => {
             const categories = await tx.menuCategory.findMany({
-                where: { venueId: venue.id },
-                orderBy: { displayOrder: 'asc' },
-                include: { items: { orderBy: { displayOrder: 'asc' }, include: ITEM_INCLUDE } },
+                where: {venueId: venue.id},
+                orderBy: {displayOrder: 'asc'},
+                include: {items: {orderBy: {displayOrder: 'asc'}, include: ITEM_INCLUDE}},
             });
-            return { venue, categories };
+            return {venue, categories};
         });
 
         for (const category of result.categories) {
@@ -302,7 +304,7 @@ export class MenuService {
     }
 
     async invalidatePublicMenuCache(venueId: string) {
-        const venue = await this.prisma.venue.findUnique({ where: { id: venueId }, select: { slug: true } });
+        const venue = await this.prisma.venue.findUnique({where: {id: venueId}, select: {slug: true}});
         if (venue) await this.cache.del(`public-menu:${venue.slug}`);
     }
 

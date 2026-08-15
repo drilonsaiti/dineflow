@@ -1,4 +1,4 @@
-import { PrismaClient, VenueRole } from '@prisma/client';
+import {PrismaClient, VenueRole} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -13,9 +13,9 @@ const SEED_USER_EMAIL = 'drilon-saiti@hotmail.com';
 
 async function main() {
     await prisma.user.upsert({
-        where: { id: SEED_USER_ID },
+        where: {id: SEED_USER_ID},
         update: {},
-        create: { id: SEED_USER_ID, email: SEED_USER_EMAIL },
+        create: {id: SEED_USER_ID, email: SEED_USER_EMAIL},
     });
 
     const venue = await prisma.venue.create({
@@ -24,12 +24,12 @@ async function main() {
             slug: 'marios-pizzeria',
             type: 'restaurant',
             brandColor: '#c0392b',
-            memberships: { create: { userId: SEED_USER_ID, role: VenueRole.OWNER } },
+            memberships: {create: {userId: SEED_USER_ID, role: VenueRole.OWNER}},
         },
     });
 
     const mains = await prisma.menuCategory.create({
-        data: { venueId: venue.id, name: 'Pizzas', displayOrder: 0 },
+        data: {venueId: venue.id, name: 'Pizzas', displayOrder: 0},
     });
 
     await prisma.menuItem.create({
@@ -48,8 +48,8 @@ async function main() {
                         maxSelect: 1,
                         options: {
                             create: [
-                                { name: 'Medium', priceDeltaCents: 0, displayOrder: 0 },
-                                { name: 'Large', priceDeltaCents: 300, displayOrder: 1 },
+                                {name: 'Medium', priceDeltaCents: 0, displayOrder: 0},
+                                {name: 'Large', priceDeltaCents: 300, displayOrder: 1},
                             ],
                         },
                     },
@@ -67,8 +67,8 @@ async function main() {
         },
     });
 
-    await prisma.table.create({ data: { venueId: venue.id, label: 'Table 1' } });
-    await prisma.table.create({ data: { venueId: venue.id, label: 'Table 2' } });
+    await prisma.table.create({data: {venueId: venue.id, label: 'Table 1'}});
+    await prisma.table.create({data: {venueId: venue.id, label: 'Table 2'}});
 
     console.log(`Seeded venue "${venue.name}" (${venue.slug}) for user ${SEED_USER_ID}`);
 }

@@ -1,35 +1,20 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
-import {
-    DragDropContext,
-    Droppable,
-    Draggable,
-    DropResult,
-} from '@hello-pangea/dnd';
-import { isAdjacentTransition } from '@/lib/order-transitions';
-import { getSocket, joinVenueRoom } from '@/lib/socket';
-import {
-    useOrders,
-    useAdvanceOrderStatus,
-    useOrderSocketSync,
-} from '@/hooks/useOrders';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/Select';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { TableRequestsPanel } from '@/components/TableRequestsPanel';
-import { OrderCard } from '@/components/OrderCard';
-import { useVenueCurrency } from '@/hooks/useVenueCurrency';
-import { useAutoPrintTickets } from '@/hooks/useVenueBasics';
-import { useMyMembership } from '@/hooks/useVenues';
-import { useTableAssignments } from '@/hooks/useTableAssignments';
-import { useCurrentUserId } from '@/hooks/useCurrentUser';
-import { playNotificationSound } from '@/lib/notification-sound';
+import {use, useEffect, useState} from 'react';
+import {DragDropContext, Draggable, Droppable, DropResult,} from '@hello-pangea/dnd';
+import {isAdjacentTransition} from '@/lib/order-transitions';
+import {acquireSocket, joinVenueRoom} from '@/lib/socket';
+import {useAdvanceOrderStatus, useOrders, useOrderSocketSync,} from '@/hooks/useOrders';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/components/ui/Select';
+import {Checkbox} from '@/components/ui/Checkbox';
+import {TableRequestsPanel} from '@/components/TableRequestsPanel';
+import {OrderCard} from '@/components/OrderCard';
+import {useVenueCurrency} from '@/hooks/useVenueCurrency';
+import {useAutoPrintTickets} from '@/hooks/useVenueBasics';
+import {useMyMembership} from '@/hooks/useVenues';
+import {useTableAssignments} from '@/hooks/useTableAssignments';
+import {useCurrentUserId} from '@/hooks/useCurrentUser';
+import {playNotificationSound} from '@/lib/notification-sound';
 
 export interface StaffOrder {
     id: string;
@@ -52,10 +37,10 @@ export interface StaffOrder {
 }
 
 const COLUMNS: { status: StaffOrder['status']; label: string }[] = [
-    { status: 'RECEIVED', label: 'Received' },
-    { status: 'VIEWED', label: 'Viewed' },
-    { status: 'PREPARING', label: 'Preparing' },
-    { status: 'READY', label: 'Ready' },
+    {status: 'RECEIVED', label: 'Received'},
+    {status: 'VIEWED', label: 'Viewed'},
+    {status: 'PREPARING', label: 'Preparing'},
+    {status: 'READY', label: 'Ready'},
 ];
 
 // Configurable "sitting too long" threshold (section 10).
@@ -75,35 +60,37 @@ export default function StaffDashboardPage({
                                            }: {
     params: Promise<{ venueId: string }>;
 }) {
-    const { venueId } = use(params);
+    const {venueId} = use(params);
 
     const [station, setStation] = useState<string>('');
     const [connected, setConnected] = useState(false);
     const [soundOn, setSoundOn] = useState(true);
     const [showAllColumns, setShowAllColumns] = useState(false);
 
-    const { data: orders = [], refetch } = useOrders(venueId, station || undefined);
+    const {data: orders = [], refetch} = useOrders(venueId, station || undefined);
     const advanceStatusMutation = useAdvanceOrderStatus(venueId, station || undefined);
-    const { onOrderCreated, onOrderUpdated } = useOrderSocketSync(venueId, station || undefined);
+    const {onOrderCreated, onOrderUpdated} = useOrderSocketSync(venueId, station || undefined);
 
     const currency = useVenueCurrency(venueId);
     const autoPrint = useAutoPrintTickets(venueId);
-    const { data: membership } = useMyMembership(venueId);
+    const {data: membership} = useMyMembership(venueId);
     const role = membership?.role ?? null;
-    const { data: assignments = [] } = useTableAssignments(venueId);
+    const {data: assignments = []} = useTableAssignments(venueId);
     const currentUserId = useCurrentUserId();
 
     useEffect(() => {
-        const socket = getSocket();
+        const {socket, release} = acquireSocket();
 
         function handleConnect() {
             setConnected(true);
             joinVenueRoom(venueId, station || undefined);
             refetch(); // resync on every (re)connect
         }
+
         function handleDisconnect() {
             setConnected(false);
         }
+
         function handleOrderCreated(order: StaffOrder) {
             onOrderCreated(order);
             if (soundOn) playNotificationSound('order');
@@ -111,6 +98,7 @@ export default function StaffDashboardPage({
                 window.open(`/admin/${venueId}/print-ticket/${order.id}`, '_blank', 'width=320,height=600');
             }
         }
+
         function handleOrderUpdated(order: StaffOrder) {
             onOrderUpdated(order);
         }
@@ -120,24 +108,24 @@ export default function StaffDashboardPage({
         socket.on('order_created', handleOrderCreated);
         socket.on('order_updated', handleOrderUpdated);
 
-        if (!socket.connected) socket.connect();
-        else handleConnect();
+        if (socket.connected) handleConnect();
 
         return () => {
             socket.off('connect', handleConnect);
             socket.off('disconnect', handleDisconnect);
             socket.off('order_created', handleOrderCreated);
             socket.off('order_updated', handleOrderUpdated);
+            release();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [venueId, station, soundOn, autoPrint]);
 
     function advance(order: StaffOrder, toStatus: StaffOrder['status']) {
-        advanceStatusMutation.mutate({ orderId: order.id, status: toStatus });
+        advanceStatusMutation.mutate({orderId: order.id, status: toStatus});
     }
 
     function handleDragEnd(result: DropResult) {
-        const { source, destination, draggableId } = result;
+        const {source, destination, draggableId} = result;
         if (!destination || source.droppableId === destination.droppableId) return;
 
         const order = orders.find((o) => o.id === draggableId);
@@ -156,11 +144,13 @@ export default function StaffDashboardPage({
 
     return (
         <div className="flex h-screen flex-col bg-canvas text-ink dark:bg-surface-dark dark:text-white">
-            <header className="flex items-center justify-between border-b border-hairline px-4 py-3 dark:border-gray-800">
+            <header
+                className="flex items-center justify-between border-b border-hairline px-4 py-3 dark:border-gray-800">
                 <h1 className="text-lg">Order board</h1>
 
                 {isWaiter && (
-                    <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
+                    <label
+                        className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
                         <Checkbox
                             checked={showAllColumns}
                             onCheckedChange={(checked) => setShowAllColumns(checked === true)}
@@ -171,13 +161,13 @@ export default function StaffDashboardPage({
 
                 <div className="flex items-center gap-4 text-sm">
           <span className={`flex items-center gap-1.5 font-medium ${connected ? 'text-success' : 'text-error'}`}>
-            <span className={`h-2 w-2 rounded-full ${connected ? 'bg-success' : 'bg-error'}`} />
+            <span className={`h-2 w-2 rounded-full ${connected ? 'bg-success' : 'bg-error'}`}/>
               {connected ? 'Live' : 'Reconnecting…'}
           </span>
 
                     <Select value={station} onValueChange={setStation}>
                         <SelectTrigger className="w-36">
-                            <SelectValue placeholder="All stations" />
+                            <SelectValue placeholder="All stations"/>
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="">All stations</SelectItem>
@@ -192,7 +182,7 @@ export default function StaffDashboardPage({
                 </div>
             </header>
 
-            <TableRequestsPanel venueId={venueId} />
+            <TableRequestsPanel venueId={venueId}/>
 
             {isWaiter && (
                 <div className="flex gap-2 overflow-x-auto border-b border-hairline px-4 py-2 dark:border-gray-800">
@@ -210,78 +200,81 @@ export default function StaffDashboardPage({
                     {assignments.filter((a) => a.userId === currentUserId).length === 0 && (
 
                         <a href={`/admin/${venueId}/tables-live`}
-                        className="text-xs font-medium text-muted underline"
+                           className="text-xs font-medium text-muted underline"
                         >
-                        Claim a table →
+                            Claim a table →
                         </a>
-                        )}
+                    )}
                 </div>
             )}
 
-<DragDropContext onDragEnd={handleDragEnd}>
-    <div className={`grid flex-1 gap-3 overflow-hidden p-3 ${gridColsClass}`}>
-        {visibleColumns.map((col) => {
-            const columnOrders = visibleOrders
-                .filter((o) => o.status === col.status)
-                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            <DragDropContext onDragEnd={handleDragEnd}>
+                <div className={`grid flex-1 gap-3 overflow-hidden p-3 ${gridColsClass}`}>
+                    {visibleColumns.map((col) => {
+                        const columnOrders = visibleOrders
+                            .filter((o) => o.status === col.status)
+                            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-            return (
-                <Droppable droppableId={col.status} key={col.status}>
-                    {(provided, snapshot) => (
-                        <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className={`flex flex-col overflow-hidden rounded-lg bg-surface-card dark:bg-surface-dark-elevated ${
-                                snapshot.isDraggingOver ? 'ring-2 ring-ink dark:ring-white' : ''
-                            }`}
-                        >
-                            <div className="flex items-center justify-between border-b border-hairline px-3 py-2 dark:border-gray-700">
-                                <span className="text-sm font-semibold text-ink dark:text-white">{col.label}</span>
-                                <span className="rounded-pill bg-surface-strong px-2 py-0.5 text-xs font-medium text-muted dark:bg-gray-700 dark:text-gray-300">
+                        return (
+                            <Droppable droppableId={col.status} key={col.status}>
+                                {(provided, snapshot) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                        className={`flex flex-col overflow-hidden rounded-lg bg-surface-card dark:bg-surface-dark-elevated ${
+                                            snapshot.isDraggingOver ? 'ring-2 ring-ink dark:ring-white' : ''
+                                        }`}
+                                    >
+                                        <div
+                                            className="flex items-center justify-between border-b border-hairline px-3 py-2 dark:border-gray-700">
+                                            <span
+                                                className="text-sm font-semibold text-ink dark:text-white">{col.label}</span>
+                                            <span
+                                                className="rounded-pill bg-surface-strong px-2 py-0.5 text-xs font-medium text-muted dark:bg-gray-700 dark:text-gray-300">
                         {columnOrders.length}
                       </span>
-                            </div>
+                                        </div>
 
-                            <div className="flex-1 space-y-2 overflow-y-auto p-2">
-                                {columnOrders.map((order, index) => (
-                                    <Draggable draggableId={order.id} index={index} key={order.id}>
-                                        {(dragProvided, dragSnapshot) => (
-                                            <div
-                                                ref={dragProvided.innerRef}
-                                                {...dragProvided.draggableProps}
-                                                {...dragProvided.dragHandleProps}
-                                                className={dragSnapshot.isDragging ? 'opacity-80' : ''}
-                                            >
-                                                <OrderCard
-                                                    key={order.id}
-                                                    order={order}
-                                                    currency={currency}
-                                                    lateThresholdMinutes={LATE_THRESHOLD_MINUTES}
-                                                    onAdvance={(to) => advance(order, to)}
-                                                    onCancel={() => advance(order, 'CANCELLED')}
-                                                    canServe={
-                                                        role !== 'STAFF' ||
-                                                        assignments.some(
-                                                            (a) => a.tableId === (order as any).tableId && a.userId === currentUserId,
-                                                        )
-                                                    }
-                                                />
-                                            </div>
-                                        )}
-                                    </Draggable>
-                                ))}
-                                {provided.placeholder}
-                                {columnOrders.length === 0 && (
-                                    <p className="p-3 text-center text-sm text-muted-soft">No orders</p>
+                                        <div className="flex-1 space-y-2 overflow-y-auto p-2">
+                                            {columnOrders.map((order, index) => (
+                                                <Draggable draggableId={order.id} index={index} key={order.id}>
+                                                    {(dragProvided, dragSnapshot) => (
+                                                        <div
+                                                            ref={dragProvided.innerRef}
+                                                            {...dragProvided.draggableProps}
+                                                            {...dragProvided.dragHandleProps}
+                                                            className={dragSnapshot.isDragging ? 'opacity-80' : ''}
+                                                        >
+                                                            <OrderCard
+                                                                key={order.id}
+                                                                order={order}
+                                                                currency={currency}
+                                                                lateThresholdMinutes={LATE_THRESHOLD_MINUTES}
+                                                                onAdvance={(to) => advance(order, to)}
+                                                                onCancel={() => advance(order, 'CANCELLED')}
+                                                                canServe={
+                                                                    role !== 'STAFF' ||
+                                                                    assignments.some(
+                                                                        (a) => a.tableId === (order as any).tableId && a.userId === currentUserId,
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </Draggable>
+                                            ))}
+                                            {provided.placeholder}
+                                            {columnOrders.length === 0 && (
+                                                <p className="p-3 text-center text-sm text-muted-soft">No orders</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
-                            </div>
-                        </div>
-                    )}
-                </Droppable>
-            );
-        })}
-    </div>
-</DragDropContext>
-</div>
-);
+                            </Droppable>
+                        );
+                    })}
+                </div>
+            </DragDropContext>
+        </div>
+    );
 }

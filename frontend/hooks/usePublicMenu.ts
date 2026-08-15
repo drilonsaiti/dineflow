@@ -1,7 +1,7 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-keys';
+import {useQuery} from '@tanstack/react-query';
+import {queryKeys} from '@/lib/query-keys';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 

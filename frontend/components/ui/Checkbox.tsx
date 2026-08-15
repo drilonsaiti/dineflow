@@ -1,13 +1,13 @@
 "use client";
 
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox";
-import { forwardRef } from "react";
-import type { ComponentPropsWithoutRef, ElementRef } from "react";
+import type {ComponentPropsWithoutRef, ElementRef} from "react";
+import {forwardRef} from "react";
 
 export const Checkbox = forwardRef<
     ElementRef<typeof CheckboxPrimitive.Root>,
     ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
->(({ className = "", ...props }, ref) => (
+>(({className = "", ...props}, ref) => (
     <CheckboxPrimitive.Root
         ref={ref}
         className={`peer h-5 w-5 shrink-0 rounded-[6px] border border-hairline bg-canvas transition-colors
@@ -31,7 +31,7 @@ export const Checkbox = forwardRef<
                 strokeLinejoin="round"
                 aria-hidden="true"
             >
-                <path d="M5 12l4 4L19 8" />
+                <path d="M5 12l4 4L19 8"/>
             </svg>
         </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

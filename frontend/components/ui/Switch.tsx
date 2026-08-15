@@ -6,7 +6,7 @@ import * as React from 'react';
 const Switch = React.forwardRef<
     React.ElementRef<typeof SwitchPrimitive.Root>,
     React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>
->(({ className = '', ...props }, ref) => (
+>(({className = '', ...props}, ref) => (
     <SwitchPrimitive.Root
         ref={ref}
         className={`relative h-6 w-11 shrink-0 rounded-full border border-hairline bg-surface-strong transition-colors
@@ -26,4 +26,4 @@ const Switch = React.forwardRef<
 
 Switch.displayName = SwitchPrimitive.Root.displayName;
 
-export { Switch };
+export {Switch};

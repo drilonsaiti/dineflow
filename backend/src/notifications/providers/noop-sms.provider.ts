@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { SmsProvider } from '../notification-provider.interface';
+import {Injectable, Logger} from '@nestjs/common';
+import {SmsProvider} from '../notification-provider.interface';
 
 /**
  * Default provider — logs instead of sending. This is intentional, not a
@@ -18,6 +18,6 @@ export class NoopSmsProvider implements SmsProvider {
 
     async send(toPhoneNumber: string, message: string) {
         this.logger.log(`[SMS stub] would send to ${toPhoneNumber}: "${message}"`);
-        return { ok: true, detail: 'no-op provider — not actually sent' };
+        return {ok: true, detail: 'no-op provider — not actually sent'};
     }
 }

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import {createClient} from '@supabase/supabase-js';
 
 // Client-side Supabase instance — used ONLY for auth (sign up/in, session,
 // magic link) and to obtain the JWT sent to the NestJS API. Never queries
@@ -10,6 +10,6 @@ export const supabase = createClient(
 );
 
 export async function getAccessToken(): Promise<string | null> {
-    const { data } = await supabase.auth.getSession();
+    const {data} = await supabase.auth.getSession();
     return data.session?.access_token ?? null;
 }

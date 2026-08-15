@@ -1,12 +1,12 @@
 'use client';
 
-import { use, useState } from 'react';
+import {use, useState} from 'react';
 import Link from 'next/link';
-import { HandMetal, Banknote, Star, CheckCircle2, Info } from 'lucide-react';
-import { useOrderTracking, useSubmitFeedback, useEstimatedWait } from '@/hooks/usePublicOrders';
-import { useActiveTableRequests, useCreateTableRequest } from '@/hooks/useTableRequestsPublic';
-import { useVenueCurrencyPublic } from '../../layout';
-import { formatCents } from '@/lib/money';
+import {Banknote, CheckCircle2, HandMetal, Info, Star} from 'lucide-react';
+import {useEstimatedWait, useOrderTracking, useSubmitFeedback} from '@/hooks/usePublicOrders';
+import {useActiveTableRequests, useCreateTableRequest} from '@/hooks/useTableRequestsPublic';
+import {useVenueCurrencyPublic} from '../../layout';
+import {formatCents} from '@/lib/money';
 
 const STATUS_STEPS = ['RECEIVED', 'VIEWED', 'PREPARING', 'READY', 'SERVED'] as const;
 const STATUS_LABELS: Record<string, string> = {
@@ -23,12 +23,12 @@ export default function OrderTrackingPage({
                                           }: {
     params: Promise<{ venueSlug: string; token: string; orderId: string }>;
 }) {
-    const { venueSlug, token, orderId } = use(params);
+    const {venueSlug, token, orderId} = use(params);
     const currency = useVenueCurrencyPublic();
 
-    const { data: order, error } = useOrderTracking(orderId, token);
-    const { data: estimatedWaitData } = useEstimatedWait(venueSlug);
-    const { data: activeRequests = [] } = useActiveTableRequests(token);
+    const {data: order, error} = useOrderTracking(orderId, token);
+    const {data: estimatedWaitData} = useEstimatedWait(venueSlug);
+    const {data: activeRequests = []} = useActiveTableRequests(token);
     const createRequestMutation = useCreateTableRequest(token);
     const feedbackMutation = useSubmitFeedback(orderId);
 
@@ -42,14 +42,14 @@ export default function OrderTrackingPage({
     const [feedbackSent, setFeedbackSent] = useState(false);
 
     async function sendTableRequest(type: 'CALL_WAITER' | 'REQUEST_BILL_CASH', count?: number, tip?: number) {
-        const result = await createRequestMutation.mutateAsync({ type, guestCount: count, tipPercent: tip });
+        const result = await createRequestMutation.mutateAsync({type, guestCount: count, tipPercent: tip});
         setRequestResult(result);
         setShowGuestCount(false);
     }
 
     async function submitFeedback() {
         if (rating === 0) return;
-        await feedbackMutation.mutateAsync({ tableToken: token, rating, comment: comment || undefined });
+        await feedbackMutation.mutateAsync({tableToken: token, rating, comment: comment || undefined});
         setFeedbackSent(true);
     }
 
@@ -78,7 +78,8 @@ export default function OrderTrackingPage({
                     aria-live="polite"
                     aria-label={`Order status: ${STATUS_LABELS[order.status]}`}
                 >
-                    <div className="absolute left-0 right-0 top-[18px] -z-10 mx-[18px] h-0.5 bg-surface-strong dark:bg-gray-700">
+                    <div
+                        className="absolute left-0 right-0 top-[18px] -z-10 mx-[18px] h-0.5 bg-surface-strong dark:bg-gray-700">
                         <div
                             className="h-full transition-all"
                             style={{
@@ -94,7 +95,7 @@ export default function OrderTrackingPage({
                                 className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium ${
                                     i <= currentIndex ? 'text-white' : 'bg-surface-card text-muted-soft dark:bg-surface-dark-elevated'
                                 }`}
-                                style={i <= currentIndex ? { backgroundColor: 'var(--brand-color, #EA580C)' } : undefined}
+                                style={i <= currentIndex ? {backgroundColor: 'var(--brand-color, #EA580C)'} : undefined}
                             >
                                 {i < currentIndex ? '✓' : i + 1}
                             </div>
@@ -107,10 +108,12 @@ export default function OrderTrackingPage({
             )}
 
             {estimatedWaitData?.avgMinutes != null && ['RECEIVED', 'VIEWED', 'PREPARING'].includes(order.status) && (
-                <p className="mt-3 text-center text-sm text-muted">Typical wait right now: ~{Math.round(estimatedWaitData.avgMinutes)} min</p>
+                <p className="mt-3 text-center text-sm text-muted">Typical wait right now:
+                    ~{Math.round(estimatedWaitData.avgMinutes)} min</p>
             )}
 
-            <div className="mt-8 divide-y divide-hairline-soft rounded-xl border border-hairline bg-canvas dark:divide-gray-800 dark:border-gray-800 dark:bg-surface-dark-elevated">
+            <div
+                className="mt-8 divide-y divide-hairline-soft rounded-xl border border-hairline bg-canvas dark:divide-gray-800 dark:border-gray-800 dark:bg-surface-dark-elevated">
                 {order.items.map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between p-3">
                         <div>
@@ -127,8 +130,9 @@ export default function OrderTrackingPage({
             </div>
 
             {activeBillRequest && (
-                <div className="mt-4 flex items-start gap-2 rounded-lg bg-surface-card p-3 text-sm text-ink dark:bg-surface-dark-elevated dark:text-white">
-                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden />
+                <div
+                    className="mt-4 flex items-start gap-2 rounded-lg bg-surface-card p-3 text-sm text-ink dark:bg-surface-dark-elevated dark:text-white">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted" aria-hidden/>
                     <span>
                         Someone at this table already requested the bill
                         {activeBillRequest.guestCount && ` — splitting ${activeBillRequest.guestCount} ways`}
@@ -142,21 +146,23 @@ export default function OrderTrackingPage({
                     onClick={() => sendTableRequest('CALL_WAITER')}
                     className="flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-hairline bg-canvas text-sm font-medium text-ink transition-colors hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-white dark:hover:bg-gray-800"
                 >
-                    <HandMetal className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+                    <HandMetal className="h-4 w-4 shrink-0 text-muted" aria-hidden/>
                     Call waiter
                 </button>
                 <button
                     onClick={() => setShowGuestCount(true)}
                     className="flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-hairline bg-canvas text-sm font-medium text-ink transition-colors hover:bg-surface-card dark:border-gray-800 dark:bg-surface-dark-elevated dark:text-white dark:hover:bg-gray-800"
                 >
-                    <Banknote className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+                    <Banknote className="h-4 w-4 shrink-0 text-muted" aria-hidden/>
                     Pay with cash
                 </button>
             </div>
 
             {showGuestCount && (
-                <div className="mt-3 rounded-lg border border-hairline bg-canvas p-3 dark:border-gray-800 dark:bg-surface-dark-elevated">
-                    <label className="text-sm font-medium text-ink dark:text-white">Splitting the bill? How many guests?</label>
+                <div
+                    className="mt-3 rounded-lg border border-hairline bg-canvas p-3 dark:border-gray-800 dark:bg-surface-dark-elevated">
+                    <label className="text-sm font-medium text-ink dark:text-white">Splitting the bill? How many
+                        guests?</label>
                     <div className="mt-2 flex items-center gap-3">
                         <input
                             type="number"
@@ -178,7 +184,7 @@ export default function OrderTrackingPage({
                                     className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                                         active ? 'text-white' : 'bg-surface-card text-ink dark:bg-surface-dark-elevated dark:text-white'
                                     }`}
-                                    style={active ? { backgroundColor: 'var(--brand-color, #EA580C)' } : undefined}
+                                    style={active ? {backgroundColor: 'var(--brand-color, #EA580C)'} : undefined}
                                 >
                                     {p === 0 ? 'No tip' : `${p}%`}
                                 </button>
@@ -190,7 +196,7 @@ export default function OrderTrackingPage({
                         <button
                             onClick={() => sendTableRequest('REQUEST_BILL_CASH', guestCount, tipPercent)}
                             className="rounded-md px-4 py-2 text-sm font-medium text-white"
-                            style={{ backgroundColor: 'var(--brand-color, #EA580C)' }}
+                            style={{backgroundColor: 'var(--brand-color, #EA580C)'}}
                         >
                             Request bill
                         </button>
@@ -205,7 +211,8 @@ export default function OrderTrackingPage({
             )}
 
             {requestResult && (
-                <div role="status" aria-live="polite" className="mt-2 rounded-lg bg-success/10 p-3 text-center text-sm text-success">
+                <div role="status" aria-live="polite"
+                     className="mt-2 rounded-lg bg-success/10 p-3 text-center text-sm text-success">
                     {requestResult.type === 'CALL_WAITER' && 'A staff member is on their way.'}
                     {requestResult.type === 'REQUEST_BILL_CASH' && (
                         <>
@@ -219,7 +226,8 @@ export default function OrderTrackingPage({
             )}
 
             {order.status === 'SERVED' && !feedbackSent && (
-                <div className="mt-6 rounded-xl border border-hairline bg-canvas p-4 text-center dark:border-gray-800 dark:bg-surface-dark-elevated">
+                <div
+                    className="mt-6 rounded-xl border border-hairline bg-canvas p-4 text-center dark:border-gray-800 dark:bg-surface-dark-elevated">
                     <p className="font-medium text-ink dark:text-white">How was everything?</p>
                     <div className="mt-2 flex justify-center gap-1">
                         {[1, 2, 3, 4, 5].map((n) => (
@@ -231,7 +239,10 @@ export default function OrderTrackingPage({
                             >
                                 <Star
                                     className={`h-6 w-6 transition-colors ${n > rating ? 'text-muted-soft' : ''}`}
-                                    style={n <= rating ? { color: 'var(--brand-color, #EA580C)', fill: 'var(--brand-color, #EA580C)' } : undefined}
+                                    style={n <= rating ? {
+                                        color: 'var(--brand-color, #EA580C)',
+                                        fill: 'var(--brand-color, #EA580C)'
+                                    } : undefined}
                                 />
                             </button>
                         ))}
@@ -249,7 +260,7 @@ export default function OrderTrackingPage({
                                 onClick={submitFeedback}
                                 disabled={feedbackMutation.isPending}
                                 className="mt-2 rounded-full px-6 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50"
-                                style={{ backgroundColor: 'var(--brand-color, #EA580C)' }}
+                                style={{backgroundColor: 'var(--brand-color, #EA580C)'}}
                             >
                                 {feedbackMutation.isPending ? 'Submitting…' : 'Submit'}
                             </button>
@@ -259,7 +270,7 @@ export default function OrderTrackingPage({
             )}
             {feedbackSent && (
                 <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-sm text-muted">
-                    <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
+                    <CheckCircle2 className="h-4 w-4 text-success" aria-hidden/>
                     Thanks for the feedback!
                 </p>
             )}

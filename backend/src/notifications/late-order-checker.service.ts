@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../prisma/prisma.service';
-import { NotificationsService } from './notifications.service';
-import { OrderStatus } from '@prisma/client';
+import {Injectable, Logger} from '@nestjs/common';
+import {Cron, CronExpression} from '@nestjs/schedule';
+import {PrismaService} from '../prisma/prisma.service';
+import {NotificationsService} from './notifications.service';
+import {OrderStatus} from '@prisma/client';
 
 /**
  * Structural counterpart to the dashboard's visual "sitting too long" flag
@@ -22,13 +22,14 @@ export class LateOrderCheckerService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly notifications: NotificationsService,
-    ) {}
+    ) {
+    }
 
     @Cron(CronExpression.EVERY_MINUTE)
     async checkForLateOrders() {
         const venues = await this.prisma.venue.findMany({
-            where: { staffAlertWebhookUrl: { not: null } },
-            select: { id: true, lateOrderThresholdMinutes: true },
+            where: {staffAlertWebhookUrl: {not: null}},
+            select: {id: true, lateOrderThresholdMinutes: true},
         });
 
         for (const venue of venues) {
@@ -42,15 +43,15 @@ export class LateOrderCheckerService {
         const lateOrders = await this.prisma.order.findMany({
             where: {
                 venueId,
-                status: { in: [OrderStatus.RECEIVED, OrderStatus.VIEWED, OrderStatus.PREPARING] },
-                createdAt: { lt: cutoff },
+                status: {in: [OrderStatus.RECEIVED, OrderStatus.VIEWED, OrderStatus.PREPARING]},
+                createdAt: {lt: cutoff},
             },
-            select: { id: true },
+            select: {id: true},
         });
 
         for (const order of lateOrders) {
             const alreadyNotified = await this.prisma.notificationLog.findFirst({
-                where: { orderId: order.id, kind: 'STAFF_ORDER_LATE', status: 'sent' },
+                where: {orderId: order.id, kind: 'STAFF_ORDER_LATE', status: 'sent'},
             });
             if (alreadyNotified) continue;
             await this.notifications.notifyStaffOrderLate(venueId, order.id);
@@ -66,13 +67,13 @@ export class LateOrderCheckerService {
     private async checkStaleTableRequests(venueId: string, thresholdMinutes: number) {
         const cutoff = new Date(Date.now() - thresholdMinutes * 60_000);
         const stale = await this.prisma.tableRequest.findMany({
-            where: { venueId, status: 'PENDING', createdAt: { lt: cutoff } },
-            include: { table: true },
+            where: {venueId, status: 'PENDING', createdAt: {lt: cutoff}},
+            include: {table: true},
         });
 
         for (const request of stale) {
             const alreadyNotified = await this.prisma.notificationLog.findFirst({
-                where: { orderId: request.id, kind: 'STAFF_ORDER_LATE', status: 'sent' },
+                where: {orderId: request.id, kind: 'STAFF_ORDER_LATE', status: 'sent'},
             });
             if (alreadyNotified) continue;
 

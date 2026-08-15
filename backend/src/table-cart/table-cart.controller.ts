@@ -1,12 +1,13 @@
 import {Body, Controller, Delete, Get, Param, Patch, Post, Query} from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
-import { TableCartService } from './table-cart.service';
-import { AddCartItemDto, UpdateCartItemDto } from './dto/table-cart.dto';
-import { Public } from '../auth/public.decorator';
+import {Throttle} from '@nestjs/throttler';
+import {TableCartService} from './table-cart.service';
+import {AddCartItemDto, UpdateCartItemDto} from './dto/table-cart.dto';
+import {Public} from '../auth/public.decorator';
 
 @Controller('public/table-cart')
 export class TableCartController {
-    constructor(private readonly cartService: TableCartService) {}
+    constructor(private readonly cartService: TableCartService) {
+    }
 
     @Public()
     @Get(':token')
@@ -14,7 +15,7 @@ export class TableCartController {
         return this.cartService.list(token);
     }
 
-    @Throttle({ default: { limit: 30, ttl: 60_000 } })
+    @Throttle({default: {limit: 30, ttl: 60_000}})
     @Public()
     @Post()
     add(@Body() dto: AddCartItemDto) {

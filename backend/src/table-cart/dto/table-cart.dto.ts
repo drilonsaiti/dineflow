@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {IsArray, IsInt, IsOptional, IsString, Min} from 'class-validator';
 
 export class AddCartItemDto {
     @IsString()
@@ -20,7 +20,7 @@ export class AddCartItemDto {
     addedByLabel?: string;
 
     @IsArray()
-    @IsString({ each: true })
+    @IsString({each: true})
     modifierOptionIds!: string[];
 
     @IsString()

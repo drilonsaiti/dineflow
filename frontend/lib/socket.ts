@@ -1,17 +1,13 @@
-import { io, Socket } from 'socket.io-client';
-import { getAccessToken } from './supabase';
+import {io, Socket} from 'socket.io-client';
+import {getAccessToken} from './supabase';
 
 let socket: Socket | null = null;
+let activeConsumers = 0; // how many mounted components currently want this socket alive
 
 export function getSocket(): Socket {
     if (!socket) {
         socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
             autoConnect: false,
-            // Reconnects automatically with backoff by default — the piece that
-            // still needs explicit handling (section 18: "connection drops
-            // mid-shift, dashboard should recover cleanly") is re-joining the
-            // venue room and re-syncing state on 'connect', which the dashboard
-            // page does via the 'connect' listener below.
         });
     }
     return socket;
@@ -23,5 +19,33 @@ export function getSocket(): Socket {
 export async function joinVenueRoom(venueId: string, station?: string) {
     const token = await getAccessToken();
     if (!token) return;
-    getSocket().emit('join_venue', { token, venueId, station });
+    getSocket().emit('join_venue', {token, venueId, station});
+}
+
+/**
+ * Reference-counted connect/disconnect: multiple components on the same
+ * page (dashboard + TableRequestsPanel, for instance) can each "want" the
+ * socket without fighting over who connects/disconnects it. Call
+ * acquireSocket() in a useEffect on mount, and the returned release()
+ * function in that effect's cleanup — the underlying connection only
+ * actually disconnects once the last consumer releases it, and only ever
+ * connects once regardless of how many consumers are mounted.
+ */
+export function acquireSocket(): { socket: Socket; release: () => void } {
+    const s = getSocket();
+    activeConsumers += 1;
+    if (!s.connected) s.connect();
+
+    let released = false;
+    return {
+        socket: s,
+        release: () => {
+            if (released) return; // guards against a double-invoked cleanup (React StrictMode double-mount in dev)
+            released = true;
+            activeConsumers = Math.max(0, activeConsumers - 1);
+            if (activeConsumers === 0) {
+                s.disconnect();
+            }
+        },
+    };
 }

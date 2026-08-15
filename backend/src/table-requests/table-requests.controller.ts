@@ -1,17 +1,18 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
-import { TableRequestsService } from './table-requests.service';
-import { CreateTableRequestDto } from './dto/create-table-request.dto';
-import { Public } from '../auth/public.decorator';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { CurrentUser, CurrentVenue } from '../common/current-user.decorator';
-import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
+import {Body, Controller, Get, Param, Patch, Post, UseGuards} from '@nestjs/common';
+import {Throttle} from '@nestjs/throttler';
+import {TableRequestsService} from './table-requests.service';
+import {CreateTableRequestDto} from './dto/create-table-request.dto';
+import {Public} from '../auth/public.decorator';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {CurrentUser, CurrentVenue} from '../common/current-user.decorator';
+import {AuthenticatedUser} from '../auth/supabase-jwt.strategy';
 
 @Controller()
 export class TableRequestsController {
-    constructor(private readonly service: TableRequestsService) {}
+    constructor(private readonly service: TableRequestsService) {
+    }
 
-    @Throttle({ default: { limit: 6, ttl: 60_000 } })
+    @Throttle({default: {limit: 6, ttl: 60_000}})
     @Public()
     @Post('public/table-requests')
     create(@Body() dto: CreateTableRequestDto) {

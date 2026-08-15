@@ -1,4 +1,4 @@
-import { OrderStatus } from '@prisma/client';
+import {OrderStatus} from '@prisma/client';
 
 /**
  * The one place transition rules live (ARCHITECTURE.md section 3).
@@ -6,20 +6,20 @@ import { OrderStatus } from '@prisma/client';
  * CANCELLED reachable only early. No skipping — see ARCHITECTURE.md for why.
  */
 const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  RECEIVED: ['VIEWED', 'CANCELLED'],
-  VIEWED: ['RECEIVED', 'PREPARING', 'CANCELLED'],
-  PREPARING: ['VIEWED', 'READY'],
-  READY: ['PREPARING', 'SERVED'],
-  SERVED: [], // terminal
-  CANCELLED: [], // terminal
+    RECEIVED: ['VIEWED', 'CANCELLED'],
+    VIEWED: ['RECEIVED', 'PREPARING', 'CANCELLED'],
+    PREPARING: ['VIEWED', 'READY'],
+    READY: ['PREPARING', 'SERVED'],
+    SERVED: [], // terminal
+    CANCELLED: [], // terminal
 };
 
 export function isValidTransition(from: OrderStatus, to: OrderStatus): boolean {
-  return ALLOWED_TRANSITIONS[from]?.includes(to) ?? false;
+    return ALLOWED_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
 export function assertValidTransition(from: OrderStatus, to: OrderStatus): void {
-  if (!isValidTransition(from, to)) {
-    throw new Error(`Invalid order status transition: ${from} -> ${to}`);
-  }
+    if (!isValidTransition(from, to)) {
+        throw new Error(`Invalid order status transition: ${from} -> ${to}`);
+    }
 }

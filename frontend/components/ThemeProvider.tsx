@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { applyTheme, getStoredTheme, Theme } from '@/lib/theme';
+import {createContext, ReactNode, useContext, useEffect, useState} from 'react';
+import {applyTheme, getStoredTheme, Theme} from '@/lib/theme';
 
 interface ThemeContextValue {
     theme: Theme;
@@ -11,7 +11,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({children}: { children: ReactNode }) {
     // Light on first render (server + client) so hydration matches.
     // The inline script in layout.tsx already sets the real class on
     // <html> before paint, so there's no flash — this just syncs state.
@@ -33,7 +33,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
 
     return (
-        <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+        <ThemeContext.Provider value={{theme, setTheme, toggleTheme}}>
             {children}
         </ThemeContext.Provider>
     );

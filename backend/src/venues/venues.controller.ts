@@ -1,60 +1,61 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
-import { VenuesService } from './venues.service';
-import { CreateVenueDto } from './dto/create-venue.dto';
-import { CurrentUser, CurrentVenue } from '../common/current-user.decorator';
-import { AuthenticatedUser } from '../auth/supabase-jwt.strategy';
-import { VenueScopeGuard } from '../common/venue-scope.guard';
-import { UpdateVenueSettingsDto } from './dto/update-venue-settings.dto';
-import { Roles } from '../common/roles.decorator';
-import { VenueRole } from '@prisma/client';
+import {Body, Controller, Get, Post, UseGuards} from '@nestjs/common';
+import {VenuesService} from './venues.service';
+import {CreateVenueDto} from './dto/create-venue.dto';
+import {CurrentUser, CurrentVenue} from '../common/current-user.decorator';
+import {AuthenticatedUser} from '../auth/supabase-jwt.strategy';
+import {VenueScopeGuard} from '../common/venue-scope.guard';
+import {UpdateVenueSettingsDto} from './dto/update-venue-settings.dto';
+import {Roles} from '../common/roles.decorator';
+import {VenueRole} from '@prisma/client';
 
 
 @Controller('venues')
 export class VenuesController {
-  constructor(private readonly venuesService: VenuesService) {}
+    constructor(private readonly venuesService: VenuesService) {
+    }
 
-  // No :venueId yet — this is the onboarding entry point (section 4).
-  @Post()
-  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateVenueDto) {
-    return this.venuesService.create(user.id, dto);
-  }
+    // No :venueId yet — this is the onboarding entry point (section 4).
+    @Post()
+    create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateVenueDto) {
+        return this.venuesService.create(user.id, dto);
+    }
 
-  @Get('mine')
-  listMine(@CurrentUser() user: AuthenticatedUser) {
-    return this.venuesService.listForUser(user.id);
-  }
+    @Get('mine')
+    listMine(@CurrentUser() user: AuthenticatedUser) {
+        return this.venuesService.listForUser(user.id);
+    }
 
-  // Full venue record — INCLUDES sensitive fields (staffAlertWebhookUrl,
-  // stripeCustomerId, stripeSubscriptionId). Owner/manager only.
-  @Get(':venueId')
-  @UseGuards(VenueScopeGuard)
-  @Roles(VenueRole.OWNER, VenueRole.MANAGER)
-  getOne(@CurrentVenue() scope: { venueId: string }) {
-    return this.venuesService.getById(scope.venueId);
-  }
+    // Full venue record — INCLUDES sensitive fields (staffAlertWebhookUrl,
+    // stripeCustomerId, stripeSubscriptionId). Owner/manager only.
+    @Get(':venueId')
+    @UseGuards(VenueScopeGuard)
+    @Roles(VenueRole.OWNER, VenueRole.MANAGER)
+    getOne(@CurrentVenue() scope: { venueId: string }) {
+        return this.venuesService.getById(scope.venueId);
+    }
 
-  // Narrow, safe-for-any-member subset — what the currency hook, settings
-  // display, and any staff-facing screen that just needs "the venue's
-  // name/currency/branding" should call instead of the full record above.
-  @Get(':venueId/basics')
-  @UseGuards(VenueScopeGuard)
-  getBasics(@CurrentVenue() scope: { venueId: string }) {
-    return this.venuesService.getBasics(scope.venueId);
-  }
+    // Narrow, safe-for-any-member subset — what the currency hook, settings
+    // display, and any staff-facing screen that just needs "the venue's
+    // name/currency/branding" should call instead of the full record above.
+    @Get(':venueId/basics')
+    @UseGuards(VenueScopeGuard)
+    getBasics(@CurrentVenue() scope: { venueId: string }) {
+        return this.venuesService.getBasics(scope.venueId);
+    }
 
-  @Post(':venueId/settings')
-  @UseGuards(VenueScopeGuard)
-  @Roles(VenueRole.OWNER, VenueRole.MANAGER)
-  updateSettings(
-      @CurrentVenue() scope: { venueId: string },
-      @Body() dto: UpdateVenueSettingsDto,
-  ) {
-    return this.venuesService.updateSettings(scope.venueId, dto);
-  }
+    @Post(':venueId/settings')
+    @UseGuards(VenueScopeGuard)
+    @Roles(VenueRole.OWNER, VenueRole.MANAGER)
+    updateSettings(
+        @CurrentVenue() scope: { venueId: string },
+        @Body() dto: UpdateVenueSettingsDto,
+    ) {
+        return this.venuesService.updateSettings(scope.venueId, dto);
+    }
 
-  @Get(':venueId/my-membership')
-  @UseGuards(VenueScopeGuard)
-  getMyMembership(@CurrentVenue() scope: { venueId: string; role: string }) {
-    return { role: scope.role };
-  }
+    @Get(':venueId/my-membership')
+    @UseGuards(VenueScopeGuard)
+    getMyMembership(@CurrentVenue() scope: { venueId: string; role: string }) {
+        return {role: scope.role};
+    }
 }

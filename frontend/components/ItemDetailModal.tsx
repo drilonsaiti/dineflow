@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
-import { useCart } from './CartContext';
-import { formatCents } from '@/lib/money';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import {X} from 'lucide-react';
+import {useCart} from './CartContext';
+import {formatCents} from '@/lib/money';
 import {PublicMenuItem} from "@/types/menu";
 
 export function ItemDetailModal({
@@ -15,7 +15,7 @@ export function ItemDetailModal({
     currency: string;
     onClose: () => void;
 }) {
-    const { addLine } = useCart();
+    const {addLine} = useCart();
     const [selected, setSelected] = useState<Record<string, string[]>>({}); // groupId -> optionIds
     const [quantity, setQuantity] = useState(1);
     const [note, setNote] = useState('');
@@ -73,14 +73,14 @@ export function ItemDetailModal({
         setSelected((prev) => {
             const current = prev[groupId] ?? [];
             if (maxSelect === 1) {
-                return { ...prev, [groupId]: current.includes(optionId) ? [] : [optionId] };
+                return {...prev, [groupId]: current.includes(optionId) ? [] : [optionId]};
             }
             const next = current.includes(optionId)
                 ? current.filter((id) => id !== optionId)
                 : current.length < maxSelect
                     ? [...current, optionId]
                     : current;
-            return { ...prev, [groupId]: next };
+            return {...prev, [groupId]: next};
         });
     }
 
@@ -121,9 +121,9 @@ export function ItemDetailModal({
             >
                 <div className="relative">
                     {item.photoUrl ? (
-                        <img src={item.photoUrl} alt={item.name} className="h-56 w-full object-cover" />
+                        <img src={item.photoUrl} alt={item.name} className="h-56 w-full object-cover"/>
                     ) : (
-                        <div className="h-40 w-full bg-surface-card dark:bg-surface-dark" />
+                        <div className="h-40 w-full bg-surface-card dark:bg-surface-dark"/>
                     )}
                     <button
                         ref={closeButtonRef}
@@ -131,7 +131,7 @@ export function ItemDetailModal({
                         className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-elevated dark:bg-surface-dark-elevated/90"
                         aria-label="Close item details"
                     >
-                        <X className="h-5 w-5 text-ink dark:text-white" aria-hidden />
+                        <X className="h-5 w-5 text-ink dark:text-white" aria-hidden/>
                     </button>
                 </div>
 
@@ -141,7 +141,7 @@ export function ItemDetailModal({
 
                     {item.tags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                            {item.tags.map(({ tag }) => (
+                            {item.tags.map(({tag}) => (
                                 <span key={tag.id} className="badge-pill">
                   {tag.label}
                 </span>
@@ -195,7 +195,8 @@ export function ItemDetailModal({
                     ))}
 
                     <div className="mt-5">
-                        <label className="text-sm font-medium text-ink dark:text-white">Note for the kitchen (optional)</label>
+                        <label className="text-sm font-medium text-ink dark:text-white">Note for the kitchen
+                            (optional)</label>
                         <textarea
                             className="input mt-1"
                             rows={2}
@@ -208,7 +209,8 @@ export function ItemDetailModal({
                     {validationError && <p className="mt-3 text-sm text-error">{validationError}</p>}
                 </div>
 
-                <div className="sticky bottom-0 flex items-center gap-3 border-t border-hairline-soft bg-canvas px-5 py-4 dark:border-gray-800 dark:bg-surface-dark-elevated">
+                <div
+                    className="sticky bottom-0 flex items-center gap-3 border-t border-hairline-soft bg-canvas px-5 py-4 dark:border-gray-800 dark:bg-surface-dark-elevated">
                     <div className="flex items-center rounded-full border border-hairline dark:border-gray-700">
                         <button
                             onClick={() => setQuantity((q) => Math.max(1, q - 1))}
@@ -229,7 +231,7 @@ export function ItemDetailModal({
                     <button
                         onClick={handleAdd}
                         className="flex min-h-[44px] flex-1 items-center justify-center rounded-full text-sm font-semibold text-white transition-colors"
-                        style={{ backgroundColor: 'var(--brand-color, #EA580C)' }}
+                        style={{backgroundColor: 'var(--brand-color, #EA580C)'}}
                     >
                         Add to cart · {formatCents(unitPriceCents * quantity, currency)}
                     </button>

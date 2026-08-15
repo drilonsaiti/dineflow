@@ -1,7 +1,7 @@
-import { Module } from '@nestjs/common';
-import { TableCartService } from './table-cart.service';
-import { TableCartController } from './table-cart.controller';
-import { TablesModule } from '../tables/tables.module';
+import {Module} from '@nestjs/common';
+import {TableCartService} from './table-cart.service';
+import {TableCartController} from './table-cart.controller';
+import {TablesModule} from '../tables/tables.module';
 
 @Module({
     imports: [TablesModule],
@@ -9,4 +9,5 @@ import { TablesModule } from '../tables/tables.module';
     providers: [TableCartService],
     exports: [TableCartService],
 })
-export class TableCartModule {}
+export class TableCartModule {
+}

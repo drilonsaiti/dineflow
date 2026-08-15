@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import {useEffect} from 'react';
+import {useRouter} from 'next/navigation';
 import Link from 'next/link';
-import { useVenuesMine } from '@/hooks/useVenues';
+import {useVenuesMine} from '@/hooks/useVenues';
 
 export default function AdminHomePage() {
     const router = useRouter();
-    const { data: venues } = useVenuesMine();
+    const {data: venues} = useVenuesMine();
 
     useEffect(() => {
         // Single-venue owners land straight on their dashboard — no picker

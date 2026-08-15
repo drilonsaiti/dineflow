@@ -1,8 +1,8 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/query-keys';
-import { getSessionToken } from '@/lib/session';
+import {useMutation, useQuery} from '@tanstack/react-query';
+import {queryKeys} from '@/lib/query-keys';
+import {getSessionToken} from '@/lib/session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
@@ -11,12 +11,14 @@ export function usePlaceOrder(tableToken: string) {
         mutationFn: async (data: { customerName?: string; customerPhone?: string; note?: string }) => {
             const res = await fetch(`${API_URL}/public/orders`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableToken, sessionToken: getSessionToken(tableToken), ...data }),
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tableToken, sessionToken: getSessionToken(tableToken), ...data}),
             });
             const body = await res.json();
             if (!res.ok) {
-                const err = new Error(body.message ?? 'Could not place order.') as Error & { unavailableMenuItemIds?: string[] };
+                const err = new Error(body.message ?? 'Could not place order.') as Error & {
+                    unavailableMenuItemIds?: string[]
+                };
                 err.unavailableMenuItemIds = body.unavailableMenuItemIds;
                 throw err;
             }
@@ -45,11 +47,11 @@ export function useOrderTracking(orderId: string, tableToken: string) {
 
 export function useSubmitFeedback(orderId: string) {
     return useMutation({
-        mutationFn: async ({ tableToken, rating, comment }: { tableToken: string; rating: number; comment?: string }) => {
+        mutationFn: async ({tableToken, rating, comment}: { tableToken: string; rating: number; comment?: string }) => {
             const res = await fetch(`${API_URL}/public/orders/${orderId}/feedback`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableToken, rating, comment }),
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({tableToken, rating, comment}),
             });
             if (!res.ok) throw new Error((await res.json()).message ?? 'Could not submit feedback.');
             return res.json();

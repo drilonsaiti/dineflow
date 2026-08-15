@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { queryKeys } from '@/lib/query-keys';
+import {useQuery} from '@tanstack/react-query';
+import {api} from '@/lib/api';
+import {queryKeys} from '@/lib/query-keys';
 
 interface VenueBasics {
     id: string;
@@ -29,6 +29,6 @@ export function useVenueBasics(venueId: string) {
 }
 
 export function useAutoPrintTickets(venueId: string): boolean {
-    const { data } = useVenueBasics(venueId);
+    const {data} = useVenueBasics(venueId);
     return data?.autoPrintTickets ?? false;
 }

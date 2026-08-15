@@ -1,8 +1,8 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { queryKeys } from '@/lib/query-keys';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+import {api} from '@/lib/api';
+import {queryKeys} from '@/lib/query-keys';
 import {MenuCategory} from "@/types/menu";
 
 export function useMenuCategories(venueId: string) {
@@ -21,11 +21,12 @@ export function useMenuTags(venueId: string) {
 
 function useInvalidateMenu(venueId: string) {
     const queryClient = useQueryClient();
-    return () => queryClient.invalidateQueries({ queryKey: queryKeys.menuCategories(venueId) });
+    return () => queryClient.invalidateQueries({queryKey: queryKeys.menuCategories(venueId)});
 }
+
 function useInvalidateTags(venueId: string) {
     const queryClient = useQueryClient();
-    return () => queryClient.invalidateQueries({ queryKey: queryKeys.menuTags(venueId) });
+    return () => queryClient.invalidateQueries({queryKey: queryKeys.menuTags(venueId)});
 }
 
 export function useCreateCategory(venueId: string) {
@@ -48,8 +49,8 @@ export function useDeleteCategory(venueId: string) {
 export function useToggleItemAvailability(venueId: string) {
     const invalidate = useInvalidateMenu(venueId);
     return useMutation({
-        mutationFn: ({ itemId, isAvailable }: { itemId: string; isAvailable: boolean }) =>
-            api.patch(`/venues/${venueId}/menu/items/${itemId}/availability`, { isAvailable }),
+        mutationFn: ({itemId, isAvailable}: { itemId: string; isAvailable: boolean }) =>
+            api.patch(`/venues/${venueId}/menu/items/${itemId}/availability`, {isAvailable}),
         onSuccess: invalidate,
     });
 }
@@ -68,7 +69,7 @@ export function useDeleteItem(venueId: string) {
 export function useSaveItem(venueId: string) {
     const invalidate = useInvalidateMenu(venueId);
     return useMutation({
-        mutationFn: ({ itemId, payload }: { itemId?: string; payload: Record<string, unknown> }) =>
+        mutationFn: ({itemId, payload}: { itemId?: string; payload: Record<string, unknown> }) =>
             itemId
                 ? api.patch(`/venues/${venueId}/menu/items/${itemId}`, payload)
                 : api.post(`/venues/${venueId}/menu/items`, payload),

@@ -1,16 +1,15 @@
 'use client';
 
-import {createContext, ReactNode, useContext, useEffect, useState} from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import {createContext, ReactNode, useContext} from 'react';
+import {useParams, usePathname} from 'next/navigation';
 import Link from 'next/link';
-import { Receipt } from 'lucide-react';
+import {Receipt} from 'lucide-react';
 
-import { formatCents } from '@/lib/money';
-import { CartProvider, useCart } from '@/components/CartContext';
+import {formatCents} from '@/lib/money';
+import {CartProvider, useCart} from '@/components/CartContext';
 import {HeaderCartLink} from "@/components/HeadCartLink";
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { setSessionToken } from '@/lib/session';
-import { useOnlineStatus } from '@/lib/online-status';
+import {ThemeToggle} from '@/components/ThemeToggle';
+import {useOnlineStatus} from '@/lib/online-status';
 import {useTableInfo} from "@/hooks/useTableInfo";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL!;
@@ -34,6 +33,7 @@ export interface TableInfo {
 }
 
 const VenueCurrencyContext = createContext<string>('USD');
+
 export function useVenueCurrencyPublic() {
     return useContext(VenueCurrencyContext);
 }
@@ -48,10 +48,10 @@ export default function TableLayout({
         token: string;
     }>();
 
-    const { venueSlug, token } = params;
+    const {venueSlug, token} = params;
     const online = useOnlineStatus();
 
-    const { data: info, error } = useTableInfo(token);
+    const {data: info, error} = useTableInfo(token);
 
     if (error) {
         return (
@@ -86,11 +86,12 @@ export default function TableLayout({
                 >
                     <header
                         className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 text-white shadow-elevated"
-                        style={{ backgroundColor: 'var(--brand-color)' }}
+                        style={{backgroundColor: 'var(--brand-color)'}}
                     >
                         <Link href={`/r/${venueSlug}/t/${token}`} className="flex min-w-0 items-center gap-3">
                             {info.venue.logoUrl && (
-                                <img src={info.venue.logoUrl} alt={info.venue.name} className="h-8 w-8 rounded-full object-cover" />
+                                <img src={info.venue.logoUrl} alt={info.venue.name}
+                                     className="h-8 w-8 rounded-full object-cover"/>
                             )}
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold leading-tight">{info.venue.name}</p>
@@ -101,14 +102,14 @@ export default function TableLayout({
                             </div>
                         </Link>
                         <div className="flex items-center gap-2">
-                            <ThemeToggle />
+                            <ThemeToggle/>
                             <HeaderCartLink venueSlug={venueSlug} token={token} info={info}/>
                             <Link
                                 href={`/r/${venueSlug}/t/${token}/tab`}
                                 className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white"
                                 aria-label="View table tab"
                             >
-                                <Receipt className="h-5 w-5" aria-hidden />
+                                <Receipt className="h-5 w-5" aria-hidden/>
                             </Link>
                         </div>
                     </header>
@@ -143,7 +144,7 @@ function CartBar({
     token: string;
     currency: string;
 }) {
-    const { count, subtotalCents } = useCart();
+    const {count, subtotalCents} = useCart();
     const pathname = usePathname();
 
     const onCartPage = pathname?.endsWith('/cart');
@@ -158,7 +159,7 @@ function CartBar({
             href={`/r/${venueSlug}/t/${token}/cart`}
             aria-live="polite"
             className="fixed inset-x-0 bottom-0 z-20 px-4 py-3 text-white shadow-[0_-2px_10px_rgba(0,0,0,0.15)]"
-            style={{ backgroundColor: 'var(--brand-color)' }}
+            style={{backgroundColor: 'var(--brand-color)'}}
         >
             <div className="mx-auto flex min-h-[44px] max-w-2xl items-center justify-between">
         <span className="font-medium">
