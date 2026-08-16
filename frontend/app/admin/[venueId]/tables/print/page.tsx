@@ -23,15 +23,16 @@ export default function PrintTablesPage({params}: { params: Promise<{ venueId: s
                 {tables.map((table) => (
                     <div
                         key={table.id}
-                        className="flex flex-col items-center break-inside-avoid rounded-lg border border-gray-300 p-6 text-center print:border-gray-300"
+                        className="flex flex-col items-center break-inside-avoid rounded-lg border border-gray-300 p-6 text-center dark:border-gray-700"
                     >
                         <img src={table.qrDataUrl} alt={table.label} className="h-40 w-40"/>
-                        <p className="mt-3 text-lg font-semibold text-black">{table.label}</p>
-                        {table.area && <p className="text-sm text-gray-600">{table.area.name}</p>}
-                        <p className="mt-1 text-xs text-gray-500">Scan to order</p>
+                        <p className="mt-3 text-lg font-semibold text-ink dark:text-white print:text-black">{table.label}</p>
+                        {table.area && <p className="text-sm text-muted print:text-gray-600">{table.area.name}</p>}
+                        <p className="mt-1 text-xs text-muted-soft print:text-gray-500">Scan to order</p>
                     </div>
                 ))}
             </div>
         </div>
     );
+
 }

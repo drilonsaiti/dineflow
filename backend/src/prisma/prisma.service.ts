@@ -34,9 +34,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         if (!UUID_RE.test(venueId)) {
             throw new BadRequestException('Invalid venue id');
         }
-        return this.$transaction(async (tx) => {
-            await tx.$executeRawUnsafe(`SET LOCAL app.current_venue_id = '${venueId}'`);
-            return work(tx as unknown as PrismaClient);
-        });
+        return this.$transaction(
+            async (tx) => {
+                await tx.$executeRawUnsafe(`SET LOCAL app.current_venue_id = '${venueId}'`);
+                return work(tx as unknown as PrismaClient);
+            },
+            {
+                // Default is 5000ms — too tight for anything doing more than one
+                // or two queries (e.g. the Z-report's four chained queries, or a
+                // cold Prisma engine on first request in dev). maxWait is how long
+                // a caller waits for a transaction slot to open; timeout is how
+                // long the transaction itself is allowed to run once started.
+                timeout: 15_000,
+                maxWait: 10_000,
+            },
+        );
     }
 }

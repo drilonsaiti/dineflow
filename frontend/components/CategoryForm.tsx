@@ -5,7 +5,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/c
 import {useCreateCategory} from '@/hooks/useMenu';
 import {useToast} from '@/components/ui/Toast';
 
-export function CategoryForm({venueId}: { venueId: string }) {
+export function CategoryForm({venueId, onCreated}: { venueId: string; onCreated?: () => void }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [station, setStation] = useState('');
@@ -24,6 +24,7 @@ export function CategoryForm({venueId}: { venueId: string }) {
             setName('');
             setDescription('');
             setStation('');
+            onCreated?.();
         } catch (err: unknown) {
             showToast(err instanceof Error ? err.message : 'Failed to create category', 'error');
         }

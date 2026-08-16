@@ -1,11 +1,12 @@
 'use client';
 
 import {useState} from 'react';
+import {X} from 'lucide-react';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/Select';
 import {useCreateTag, useDeleteTag, useMenuTags} from '@/hooks/useMenu';
 import {useToast} from '@/components/ui/Toast';
 
-export function TagManager({venueId}: { venueId: string }) {
+export function TagManager({venueId, onChange}: { venueId: string; onChange?: () => void }) {
     const {data: tags = []} = useMenuTags(venueId);
     const createMutation = useCreateTag(venueId);
     const deleteMutation = useDeleteTag(venueId);
@@ -20,14 +21,24 @@ export function TagManager({venueId}: { venueId: string }) {
         try {
             await createMutation.mutateAsync({label, kind});
             setLabel('');
+            onChange?.();
         } catch (err: unknown) {
             showToast(err instanceof Error ? err.message : 'Failed to add tag', 'error');
         }
     }
 
+    async function removeTag(tagId: string) {
+        try {
+            await deleteMutation.mutateAsync(tagId);
+            onChange?.();
+        } catch (err: unknown) {
+            showToast(err instanceof Error ? err.message : 'Failed to delete tag', 'error');
+        }
+    }
+
     return (
         <div className="rounded-xl border border-dashed border-hairline p-4 dark:border-gray-700">
-            <p className="text-sm font-medium">Tags (dietary, allergens, etc.)</p>
+            <p className="text-sm font-medium text-ink dark:text-white">Tags (dietary, allergens, etc.)</p>
             <form onSubmit={addTag} className="mt-2 flex flex-wrap items-end gap-2">
                 <input
                     className="input"
@@ -52,14 +63,14 @@ export function TagManager({venueId}: { venueId: string }) {
             <div className="mt-2 flex flex-wrap gap-1.5">
                 {tags.map((tag) => (
                     <span key={tag.id}
-                          className="flex items-center gap-1 rounded-full bg-surface-strong px-2.5 py-1 text-xs dark:bg-gray-700">
+                          className="flex items-center gap-1 rounded-full bg-surface-strong px-2.5 py-1 text-xs text-ink dark:bg-gray-700 dark:text-gray-200">
             {tag.label}
                         <button
-                            onClick={() => deleteMutation.mutate(tag.id)}
+                            onClick={() => removeTag(tag.id)}
                             className="text-muted hover:text-error"
                             aria-label={`Delete ${tag.label}`}
                         >
-              ✕
+              <X className="h-3 w-3" aria-hidden/>
             </button>
           </span>
                 ))}

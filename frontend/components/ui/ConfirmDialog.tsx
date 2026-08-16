@@ -29,7 +29,7 @@ export function ConfirmDialog({
                         <button className="btn-secondary">Cancel</button>
                     </DialogClose>
                     <button
-                        className={danger ? 'btn-primary bg-error hover:bg-error active:bg-error/90' : 'btn-primary'}
+                        className={danger ? 'btn-danger' : 'btn-primary'}
                         onClick={() => {
                             onConfirm();
                             onOpenChange(false);

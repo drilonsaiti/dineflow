@@ -1,15 +1,19 @@
 'use client';
 
 import {useEffect, useState} from 'react';
+import {X} from 'lucide-react';
 import {elapsedMinutes, formatElapsed} from '@/lib/elapsed';
 import {StaffOrder} from "@/app/admin/[venueId]/dashboard/page";
+import {formatCents} from '@/lib/money';
 import {NEXT, PREV} from '@/lib/order-transitions';
 
 
 export function OrderCard({
                               order,
+                              currency,
                               lateThresholdMinutes,
                               onAdvance,
+                              onCancel,
                               canServe = true,
                           }: {
     order: StaffOrder;
@@ -40,10 +44,22 @@ export function OrderCard({
             }`}
         >
             <div className="flex items-center justify-between">
-                <span className="text-lg font-bold text-ink dark:text-white">#{order.dailyNumber}</span>
-                <span className={`text-sm font-medium ${isLate ? 'text-error' : 'text-muted'}`}>
-          {formatElapsed(order.createdAt)}
-        </span>
+                <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-ink dark:text-white">#{order.dailyNumber}</span>
+                    <span className="text-xs font-medium text-muted">{formatCents(order.totalCents, currency)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className={`text-sm font-medium ${isLate ? 'text-error' : 'text-muted'}`}>
+                        {formatElapsed(order.createdAt)}
+                    </span>
+                    <button
+                        onClick={onCancel}
+                        className="text-muted-soft hover:text-error"
+                        aria-label="Cancel order"
+                    >
+                        <X className="h-4 w-4" aria-hidden/>
+                    </button>
+                </div>
             </div>
             <p className="text-sm text-body dark:text-gray-300">
                 {order.table.label}
@@ -86,7 +102,7 @@ export function OrderCard({
                         onClick={() => onAdvance(next)}
                         disabled={next === 'SERVED' && !canServe}
                         title={next === 'SERVED' && !canServe ? "Claim this table to mark it served" : undefined}
-                        className="min-h-[44px] flex-[2] rounded-md bg-brand text-sm font-semibold disabled:opacity-40"
+                        className="btn-primary min-h-[44px] flex-[2] text-sm"
                     >
                         {next === 'VIEWED' && 'Mark seen →'}
                         {next === 'PREPARING' && 'Start preparing →'}

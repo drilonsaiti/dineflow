@@ -14,6 +14,7 @@ import {VenueRole} from '@prisma/client';
 // via VenueScopeGuard's membership check with no @Roles() on GET routes.
 @Controller('venues/:venueId/menu')
 @UseGuards(VenueScopeGuard)
+@Roles(VenueRole.OWNER, VenueRole.MANAGER)
 export class MenuController {
     constructor(private readonly menuService: MenuService) {
     }

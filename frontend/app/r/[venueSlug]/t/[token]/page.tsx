@@ -1,8 +1,10 @@
 'use client';
 
 import {use, useState} from 'react';
+import {SlidersHorizontal} from 'lucide-react';
 import {usePublicMenu} from '@/hooks/usePublicMenu';
 import {ItemDetailModal} from "@/components/ItemDetailModal";
+import {formatCents} from '@/lib/money';
 
 interface MenuPageProps {
     params: Promise<{ venueSlug: string; token: string }>;
@@ -95,9 +97,10 @@ export default function MenuPage({params}: MenuPageProps) {
                 <div className="px-4">
                     <button
                         onClick={() => setShowFilters((s) => !s)}
-                        className="mt-2 flex min-h-[36px] items-center gap-1 rounded-full border border-hairline px-3 text-xs font-medium text-muted dark:border-gray-700"
+                        className="mt-2 flex min-h-[36px] items-center gap-1.5 rounded-full border border-hairline px-3 text-xs font-medium text-muted dark:border-gray-700"
                     >
-                        🔍 Dietary filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+                        <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden/>
+                        Dietary filters {activeFilterCount > 0 && `(${activeFilterCount})`}
                     </button>
                     {showFilters && (
                         <div
@@ -146,7 +149,7 @@ export default function MenuPage({params}: MenuPageProps) {
             <div className="px-4 py-4 space-y-8">
                 {menu.categories.map((category: any) => (
                     <section key={category.id} id={`cat-${category.id}`}>
-                        <h2 className="text-lg font-display font-semibold">{category.name}</h2>
+                        <h2 className="text-lg">{category.name}</h2>
                         {category.description && <p className="text-sm text-muted">{category.description}</p>}
                         <div className="mt-3 space-y-3">
                             {category.items.filter(itemPassesFilters).length === 0 && activeFilterCount > 0 && (
@@ -168,12 +171,13 @@ export default function MenuPage({params}: MenuPageProps) {
                                         <div className="h-16 w-16 shrink-0 rounded-lg bg-surface-strong"/>
                                     )}
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate font-medium">{item.name}</p>
+                                        <p className="truncate font-medium text-ink dark:text-white">{item.name}</p>
                                         {item.description &&
                                             <p className="line-clamp-2 text-sm text-muted">{item.description}</p>}
                                         <div className="mt-1 flex items-center gap-2">
-                                            <span
-                                                className="text-sm font-semibold">{(item.priceCents / 100).toFixed(2)}</span>
+                                            <span className="text-sm font-semibold text-ink dark:text-white">
+                                                {formatCents(item.priceCents, menu.venue.currency)}
+                                            </span>
                                             {!item.isAvailable &&
                                                 <span className="text-xs font-medium text-error">Unavailable</span>}
                                         </div>

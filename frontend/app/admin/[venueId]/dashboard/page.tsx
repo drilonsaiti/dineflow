@@ -19,6 +19,7 @@ import {playNotificationSound} from '@/lib/notification-sound';
 export interface StaffOrder {
     id: string;
     dailyNumber: number;
+    tableId: string;
     status: 'RECEIVED' | 'VIEWED' | 'PREPARING' | 'READY' | 'SERVED' | 'CANCELLED';
     createdAt: string;
     totalCents: number;
@@ -101,6 +102,20 @@ export default function StaffDashboardPage({
 
         function handleOrderUpdated(order: StaffOrder) {
             onOrderUpdated(order);
+
+            if (soundOn && order.status === 'READY') {
+                // Owners/managers aren't tied to a claimed table — they hear every
+                // ready alert, same as they see every column. A STAFF-role waiter
+                // only hears it if they're the one who claimed this specific
+                // table, so the sound means "your table" rather than "any table."
+                const isOwnerOrManager = role !== 'STAFF';
+                const claimedByMe = assignments.some(
+                    (a) => a.tableId === (order as any).tableId && a.userId === currentUserId,
+                );
+                if (isOwnerOrManager || claimedByMe) {
+                    playNotificationSound('ready');
+                }
+            }
         }
 
         socket.on('connect', handleConnect);
@@ -118,7 +133,7 @@ export default function StaffDashboardPage({
             release();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [venueId, station, soundOn, autoPrint]);
+    }, [venueId, station, soundOn, autoPrint, role, assignments, currentUserId]);
 
     function advance(order: StaffOrder, toStatus: StaffOrder['status']) {
         advanceStatusMutation.mutate({orderId: order.id, status: toStatus});
@@ -254,9 +269,7 @@ export default function StaffDashboardPage({
                                                                 onCancel={() => advance(order, 'CANCELLED')}
                                                                 canServe={
                                                                     role !== 'STAFF' ||
-                                                                    assignments.some(
-                                                                        (a) => a.tableId === (order as any).tableId && a.userId === currentUserId,
-                                                                    )
+                                                                    assignments.some((a) => a.tableId === order.tableId && a.userId === currentUserId)
                                                                 }
                                                             />
                                                         </div>

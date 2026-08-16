@@ -19,10 +19,15 @@ h1, h2, h3 {
     outline-offset: 2px;
 }
 
+.dark :focus-visible {
+    outline-color: theme('colors.canvas');
+}
+
 @layer components {
     .btn-primary {
         @apply inline-flex min-h-[44px] items-center justify-center rounded-md bg-primary px-5 py-2.5
-        text-sm font-semibold text-white transition-colors active:bg-primary-active disabled:opacity-50;
+        text-sm font-semibold text-white transition-colors active:bg-primary-active disabled:opacity-50
+        dark:bg-white dark:text-ink dark:active:bg-gray-200;
     }
 
     .btn-secondary {
@@ -33,6 +38,11 @@ h1, h2, h3 {
     .btn-accent {
         @apply inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-5 py-2.5
         text-sm font-semibold text-white transition-colors active:bg-accent-active disabled:opacity-50;
+    }
+
+    .btn-danger {
+        @apply inline-flex min-h-[44px] items-center justify-center rounded-md bg-error px-5 py-2.5
+        text-sm font-semibold text-white transition-colors hover:bg-error/90 active:bg-error/80 disabled:opacity-50;
     }
 
     .btn-ghost {

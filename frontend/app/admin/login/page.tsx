@@ -31,7 +31,7 @@ export default function LoginPage() {
                 Enter your email — we'll send a link. First time here? That same link creates your account.
             </p>
             {sent ? (
-                <p className="mt-4 text-sm text-body">
+                <p className="mt-4 text-sm text-body dark:text-gray-300">
                     Check your email for a magic link to sign in.
                 </p>
             ) : (

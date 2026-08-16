@@ -120,15 +120,15 @@ export function ItemDetailModal({
                 className="flex h-full w-full flex-col overflow-y-auto bg-canvas dark:bg-surface-dark-elevated sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl"
             >
                 <div className="relative">
-                    {item.photoUrl ? (
+                    {item.photoUrl && (
                         <img src={item.photoUrl} alt={item.name} className="h-56 w-full object-cover"/>
-                    ) : (
-                        <div className="h-40 w-full bg-surface-card dark:bg-surface-dark"/>
                     )}
                     <button
                         ref={closeButtonRef}
                         onClick={onClose}
-                        className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-elevated dark:bg-surface-dark-elevated/90"
+                        className={`absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full shadow-elevated ${
+                            item.photoUrl ? 'bg-white/90 dark:bg-surface-dark-elevated/90' : 'bg-surface-card dark:bg-surface-dark-elevated'
+                        }`}
                         aria-label="Close item details"
                     >
                         <X className="h-5 w-5 text-ink dark:text-white" aria-hidden/>

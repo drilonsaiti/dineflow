@@ -17,7 +17,7 @@ export default function PrintTicketPage({params}: { params: Promise<{ venueId: s
     if (!order) return null;
 
     return (
-        <div className="mx-auto w-[300px] p-2 font-mono text-xs">
+        <div className="mx-auto w-[300px] bg-white p-2 font-mono text-xs text-black">
             <p className="text-center text-sm font-bold">ORDER #{order.dailyNumber}</p>
             <p className="text-center">{order.table.label}</p>
             <p className="text-center text-gray-500">{new Date(order.createdAt).toLocaleTimeString()}</p>
