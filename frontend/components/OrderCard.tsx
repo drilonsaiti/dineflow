@@ -46,6 +46,9 @@ export function OrderCard({
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-ink dark:text-white">#{order.dailyNumber}</span>
+                    {order.locationFlagged && (
+                        <span className="text-xs text-amber-400">⚠ Off-site?</span>
+                    )}
                     <span className="text-xs font-medium text-muted">{formatCents(order.totalCents, currency)}</span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -92,6 +92,8 @@ model Venue {
   taxInclusive              Boolean            @default(true) // true = menu prices already include tax (common in EU); false = tax added on top
   autoPrintTickets          Boolean            @default(false)
   printerBridgeUrl          String? // optional — see PrinterModule note; points at a local ESC/POS bridge on the venue's network, not this backend itself
+  latitude                  Float?
+  longitude                 Float?
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
@@ -261,17 +263,18 @@ enum OrderStatus {
 }
 
 model Order {
-  id            String      @id @default(uuid()) @db.Uuid
-  venueId       String      @db.Uuid
-  tableId       String      @db.Uuid
-  dailyNumber   Int
-  status        OrderStatus @default(RECEIVED)
-  customerName  String?
-  customerPhone String? // optional at order time (section 15) — enables SMS-when-Ready later without a schema change
-  note          String?
-  totalCents    Int         @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String      @id @default(uuid()) @db.Uuid
+  venueId         String      @db.Uuid
+  tableId         String      @db.Uuid
+  dailyNumber     Int
+  status          OrderStatus @default(RECEIVED)
+  customerName    String?
+  customerPhone   String? // optional at order time (section 15) — enables SMS-when-Ready later without a schema change
+  note            String?
+  totalCents      Int         @default(0)
+  locationFlagged Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
   venue        Venue              @relation(fields: [venueId], references: [id], onDelete: Cascade)
   table        Table              @relation(fields: [tableId], references: [id])
@@ -394,6 +397,7 @@ model TableRequest {
   guestCount              Int?
   totalCentsAtRequest     Int?
   perPersonCentsAtRequest Int?
+  tipPercentAtRequest     Int?
 
   venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
   table Table @relation(fields: [tableId], references: [id])
@@ -463,4 +467,13 @@ model TableSession {
   table Table @relation(fields: [tableId], references: [id], onDelete: Cascade)
 
   @@index([tableId, status])
+}
+
+model StaffLoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  createdAt DateTime @default(now())
+  success   Boolean
+
+  @@index([email, createdAt])
 }

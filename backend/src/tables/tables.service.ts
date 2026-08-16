@@ -292,4 +292,14 @@ export class TablesService {
         const safe = parts.join('-').replace(/[^a-z0-9-_]+/gi, '_').toLowerCase();
         return `${safe || 'table'}.${ext}`;
     }
+
+    /** Called on every successful cart/order/table-request write for a table
+     * — extends the session's expiry rather than letting a long dinner
+     * (>4h) get logged out mid-meal from a fixed creation-time deadline. */
+    async touchSession(sessionToken: string | undefined) {
+        await this.prisma.tableSession.updateMany({
+            where: { sessionToken, status: 'ACTIVE' },
+            data: { expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000) },
+        });
+    }
 }

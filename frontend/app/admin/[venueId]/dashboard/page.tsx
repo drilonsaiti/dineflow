@@ -24,6 +24,9 @@ export interface StaffOrder {
     createdAt: string;
     totalCents: number;
     customerName: string | null;
+    customerLatitude: number | null;
+    customerLongitude: number | null;
+    locationFlagged: boolean;
     table: { label: string };
     items: {
         id: string;
@@ -223,6 +226,11 @@ export default function StaffDashboardPage({
                 </div>
             )}
 
+            <div className="sr-only" id="dnd-instructions">
+                Press space bar to lift an order card, use arrow keys to move it between
+                columns, and press space bar again to drop it. Press escape to cancel.
+            </div>
+
             <DragDropContext onDragEnd={handleDragEnd}>
                 <div className={`grid flex-1 gap-3 overflow-hidden p-3 ${gridColsClass}`}>
                     {visibleColumns.map((col) => {
@@ -258,7 +266,10 @@ export default function StaffDashboardPage({
                                                             ref={dragProvided.innerRef}
                                                             {...dragProvided.draggableProps}
                                                             {...dragProvided.dragHandleProps}
-                                                            className={dragSnapshot.isDragging ? 'opacity-80' : ''}
+                                                            aria-describedby="dnd-instructions"
+                                                            className={`focus-visible:ring-2 focus-visible:ring-brand ${
+                                                                dragSnapshot.isDragging ? 'opacity-80' : ''
+                                                            }`}
                                                         >
                                                             <OrderCard
                                                                 key={order.id}
@@ -269,7 +280,11 @@ export default function StaffDashboardPage({
                                                                 onCancel={() => advance(order, 'CANCELLED')}
                                                                 canServe={
                                                                     role !== 'STAFF' ||
-                                                                    assignments.some((a) => a.tableId === order.tableId && a.userId === currentUserId)
+                                                                    assignments.some(
+                                                                        (a) =>
+                                                                            a.tableId === order.tableId &&
+                                                                            a.userId === currentUserId,
+                                                                    )
                                                                 }
                                                             />
                                                         </div>

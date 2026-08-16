@@ -4,6 +4,7 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {Eye, EyeOff} from 'lucide-react';
 import {supabase} from '@/lib/supabase';
+import {useStaffLogin} from "@/hooks/useStaffLogin";
 
 // One step: email + PIN, submit, in. No email round-trip. This is a real
 // Supabase password sign-in (the PIN is the account's password) — not a
@@ -13,21 +14,17 @@ export default function StaffLoginPage() {
     const [email, setEmail] = useState('');
     const [pin, setPin] = useState('');
     const [showPin, setShowPin] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const loginMutation = useStaffLogin();
 
     async function submit(e: React.FormEvent) {
         e.preventDefault();
-        setLoading(true);
-        setError(null);
-        const {error} = await supabase.auth.signInWithPassword({email, password: pin});
-        if (error) {
-            setError('Email or PIN not recognized. Ask your manager to double-check it.');
-            setLoading(false);
-            return;
+        try {
+            await loginMutation.mutateAsync({email, pin});
+            router.push('/admin');
+        } catch {
+            // error already captured on loginMutation.error — nothing else to do here
         }
-        router.push('/admin');
     }
 
     return (
@@ -64,10 +61,12 @@ export default function StaffLoginPage() {
                         {showPin ? <EyeOff className="h-4 w-4" aria-hidden/> : <Eye className="h-4 w-4" aria-hidden/>}
                     </button>
                 </div>
-                <button disabled={loading} className="btn-primary w-full">
-                    {loading ? 'Signing in…' : 'Sign in'}
+                <button disabled={loginMutation.isPending} className="btn-primary w-full">
+                    {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
                 </button>
-                {error && <p role="alert" className="text-sm text-error">{error}</p>}
+                {loginMutation.error &&
+                    <p role="alert" className="text-sm text-error">{(loginMutation.error as Error).message}
+                    </p>}
             </form>
             <a href="/admin/login" className="mt-6 text-center text-sm text-muted underline">
                 Owner or manager? Sign in with email link instead

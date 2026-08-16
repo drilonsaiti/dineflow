@@ -29,16 +29,29 @@ export class TableRequestsService {
             // second one.
             if (type === 'REQUEST_BILL_CASH') {
                 const existing = await tx.tableRequest.findFirst({
-                    where: {tableId: table.id, type: 'REQUEST_BILL_CASH', status: {not: 'RESOLVED'}},
+                    where: { tableId: table.id, type: 'REQUEST_BILL_CASH', status: { not: 'RESOLVED' } },
                 });
                 if (existing) {
+                    // Recompute from the live order total rather than reusing
+                    // existing.totalCentsAtRequest — that lets a later request also
+                    // pick up any items ordered between the first bill request and
+                    // this one, not just update guest count/tip on stale numbers.
+                    const startOfDay = new Date();
+                    startOfDay.setHours(0, 0, 0, 0);
+                    const agg = await tx.order.aggregate({
+                        where: { venueId: table.venueId, tableId: table.id, createdAt: { gte: startOfDay }, status: { not: 'CANCELLED' } },
+                        _sum: { totalCents: true },
+                    });
+                    const baseTotal = agg._sum.totalCents ?? 0;
+                    const effectiveTip = tipPercent ?? existing.tipPercentAtRequest ?? undefined;
+                    const totalCentsAtRequest = effectiveTip ? Math.round(baseTotal * (1 + effectiveTip / 100)) : baseTotal;
                     const mergedGuestCount = guestCount ?? existing.guestCount ?? undefined;
-                    const totalCents = existing.totalCentsAtRequest ?? 0;
-                    const perPersonCentsAtRequest = mergedGuestCount ? Math.round(totalCents / mergedGuestCount) : null;
+                    const perPersonCentsAtRequest = mergedGuestCount ? Math.round(totalCentsAtRequest / mergedGuestCount) : null;
+
                     const updated = await tx.tableRequest.update({
-                        where: {id: existing.id},
-                        data: {guestCount: mergedGuestCount, perPersonCentsAtRequest},
-                        include: {table: true},
+                        where: { id: existing.id },
+                        data: { guestCount: mergedGuestCount, totalCentsAtRequest, perPersonCentsAtRequest, tipPercentAtRequest: effectiveTip },
+                        include: { table: true },
                     });
                     this.gateway.emitTableRequestEvent(table.venueId, 'table_request_updated', updated);
                     return updated;
@@ -72,7 +85,8 @@ export class TableRequestsService {
                     type,
                     guestCount,
                     totalCentsAtRequest,
-                    perPersonCentsAtRequest
+                    perPersonCentsAtRequest,
+                    tipPercentAtRequest: tipPercent,
                 },
                 include: {table: true},
             });

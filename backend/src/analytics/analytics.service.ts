@@ -264,4 +264,44 @@ export class AnalyticsService {
             };
         });
     }
+
+    async exportOrdersCsv(venueId: string, since?: Date, until?: Date): Promise<string> {
+        const clampedSince = await this.clampSince(venueId, since);
+        const effectiveUntil = until ?? new Date();
+        // Hard cap regardless of range requested — protects against an
+        // accidental "since the dawn of time" export locking up the DB.
+        const MAX_ROWS = 20_000;
+
+        return this.prisma.withVenueScope(venueId, async (tx) => {
+            const orders = await tx.order.findMany({
+                where: { venueId, createdAt: { gte: clampedSince, lte: effectiveUntil } },
+                include: { table: true, items: { include: { menuItem: true } } },
+                orderBy: { createdAt: 'asc' },
+                take: MAX_ROWS,
+            });
+
+            const rows = [['Order #', 'Date', 'Table', 'Status', 'Items', 'Total', 'Customer name'].join(',')];
+
+            for (const order of orders) {
+                const itemsSummary = order.items
+                    .map((i) => `${i.quantity}x ${i.menuItem.name}`)
+                    .join('; ')
+                    .replace(/"/g, '""'); // escape embedded quotes for CSV safety
+
+                rows.push(
+                    [
+                        order.dailyNumber,
+                        order.createdAt.toISOString(),
+                        order.table.label,
+                        order.status,
+                        `"${itemsSummary}"`,
+                        (order.totalCents / 100).toFixed(2),
+                        order.customerName ?? '',
+                    ].join(','),
+                );
+            }
+
+            return rows.join('\n');
+        });
+    }
 }

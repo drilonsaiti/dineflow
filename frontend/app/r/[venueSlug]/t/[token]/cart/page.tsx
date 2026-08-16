@@ -23,17 +23,40 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
 
     async function placeOrder() {
         setError(null);
+
+        let coords: { lat?: number; lng?: number } = {};
+
+        try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    timeout: 2000,
+                }),
+            );
+
+            coords = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+            };
+        } catch {
+            // Denied, unsupported, or timed out — order still proceeds without location.
+        }
+
         try {
             const order = await placeOrderMutation.mutateAsync({
                 customerName: customerName || undefined,
                 customerPhone: customerPhone || undefined,
                 note: orderNote || undefined,
+                customerLatitude: coords.lat,
+                customerLongitude: coords.lng,
             });
+
             router.push(`/r/${venueSlug}/t/${token}/order/${order.id}`);
         } catch (err: any) {
             if (err.unavailableMenuItemIds) {
                 await bulkRemoveMutation.mutateAsync(err.unavailableMenuItemIds);
-                setError('Some items are no longer available and were removed from the shared cart. Please review and try again.');
+                setError(
+                    'Some items are no longer available and were removed from the shared cart. Please review and try again.',
+                );
             } else {
                 setError(err.message ?? 'Something went wrong placing your order.');
             }

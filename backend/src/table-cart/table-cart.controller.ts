@@ -22,6 +22,7 @@ export class TableCartController {
         return this.cartService.add(dto);
     }
 
+    @Throttle({ default: { limit: 30, ttl: 60_000 } })
     @Public()
     @Patch(':token/items/:itemId')
     update(
@@ -33,6 +34,7 @@ export class TableCartController {
         return this.cartService.update(token, itemId, session, dto);
     }
 
+    @Throttle({ default: { limit: 30, ttl: 60_000 } })
     @Public()
     @Delete(':token/items/:itemId')
     remove(@Param('token') token: string, @Param('itemId') itemId: string, @Query('session') session: string) {

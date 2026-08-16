@@ -42,6 +42,33 @@ export class OrdersService {
     async placeOrder(dto: PlaceOrderDto) {
         const table = await this.tablesService.resolveByToken(dto.tableToken);
         await this.tablesService.assertSessionValid(table.id, dto.sessionToken);
+        this.tablesService.touchSession(dto.sessionToken).catch(() => {});
+
+        let locationFlagged = false;
+
+        const venue = await this.prisma.venue.findUnique({
+            where: {id: table.venueId},
+        });
+
+        if (
+            venue?.latitude != null &&
+            venue?.longitude != null &&
+            dto.customerLatitude != null &&
+            dto.customerLongitude != null
+        ) {
+            const distance = this.distanceMeters(
+                venue.latitude,
+                venue.longitude,
+                dto.customerLatitude,
+                dto.customerLongitude,
+            );
+
+            // Soft signal only — never block an order.
+            if (distance > 300) {
+                locationFlagged = true;
+            }
+        }
+
         const twoMinutesAgo = new Date(Date.now() - 2 * 60_000);
         const recentOrderCount = await this.prisma.order.count({
             where: {tableId: table.id, createdAt: {gte: twoMinutesAgo}},
@@ -133,6 +160,7 @@ export class OrdersService {
                     customerPhone: dto.customerPhone,
                     note: dto.note,
                     totalCents,
+                    locationFlagged,
                     status: OrderStatus.RECEIVED,
                     items: {create: itemsData},
                     statusEvents: {create: {status: OrderStatus.RECEIVED}},
@@ -192,22 +220,10 @@ export class OrdersService {
 
     // ---------- Staff-facing (authenticated, venue-scoped) ----------
 
-    async listForVenue(venueId: string, station?: string) {
+    async listForVenue(venueId: string, station?: string, take = 100, skip = 0) {
         return this.prisma.withVenueScope(venueId, (tx) =>
             tx.order.findMany({
-                where: {
-                    venueId,
-                    status: {notIn: [OrderStatus.SERVED, OrderStatus.CANCELLED]},
-                    // An order "belongs" to a station if any of its line items came
-                    // from a category tagged for that station. Categories with no
-                    // station set (null) are venue-wide (e.g. desserts shown to
-                    // everyone) and are intentionally excluded from a station-scoped
-                    // view — a kitchen filter should show kitchen work, not
-                    // everything that isn't explicitly bar.
-                    ...(station
-                        ? {items: {some: {menuItem: {category: {station}}}}}
-                        : {}),
-                },
+                where: { venueId, status: { notIn: [OrderStatus.SERVED, OrderStatus.CANCELLED] }, ...(station ? { items: { some: { menuItem: { category: { station } } } } } : {}) },
                 include: {
                     items: {
                         include: {
@@ -223,6 +239,8 @@ export class OrdersService {
                     },
                 },
                 orderBy: {createdAt: 'asc'},
+                take: Math.min(take, 200),
+                skip,
             }),
         );
     }
@@ -274,7 +292,7 @@ export class OrdersService {
         });
     }
 
-    async listForTable(venueId: string, tableId: string) {
+    async listForTable(venueId: string, tableId: string, take = 100, skip = 0) {
         return this.prisma.withVenueScope(venueId, (tx) =>
             tx.order.findMany({
                 where: {venueId, tableId},
@@ -287,7 +305,8 @@ export class OrdersService {
                     },
                 },
                 orderBy: {createdAt: 'desc'},
-                take: 20,
+                take: Math.min(take, 200),
+                skip
             }),
         );
     }
@@ -369,5 +388,37 @@ export class OrdersService {
             if (!order || order.venueId !== venueId) throw new NotFoundException('Order not found');
             return order;
         });
+    }
+
+    /** Per-guest breakdown for splitting the bill by what each person
+     * actually ordered, not evenly (section 2 of the original ask). Reuses
+     * the same addedByLabel grouping as getTableTab — "Shared" bucket for
+     * anything with no label, since not every group bothers naming who
+     * ordered what. */
+    async getItemizedBill(tableToken: string, sessionToken: string) {
+        const tab = await this.getTableTab(tableToken, sessionToken); // already groups by person + totals
+
+        return {
+            byPerson: tab.byPerson.map((p) => ({
+                label: p.label,
+                totalCents: p.totalCents,
+                items: p.items,
+            })),
+            grandTotalCents: tab.grandTotalCents,
+            // Explicit limitation, not a silent gap: shared items (appetizers
+            // nobody attributed to a specific person) land in "Shared" and are
+            // NOT auto-split across the other buckets — that would require
+            // knowing who actually ate them, which this app doesn't track.
+            note: 'Items added without a name are grouped as "Shared" and are not automatically divided between guests.',
+        };
+    }
+
+    private distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+        const R = 6371000;
+        const toRad = (d: number) => (d * Math.PI) / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

@@ -156,6 +156,13 @@ export default function OrderTrackingPage({
                     <Banknote className="h-4 w-4 shrink-0 text-muted" aria-hidden/>
                     Pay with cash
                 </button>
+
+                <Link
+                    href={`/r/${venueSlug}/t/${token}/tab`}
+                    className="col-span-2 mt-2 block text-center text-xs text-gray-500 underline"
+                >
+                    See who ordered what (itemized)
+                </Link>
             </div>
 
             {showGuestCount && (

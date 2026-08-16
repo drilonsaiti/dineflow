@@ -39,8 +39,13 @@ export class OrdersController {
 
     @Get('venues/:venueId/orders')
     @UseGuards(VenueScopeGuard)
-    listForVenue(@CurrentVenue() scope: { venueId: string }, @Query('station') station?: string) {
-        return this.ordersService.listForVenue(scope.venueId, station);
+    listForVenue(
+        @CurrentVenue() scope: { venueId: string },
+        @Query('station') station?: string,
+        @Query('take') take?: string,
+        @Query('skip') skip?: string,
+    ) {
+        return this.ordersService.listForVenue(scope.venueId, station, Number(take) || 100, Number(skip) || 0);
     }
 
     @Patch('venues/:venueId/orders/:orderId/status')
@@ -60,6 +65,7 @@ export class OrdersController {
         return this.ordersService.listForTable(scope.venueId, tableId);
     }
 
+    @Throttle({ default: { limit: 3, ttl: 60_000 } })
     @Public()
     @Post('public/orders/:orderId/feedback')
     submitFeedback(@Param('orderId') orderId: string, @Body() dto: SubmitFeedbackDto) {
@@ -76,5 +82,11 @@ export class OrdersController {
     @UseGuards(VenueScopeGuard)
     getOne(@CurrentVenue() scope: { venueId: string }, @Param('orderId') orderId: string) {
         return this.ordersService.getOneForVenue(scope.venueId, orderId);
+    }
+
+    @Public()
+    @Get('public/tables/:token/itemized-bill')
+    getItemizedBill(@Param('token') token: string, @Query('session') session: string) {
+        return this.ordersService.getItemizedBill(token, session);
     }
 }

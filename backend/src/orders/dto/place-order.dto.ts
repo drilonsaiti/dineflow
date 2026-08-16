@@ -1,4 +1,4 @@
-import {IsOptional, IsString} from 'class-validator';
+import {IsNumber, IsOptional, IsString} from 'class-validator';
 
 export class PlaceOrderDto {
     @IsString()
@@ -18,4 +18,12 @@ export class PlaceOrderDto {
 
     @IsString()
     sessionToken!: string;
+
+    @IsOptional()
+    @IsNumber()
+    customerLatitude?: number;
+
+    @IsOptional()
+    @IsNumber()
+    customerLongitude?: number;
 }

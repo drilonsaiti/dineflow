@@ -19,6 +19,8 @@ export default function TableTabPage({params}: { params: Promise<{ venueSlug: st
             <h1 className="text-xl">Table tab</h1>
             <p className="text-sm text-muted">Everything ordered so far, by who added it.</p>
 
+            {tab.note && <p className="mt-4 text-xs text-gray-400">{tab.note}</p>}
+
             <div className="mt-4 space-y-4">
                 {tab.byPerson.map((person: any) => (
                     <div

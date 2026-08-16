@@ -39,7 +39,8 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.7.5",
-    "stripe": "^17.3.1"
+    "stripe": "^17.3.1",
+    "@sentry/nestjs": "^10.69.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.24",

@@ -59,6 +59,7 @@ export class TableCartService {
     async add(dto: AddCartItemDto) {
         const table = await this.tablesService.resolveByToken(dto.tableToken);
         await this.tablesService.assertSessionValid(table.id, dto.sessionToken);
+        this.tablesService.touchSession(dto.sessionToken).catch(() => {});
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const menuItem = await tx.menuItem.findUnique({
                 where: {id: dto.menuItemId},
@@ -89,6 +90,7 @@ export class TableCartService {
     async update(tableToken: string, itemId: string, sessionToken: string | undefined, dto: UpdateCartItemDto) {
         const table = await this.tablesService.resolveByToken(tableToken);
         await this.tablesService.assertSessionValid(table.id, sessionToken);
+        this.tablesService.touchSession(sessionToken).catch(() => {});
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const item = await tx.tableCartItem.findUnique({where: {id: itemId}});
             if (!item || item.tableId !== table.id) throw new NotFoundException('Cart item not found');
@@ -107,6 +109,7 @@ export class TableCartService {
     async remove(tableToken: string, itemId: string, sessionToken: string | undefined) {
         const table = await this.tablesService.resolveByToken(tableToken);
         await this.tablesService.assertSessionValid(table.id, sessionToken);
+        this.tablesService.touchSession(sessionToken).catch(() => {});
         return this.prisma.withVenueScope(table.venueId, async (tx) => {
             const item = await tx.tableCartItem.findUnique({where: {id: itemId}});
             if (!item || item.tableId !== table.id) throw new NotFoundException('Cart item not found');
@@ -121,6 +124,7 @@ export class TableCartService {
     async removeByMenuItemIds(tableToken: string, menuItemIds: string[], sessionToken: string | undefined) {
         const table = await this.tablesService.resolveByToken(tableToken);
         await this.tablesService.assertSessionValid(table.id, sessionToken);
+        this.tablesService.touchSession(sessionToken).catch(() => {});
         return this.prisma.withVenueScope(table.venueId, (tx) =>
             tx.tableCartItem.deleteMany({where: {tableId: table.id, menuItemId: {in: menuItemIds}}}),
         );

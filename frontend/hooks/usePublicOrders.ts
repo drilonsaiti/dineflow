@@ -8,7 +8,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export function usePlaceOrder(tableToken: string) {
     return useMutation({
-        mutationFn: async (data: { customerName?: string; customerPhone?: string; note?: string }) => {
+        mutationFn: async (data: { customerName?: string; customerPhone?: string; note?: string;customerLatitude?: number;customerLongitude?: number }) => {
             const res = await fetch(`${API_URL}/public/orders`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},

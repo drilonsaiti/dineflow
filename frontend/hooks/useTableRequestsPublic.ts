@@ -49,3 +49,15 @@ export function useTableTab(tableToken: string) {
         refetchInterval: 5000,
     });
 }
+
+export function useItemizedBill(tableToken: string) {
+    return useQuery({
+        queryKey: ['itemized-bill', tableToken],
+        queryFn: async () => {
+            const session = getSessionToken(tableToken);
+            const res = await fetch(`${API_URL}/public/tables/${tableToken}/itemized-bill?session=${session}`);
+            if (!res.ok) throw new Error((await res.json()).message ?? 'Could not load the bill.');
+            return res.json();
+        },
+    });
+}
