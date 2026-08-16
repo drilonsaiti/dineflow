@@ -25,6 +25,9 @@ export interface TableInfo {
         logoUrl: string | null;
         brandColor: string | null;
         currency: string;
+        taxRatePercent: number | null;
+        taxInclusive: boolean;
+        supportedLanguages: string[];
     };
     area: {
         name: string;

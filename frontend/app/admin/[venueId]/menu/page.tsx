@@ -114,36 +114,24 @@ export default function MenuAdminPage({params}: { params: Promise<{ venueId: str
                                                 }}
                                             />
                                         ) : (
-                                            <div className="flex items-center justify-between gap-4">
-                                                <div className={!item.isAvailable ? 'opacity-50' : ''}>
-                                                    <p className="font-medium text-ink dark:text-white">
-                                                        {item.name} <span
-                                                        className="font-normal text-muted">{formatCents(item.priceCents, currency)}</span>
+                                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                                <div className={`min-w-0 ${!item.isAvailable ? 'opacity-50' : ''}`}>
+                                                    <p className="truncate font-medium text-ink dark:text-white">
+                                                        {item.name}{' '}
+                                                        <span className="font-normal text-muted">{formatCents(item.priceCents, currency)}</span>
                                                     </p>
-                                                    {item.description &&
-                                                        <p className="text-sm text-muted">{item.description}</p>}
+                                                    {item.description && <p className="line-clamp-1 text-sm text-muted">{item.description}</p>}
                                                     {item.modifierGroups.length > 0 && (
                                                         <p className="mt-1 text-xs text-muted-soft">{item.modifierGroups.map((g: any) => g.name).join(' · ')}</p>
                                                     )}
                                                 </div>
-                                                <div className="flex shrink-0 items-center gap-3 text-sm">
-                                                    <label
-                                                        className="flex cursor-pointer select-none items-center gap-2 text-muted">
+                                                <div className="flex shrink-0 items-center gap-2 text-sm sm:gap-3">
+                                                    <label className="flex cursor-pointer select-none items-center gap-2 text-muted">
                                                         Available
-                                                        <Switch
-                                                            checked={item.isAvailable}
-                                                            onCheckedChange={() => toggleAvailability(item.id, item.isAvailable)}
-                                                        />
+                                                        <Switch checked={item.isAvailable} onCheckedChange={() => toggleAvailability(item.id, item.isAvailable)} />
                                                     </label>
-                                                    <button
-                                                        className="font-medium text-ink hover:underline dark:text-white"
-                                                        onClick={() => setEditingItem({categoryId: category.id, item})}>
-                                                        Edit
-                                                    </button>
-                                                    <button className="font-medium text-error hover:underline"
-                                                            onClick={() => setConfirmDeleteItem(item.id)}>
-                                                        Delete
-                                                    </button>
+                                                    <button className="font-medium text-ink hover:underline dark:text-white" onClick={() => setEditingItem({categoryId: category.id, item})}>Edit</button>
+                                                    <button className="font-medium text-error hover:underline" onClick={() => setConfirmDeleteItem(item.id)}>Delete</button>
                                                 </div>
                                             </div>
                                         )}

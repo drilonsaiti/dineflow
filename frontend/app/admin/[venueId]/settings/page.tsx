@@ -130,147 +130,91 @@ export default function VenueSettingsPage({params}: { params: Promise<{ venueId:
     return (
         <RequireOwnerOrManager venueId={venueId}>
             <div className="mx-auto max-w-lg p-6 space-y-8">
+                <div className="flex flex-wrap gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-ink dark:text-white">Brand color</label>
+                        <input type="color" className="mt-1 h-10 w-16 rounded border border-hairline dark:border-gray-700" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} />
+                    </div>
+                    <div className="min-w-[140px] flex-1">
+                        <label className="block text-sm font-medium text-ink dark:text-white">Currency</label>
+                        <Select value={currency} onValueChange={setCurrency}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {['USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'MKD'].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="min-w-[140px] flex-1">
+                        <label className="block text-sm font-medium text-ink dark:text-white">Timezone</label>
+                        <input className="input mt-1" value={timezone} onChange={(e) => setTimezone(e.target.value)} placeholder="Europe/Zurich" />
+                    </div>
+                </div>
+
                 <div>
-                    <h1 className="text-2xl">Venue profile</h1>
-                    <div className="mt-4 space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-ink dark:text-white">Venue type</label>
-                            <Select value={type} onValueChange={setType}>
-                                <SelectTrigger className="mt-1">
-                                    <SelectValue/>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="restaurant">Restaurant</SelectItem>
-                                    <SelectItem value="cafe">Café</SelectItem>
-                                    <SelectItem value="bar">Bar</SelectItem>
-                                    <SelectItem value="other">Other</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-ink dark:text-white">Logo</label>
-                            <div className="mt-1 flex items-center gap-3">
-                                {logoUrl ? (
-                                    <img src={logoUrl} alt="" className="h-12 w-12 rounded-full object-cover"/>
-                                ) : (
-                                    <div
-                                        className="h-12 w-12 rounded-full bg-surface-card dark:bg-surface-dark-elevated"/>
-                                )}
-                                <label className="btn-secondary cursor-pointer px-3 py-1.5 text-sm">
-                                    {uploadingLogo ? 'Uploading…' : 'Upload logo'}
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload}/>
-                                </label>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-ink dark:text-white">Brand
-                                    color</label>
-                                <input
-                                    type="color"
-                                    className="mt-1 h-10 w-16 rounded border border-hairline dark:border-gray-700"
-                                    value={brandColor}
-                                    onChange={(e) => setBrandColor(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-ink dark:text-white">Currency</label>
-                                <Select value={currency} onValueChange={setCurrency}>
-                                    <SelectTrigger className="mt-1">
-                                        <SelectValue/>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {['MKD', 'USD', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD'].map((c) => (
-                                            <SelectItem key={c} value={c}>{c}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex-1">
-                                <label className="block text-sm font-medium text-ink dark:text-white">Timezone</label>
-                                <input
-                                    className="input mt-1"
-                                    value={timezone}
-                                    onChange={(e) => setTimezone(e.target.value)}
-                                    placeholder="Europe/Zurich"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium">Menu languages</label>
-                                <p className="mt-1 text-xs text-gray-500">
-                                    English (your default menu text) is always shown. Pick any additional languages you've
-                                    translated menu items into — translations are added per-item on the Menu page.
-                                </p>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    {AVAILABLE_LANGUAGES.map((lang) => {
-                                        const checked = supportedLanguages.includes(lang.code);
-                                        return (
-                                            <button
-                                                key={lang.code}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSupportedLanguages((prev) =>
-                                                        checked ? prev.filter((c) => c !== lang.code) : [...prev, lang.code],
-                                                    )
-                                                }
-                                                className={`rounded-full px-3 py-1.5 text-sm font-medium ${
-                                                    checked ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong text-muted dark:bg-gray-700'
-                                                }`}
-                                            >
-                                                {lang.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-ink dark:text-white">Tax rate %
-                                    (optional)</label>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    className="input mt-1 w-24"
-                                    value={taxRatePercent}
-                                    onChange={(e) => setTaxRatePercent(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex items-end pb-2">
-                                <label
-                                    className="flex cursor-pointer select-none items-center gap-2 text-sm text-ink dark:text-white">
-                                    <Checkbox checked={taxInclusive}
-                                              onCheckedChange={(c) => setTaxInclusive(c === true)}/>
-                                    Prices include tax
-                                </label>
-                            </div>
-                        </div>
+                    <label className="block text-sm font-medium text-ink dark:text-white">Menu languages</label>
+                    <p className="mt-1 text-xs text-muted">
+                        English (your default menu text) is always shown. Pick any additional languages you've
+                        translated menu items into — translations are added per-item on the Menu page.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {AVAILABLE_LANGUAGES.map((lang) => {
+                            const checked = supportedLanguages.includes(lang.code);
+                            return (
+                                <button
+                                    key={lang.code}
+                                    type="button"
+                                    onClick={() =>
+                                        setSupportedLanguages((prev) =>
+                                            checked ? prev.filter((c) => c !== lang.code) : [...prev, lang.code],
+                                        )
+                                    }
+                                    className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                                        checked ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong text-muted dark:bg-gray-700'
+                                    }`}
+                                >
+                                    {lang.label}
+                                </button>
+                            );
+                        })}
                     </div>
+                </div>
 
-                    <div className="flex gap-4">
-                        <div>
-                            <label className="block text-sm font-medium">Latitude</label>
-                            <input className="mt-1 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium">Longitude</label>
-                            <input className="mt-1 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
-                        </div>
-                        <div className="flex items-end pb-1">
-                            <button
-                                type="button"
-                                onClick={() => navigator.geolocation.getCurrentPosition((p) => {
-                                    setLatitude(p.coords.latitude.toString());
-                                    setLongitude(p.coords.longitude.toString());
-                                })}
-                                className="text-sm text-brand underline"
-                            >
-                                Use my current location
-                            </button>
-                        </div>
+                <div className="flex flex-wrap items-end gap-4">
+                    <div className="w-24">
+                        <label className="block text-sm font-medium text-ink dark:text-white">Tax rate % (optional)</label>
+                        <input type="number" step="0.1" className="input mt-1 w-24" value={taxRatePercent} onChange={(e) => setTaxRatePercent(e.target.value)} />
                     </div>
-                    <p className="text-xs text-gray-500">Used only as a soft signal flagging orders placed far from the venue — never blocks an order.</p>
+                    <label className="flex cursor-pointer select-none items-center gap-2 pb-2.5 text-sm text-ink dark:text-white">
+                        <Checkbox checked={taxInclusive} onCheckedChange={(c) => setTaxInclusive(c === true)} />
+                        Prices include tax
+                    </label>
+                </div>
+
+                <div className="mt-6 space-y-2">
+                    <p className="text-sm font-medium text-ink dark:text-white">Venue location</p>
+                    <div className="flex flex-wrap items-end gap-4">
+                        <div>
+                            <label className="block text-sm font-medium text-ink dark:text-white">Latitude</label>
+                            <input className="input mt-1 w-32" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-ink dark:text-white">Longitude</label>
+                            <input className="input mt-1 w-32" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigator.geolocation.getCurrentPosition((p) => {
+                                setLatitude(p.coords.latitude.toString());
+                                setLongitude(p.coords.longitude.toString());
+                            })}
+                            className="pb-2.5 text-sm font-medium text-ink underline dark:text-white"
+                        >
+                            Use my current location
+                        </button>
+                    </div>
+                    <p className="text-xs text-muted">
+                        Used only as a soft signal flagging orders placed far from the venue — never blocks an order.
+                    </p>
                 </div>
 
                 <form onSubmit={save} className="space-y-5 border-t border-hairline pt-6 dark:border-gray-800">

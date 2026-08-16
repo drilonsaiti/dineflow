@@ -85,6 +85,12 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
             return;
         }
 
+        // Drop languages where both fields are empty so we don't persist
+        // empty-string translation entries.
+        const cleanedTranslations = Object.fromEntries(
+            Object.entries(translations).filter(([, t]) => t.name?.trim() || t.description?.trim()),
+        );
+
         const payload = {
             categoryId,
             name,
@@ -103,6 +109,7 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
             tagIds: selectedTagIds,
             availableFrom: availableFrom || undefined,
             availableTo: availableTo || undefined,
+            translations: Object.keys(cleanedTranslations).length > 0 ? cleanedTranslations : undefined,
         };
 
         try {
@@ -188,7 +195,7 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
                     {photoUrl ? (
                         <img src={photoUrl} alt="" className="h-16 w-16 rounded-md object-cover"/>
                     ) : (
-                        <div className="h-16 w-16 rounded-md bg-surface-strong"/>
+                        <div className="h-16 w-16 rounded-md bg-surface-strong dark:bg-surface-dark-elevated"/>
                     )}
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading}
                             className="btn-secondary px-3 py-1.5 text-sm">
@@ -225,23 +232,28 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
 
                 {groups.map((group, gi) => (
                     <div key={gi} className="card space-y-2 p-3">
-                        <div className="flex items-center gap-2">
-                            <input className="input flex-1 py-1 text-sm" placeholder="Group name, e.g. Size"
-                                   value={group.name} onChange={(e) => updateGroup(gi, {name: e.target.value})}/>
-                            <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs text-muted">
-                                <Checkbox checked={group.isRequired}
-                                          onCheckedChange={(checked) => updateGroup(gi, {isRequired: checked === true})}/>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <input
+                                className="input min-w-[140px] flex-1 py-1 text-sm"
+                                placeholder="Group name, e.g. Size"
+                                value={group.name}
+                                onChange={(e) => updateGroup(gi, {name: e.target.value})}
+                            />
+                            <button type="button" className="shrink-0 text-xs font-medium text-error" onClick={() => removeGroup(gi)}>Remove</button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs">
+                            <label className="flex cursor-pointer select-none items-center gap-1.5 text-muted">
+                                <Checkbox checked={group.isRequired} onCheckedChange={(checked) => updateGroup(gi, {isRequired: checked === true})} />
                                 Required
                             </label>
-                            <input type="number" className="input w-14 py-1 text-xs" value={group.minSelect}
-                                   onChange={(e) => updateGroup(gi, {minSelect: Number(e.target.value)})}
-                                   title="Min select"/>
-                            <input type="number" className="input w-14 py-1 text-xs" value={group.maxSelect}
-                                   onChange={(e) => updateGroup(gi, {maxSelect: Number(e.target.value)})}
-                                   title="Max select"/>
-                            <button type="button" className="text-xs font-medium text-error"
-                                    onClick={() => removeGroup(gi)}>Remove
-                            </button>
+                            <label className="flex items-center gap-1.5 text-muted">
+                                Min
+                                <input type="number" className="input w-14 py-1 text-xs" value={group.minSelect} onChange={(e) => updateGroup(gi, {minSelect: Number(e.target.value)})} />
+                            </label>
+                            <label className="flex items-center gap-1.5 text-muted">
+                                Max
+                                <input type="number" className="input w-14 py-1 text-xs" value={group.maxSelect} onChange={(e) => updateGroup(gi, {maxSelect: Number(e.target.value)})} />
+                            </label>
                         </div>
 
                         <div className="space-y-1 pl-2">
@@ -295,33 +307,46 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
             )}
 
             <div>
-                <p className="text-xs font-medium text-gray-500">Translations (optional)</p>
+                <p className="text-xs font-medium text-muted">Translations (optional)</p>
                 {configuredLanguages.length === 0 ? (
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-soft">
                         No additional languages configured yet — add some in venue Settings to enable translations.
                     </p>
                 ) : (
-                <div className="mt-1 flex gap-2">
-                    {configuredLanguages.map((l) => (
-                        <button key={l} type="button" onClick={() => setTranslationLang(l)} className={`rounded-full px-3 py-1 text-xs ${translationLang === l ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong'}`}>
-                            {l.toUpperCase()}
-                        </button>
-                    ))}
-                </div>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                        {configuredLanguages.map((l: string) => (
+                            <button
+                                key={l}
+                                type="button"
+                                onClick={() => setTranslationLang(l)}
+                                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                                    translationLang === l
+                                        ? 'bg-ink text-white dark:bg-white dark:text-ink'
+                                        : 'bg-surface-strong text-muted dark:bg-gray-700 dark:text-gray-300'
+                                }`}
+                            >
+                                {l.toUpperCase()}
+                            </button>
+                        ))}
+                    </div>
                 )}
-                <input
-                    className="input mt-2"
-                    placeholder={`Name in ${translationLang.toUpperCase()}`}
-                    value={translations[translationLang]?.name ?? ''}
-                    onChange={(e) => setTranslations((prev) => ({ ...prev, [translationLang]: { ...prev[translationLang], name: e.target.value } }))}
-                />
-                <textarea
-                    className="input mt-2"
-                    rows={2}
-                    placeholder={`Description in ${translationLang.toUpperCase()}`}
-                    value={translations[translationLang]?.description ?? ''}
-                    onChange={(e) => setTranslations((prev) => ({ ...prev, [translationLang]: { ...prev[translationLang], description: e.target.value } }))}
-                />
+                {configuredLanguages.length > 0 && (
+                    <>
+                        <input
+                            className="input mt-2"
+                            placeholder={`Name in ${translationLang.toUpperCase()}`}
+                            value={translations[translationLang]?.name ?? ''}
+                            onChange={(e) => setTranslations((prev) => ({ ...prev, [translationLang]: { ...prev[translationLang], name: e.target.value } }))}
+                        />
+                        <textarea
+                            className="input mt-2"
+                            rows={2}
+                            placeholder={`Description in ${translationLang.toUpperCase()}`}
+                            value={translations[translationLang]?.description ?? ''}
+                            onChange={(e) => setTranslations((prev) => ({ ...prev, [translationLang]: { ...prev[translationLang], description: e.target.value } }))}
+                        />
+                    </>
+                )}
             </div>
 
             <div className="flex gap-2">

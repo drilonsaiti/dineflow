@@ -1,59 +1,63 @@
-"use client";
+'use client';
 
-import * as SelectPrimitive from "@radix-ui/react-select";
-import type {ComponentPropsWithoutRef, ElementRef} from "react";
-import {forwardRef} from "react";
+import * as React from 'react';
+import * as SelectPrimitive from '@radix-ui/react-select';
+import {cn} from '@/lib/utils';
 
 export const Select = SelectPrimitive.Root;
 export const SelectValue = SelectPrimitive.Value;
 
-export const SelectTrigger = forwardRef<
-    ElementRef<typeof SelectPrimitive.Trigger>,
-    ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({className = "", children, ...props}, ref) => (
+export const SelectTrigger = React.forwardRef<
+    React.ElementRef<typeof SelectPrimitive.Trigger>,
+    React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+>(({className, children, ...props}, ref) => (
     <SelectPrimitive.Trigger
         ref={ref}
-        className={`input flex items-center justify-between gap-2 [&>span]:truncate
-      data-[placeholder]:text-muted-soft
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2
-      ${className}`}
+        className={cn(
+            'input flex items-center justify-between gap-2 [&>span]:truncate',
+            'data-[placeholder]:text-muted-soft',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2',
+            className,
+        )}
         {...props}
     >
         {children}
 
-        <SelectPrimitive.Icon asChild>
+        <SelectPrimitive.Icon>
             <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
+                viewBox="0 0 12 8"
+                className="h-2.5 w-3 shrink-0 text-muted"
                 fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
                 aria-hidden="true"
-                className="shrink-0 opacity-60"
             >
-                <path d="m6 9 6 6 6-6"/>
+                <path
+                    d="M1 1.5L6 6.5L11 1.5"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                />
             </svg>
         </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
 ));
 
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
+SelectTrigger.displayName = 'SelectTrigger';
 
-export const SelectContent = forwardRef<
-    ElementRef<typeof SelectPrimitive.Content>,
-    ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({className = "", children, ...props}, ref) => (
+export const SelectContent = React.forwardRef<
+    React.ElementRef<typeof SelectPrimitive.Content>,
+    React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({className, children, ...props}, ref) => (
     <SelectPrimitive.Portal>
         <SelectPrimitive.Content
             ref={ref}
             position="popper"
             sideOffset={6}
-            className={`z-50 overflow-hidden rounded-lg border border-hairline bg-canvas shadow-elevated
-        dark:border-gray-700 dark:bg-surface-dark-elevated
-        ${className}`}
+            className={cn(
+                'z-50 overflow-hidden rounded-lg border border-hairline bg-canvas shadow-elevated',
+                'dark:border-gray-700 dark:bg-surface-dark-elevated',
+                className,
+            )}
             {...props}
         >
             <SelectPrimitive.Viewport className="p-1">
@@ -63,42 +67,26 @@ export const SelectContent = forwardRef<
     </SelectPrimitive.Portal>
 ));
 
-SelectContent.displayName = SelectPrimitive.Content.displayName;
+SelectContent.displayName = 'SelectContent';
 
-export const SelectItem = forwardRef<
-    ElementRef<typeof SelectPrimitive.Item>,
-    ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({className = "", children, ...props}, ref) => (
+export const SelectItem = React.forwardRef<
+    React.ElementRef<typeof SelectPrimitive.Item>,
+    React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({className, children, ...props}, ref) => (
     <SelectPrimitive.Item
         ref={ref}
-        className={`relative flex min-h-[36px] cursor-pointer select-none items-center rounded-md px-3 py-1.5 pr-8 text-sm text-ink
-      outline-none
-      data-[highlighted]:bg-surface-card
-      dark:text-gray-100
-      dark:data-[highlighted]:bg-white/10
-      ${className}`}
+        className={cn(
+            'relative flex min-h-[36px] cursor-pointer select-none items-center rounded-md px-3 py-1.5 text-sm text-ink',
+            'outline-none data-[highlighted]:bg-surface-card',
+            'dark:text-gray-100 dark:data-[highlighted]:bg-white/10',
+            className,
+        )}
         {...props}
     >
         <SelectPrimitive.ItemText>
             {children}
         </SelectPrimitive.ItemText>
-
-        <SelectPrimitive.ItemIndicator className="absolute right-2 flex items-center justify-center">
-            <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-            >
-                <path d="M5 12l4 4L19 8"/>
-            </svg>
-        </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
 ));
 
-SelectItem.displayName = SelectPrimitive.Item.displayName;
+SelectItem.displayName = 'SelectItem';

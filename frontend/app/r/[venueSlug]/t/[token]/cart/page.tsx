@@ -2,6 +2,7 @@
 
 import {use, useState} from 'react';
 import {useRouter} from 'next/navigation';
+import {ChevronDown} from 'lucide-react';
 import {ApiError, usePlaceOrder} from '@/hooks/usePublicOrders';
 import {useBulkRemoveCartItems} from '@/hooks/useTableCart';
 import {useVenueCurrencyPublic, useVenueTaxPublic} from '../layout';
@@ -20,11 +21,14 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [orderNote, setOrderNote] = useState('');
+    const [showDetails, setShowDetails] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     async function placeOrder() {
         setError(null);
+        setSubmitting(true);
 
         let coords: { lat?: number; lng?: number } = {};
 
@@ -60,6 +64,8 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
             } else {
                 setError(err instanceof Error ? err.message : 'Something went wrong placing your order.');
             }
+        } finally {
+            setSubmitting(false);
         }
     }
 
@@ -144,40 +150,51 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
                 ))}
             </div>
 
-            <div className="mt-4 space-y-3">
-                <div>
-                    <label className="text-sm font-medium text-ink dark:text-white">Your name for the order
-                        (optional)</label>
-                    <input className="input mt-1" placeholder="So staff can call you by name" value={customerName}
-                           onChange={(e) => setCustomerName(e.target.value)}/>
+            <button
+                type="button"
+                onClick={() => setShowDetails((s) => !s)}
+                className="mt-4 flex min-h-[44px] w-full items-center justify-between text-sm font-medium text-ink dark:text-white"
+            >
+                Add your name, phone, or a note (optional)
+                <ChevronDown className={`h-4 w-4 text-muted transition-transform ${showDetails ? 'rotate-180' : ''}`} aria-hidden />
+            </button>
+
+            {showDetails && (
+                <div className="space-y-3 pb-1">
+                    <div>
+                        <label className="text-sm font-medium text-ink dark:text-white">Your name for the order
+                            (optional)</label>
+                        <input className="input mt-1" placeholder="So staff can call you by name" value={customerName}
+                               onChange={(e) => setCustomerName(e.target.value)}/>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-ink dark:text-white">Phone <span
+                            className="text-muted-soft font-normal">(optional — get a text when it's ready)</span></label>
+                        <input type="tel" className="input mt-1" value={customerPhone}
+                               onChange={(e) => setCustomerPhone(e.target.value)}/>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-ink dark:text-white">Note for the whole order
+                            (optional)</label>
+                        <textarea className="input mt-1" rows={2} value={orderNote}
+                                  onChange={(e) => setOrderNote(e.target.value)}/>
+                    </div>
                 </div>
-                <div>
-                    <label className="text-sm font-medium text-ink dark:text-white">Phone <span
-                        className="text-muted-soft font-normal">(optional — get a text when it's ready)</span></label>
-                    <input type="tel" className="input mt-1" value={customerPhone}
-                           onChange={(e) => setCustomerPhone(e.target.value)}/>
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-ink dark:text-white">Note for the whole order
-                        (optional)</label>
-                    <textarea className="input mt-1" rows={2} value={orderNote}
-                              onChange={(e) => setOrderNote(e.target.value)}/>
-                </div>
-            </div>
+            )}
 
             {taxCents > 0 && (
-                <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-white">
+                <div className="mt-4 flex items-center justify-between text-sm text-muted">
                     <span>Subtotal</span>
                     <span>{formatCents(subtotalCents, currency)}</span>
                 </div>
             )}
             {taxCents > 0 && (
-                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-white">
+                <div className="flex items-center justify-between text-sm text-muted">
                     <span>Tax ({taxRatePercent}%)</span>
                     <span>{formatCents(taxCents, currency)}</span>
                 </div>
             )}
-            <div className="mt-1 flex items-center justify-between text-lg font-semibold dark:text-white">
+            <div className="mt-1 flex items-center justify-between text-lg font-semibold text-ink dark:text-white">
                 <span>Total</span>
                 <span>{formatCents(grandTotalCents, currency)}</span>
             </div>
@@ -186,11 +203,11 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
 
             <button
                 onClick={placeOrder}
-                disabled={placeOrderMutation.isPending}
+                disabled={submitting}
                 className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
                 style={{backgroundColor: 'var(--brand-color, #EA580C)'}}
             >
-                {placeOrderMutation.isPending ? 'Placing order…' : 'Place order for the table'}
+                {submitting ? 'Placing order…' : 'Place order for the table'}
             </button>
         </div>
     );
