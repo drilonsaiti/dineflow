@@ -38,6 +38,16 @@ export function useVenueCurrencyPublic() {
     return useContext(VenueCurrencyContext);
 }
 
+const VenueTaxContext = createContext<{ taxRatePercent: number | null; taxInclusive: boolean }>({ taxRatePercent: null, taxInclusive: true });
+export function useVenueTaxPublic() {
+    return useContext(VenueTaxContext);
+}
+
+const VenueLanguagesContext = createContext<string[]>([]);
+export function useVenueLanguagesPublic() {
+    return useContext(VenueLanguagesContext);
+}
+
 export default function TableLayout({
                                         children,
                                     }: {
@@ -75,7 +85,9 @@ export default function TableLayout({
 
     return (
         <VenueCurrencyContext.Provider value={info.venue.currency}>
-            <CartProvider token={token}>
+            <VenueTaxContext.Provider value={{ taxRatePercent: info.venue.taxRatePercent, taxInclusive: info.venue.taxInclusive }}>
+                <VenueLanguagesContext.Provider value={info.venue.supportedLanguages ?? []}>
+                    <CartProvider token={token}>
                 <div
                     className="min-h-screen bg-canvas pb-24 dark:bg-surface-dark"
                     style={
@@ -131,6 +143,8 @@ export default function TableLayout({
                     />
                 </div>
             </CartProvider>
+                </VenueLanguagesContext.Provider>
+            </VenueTaxContext.Provider>
         </VenueCurrencyContext.Provider>
     );
 }

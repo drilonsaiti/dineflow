@@ -87,6 +87,7 @@ export class VenuesService {
             timezone: venue.timezone,
             plan: venue.plan,
             autoPrintTickets: venue.autoPrintTickets,
+            supportedLanguages: venue.supportedLanguages,
             // Deliberately omitted: staffAlertWebhookUrl, stripeCustomerId,
             // stripeSubscriptionId, subscriptionStatus, maxTables, maxStaff,
             // analyticsHistoryDays — billing/ops internals, owner/manager only,

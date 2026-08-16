@@ -304,4 +304,21 @@ export class AnalyticsService {
             return rows.join('\n');
         });
     }
+
+    async getAverageTableTurnover(venueId: string, since?: Date) {
+        const clampedSince = await this.clampSince(venueId, since);
+
+        return this.prisma.withVenueScope(venueId, async (tx) => {
+            const closedSessions = await tx.tableSession.findMany({
+                where: { venueId, status: 'CLOSED', closedAt: { not: null }, createdAt: { gte: clampedSince } },
+                select: { createdAt: true, closedAt: true },
+            });
+
+            if (closedSessions.length === 0) return { avgMinutes: null, sampleSize: 0 };
+
+            const durations = closedSessions.map((s) => (s.closedAt!.getTime() - s.createdAt.getTime()) / 60000);
+            const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+            return { avgMinutes: Math.round(avg), sampleSize: durations.length };
+        });
+    }
 }

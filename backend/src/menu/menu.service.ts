@@ -123,6 +123,8 @@ export class MenuService {
                     tags: dto.tagIds ? {create: dto.tagIds.map((tagId) => ({tagId}))} : undefined,
                     stockCount: dto.stockCount,
                     lowStockThreshold: dto.lowStockThreshold,
+                    translations: dto.translations,
+                    courseNumber: dto.courseNumber ?? 1
                 },
             });
 
@@ -153,6 +155,8 @@ export class MenuService {
                     takeawayOnly: dto.takeawayOnly,
                     stockCount: dto.stockCount,
                     lowStockThreshold: dto.lowStockThreshold,
+                    translations: dto.translations,
+                    courseNumber: dto.courseNumber ?? 1
                 },
             });
 
@@ -272,36 +276,35 @@ export class MenuService {
      * one venue's data by construction (only that venue's categories/items
      * are ever queried), and only ever returns available items' visibility
      * flag as-is so the frontend can grey out unavailable items. */
-    async getPublicMenu(venueSlug: string) {
-        const cacheKey = `public-menu:${venueSlug}`;
+    async getPublicMenu(venueSlug: string, lang?: string) {
+        const cacheKey = `public-menu:${venueSlug}:${lang ?? 'default'}`;
         const cached = await this.cache.get(cacheKey);
         if (cached) return cached;
 
-        const venue = await this.prisma.venue.findUnique({where: {slug: venueSlug}});
+        const venue = await this.prisma.venue.findUnique({ where: { slug: venueSlug } });
         if (!venue) throw new NotFoundException('Venue not found');
 
         const result = await this.prisma.withVenueScope(venue.id, async (tx) => {
             const categories = await tx.menuCategory.findMany({
-                where: {venueId: venue.id},
-                orderBy: {displayOrder: 'asc'},
-                include: {items: {orderBy: {displayOrder: 'asc'}, include: ITEM_INCLUDE}},
+                where: { venueId: venue.id },
+                orderBy: { displayOrder: 'asc' },
+                include: { items: { orderBy: { displayOrder: 'asc' }, include: ITEM_INCLUDE } },
             });
-            return {venue, categories};
+            return { venue, categories };
         });
 
         for (const category of result.categories) {
+            this.applyTranslation(category, lang);
             for (const item of category.items as any[]) {
+                this.applyTranslation(item, lang);
                 item.isAvailable = item.isAvailable && this.isWithinSchedule(item.availableFrom, item.availableTo);
             }
         }
 
-        // Short TTL (15s), not "forever until invalidated" — a customer
-        // scanning mid-write-window sees a menu at most 15s stale even if an
-        // invalidation call below somehow fails to fire, rather than serving
-        // wrong-for-the-shift data indefinitely.
         await this.cache.set(cacheKey, result, 15_000);
         return result;
     }
+
 
     async invalidatePublicMenuCache(venueId: string) {
         const venue = await this.prisma.venue.findUnique({where: {id: venueId}, select: {slug: true}});
@@ -321,5 +324,16 @@ export class MenuService {
         return fromMinutes <= toMinutes
             ? nowMinutes >= fromMinutes && nowMinutes <= toMinutes
             : nowMinutes >= fromMinutes || nowMinutes <= toMinutes; // overnight wrap
+    }
+
+    /** Overlays a translated name/description onto the object if the venue
+     * has one for the requested language — falls back to the default
+     * name/description silently rather than showing an empty field when a
+     * translation is missing for one item. */
+    private applyTranslation(entity: any, lang?: string) {
+        if (!lang || !entity.translations) return;
+        const t = (entity.translations as Record<string, { name?: string; description?: string }>)[lang];
+        if (t?.name) entity.name = t.name;
+        if (t?.description) entity.description = t.description;
     }
 }

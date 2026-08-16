@@ -1,4 +1,4 @@
-import {Body, Controller, Delete, Get, Param, Patch, Post, UseGuards} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards} from '@nestjs/common';
 import {MenuService} from './menu.service';
 import {CreateCategoryDto, UpdateCategoryDto} from './dto/category.dto';
 import {CreateMenuItemDto, ReorderDto, UpdateMenuItemDto} from './dto/menu-item.dto';
@@ -123,7 +123,7 @@ export class PublicMenuController {
 
     @Public()
     @Get(':venueSlug')
-    getPublicMenu(@Param('venueSlug') venueSlug: string) {
-        return this.menuService.getPublicMenu(venueSlug);
+    getPublicMenu(@Param('venueSlug') venueSlug: string, @Query('lang') lang?: string) {
+        return this.menuService.getPublicMenu(venueSlug, lang);
     }
 }

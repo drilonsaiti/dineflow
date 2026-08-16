@@ -15,6 +15,7 @@ interface VenueBasics {
     timezone: string;
     plan: string;
     autoPrintTickets: boolean;
+    supportedLanguages: string[];
 }
 
 /** Single source of truth for the /basics endpoint — useVenueCurrency and

@@ -2,17 +2,12 @@
 
 import {useQuery} from '@tanstack/react-query';
 import {queryKeys} from '@/lib/query-keys';
+import {api} from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!;
-
-export function usePublicMenu(venueSlug: string) {
+export function usePublicMenu(venueSlug: string, lang?: string) {
     return useQuery({
-        queryKey: queryKeys.publicMenu(venueSlug),
-        queryFn: async () => {
-            const res = await fetch(`${API_URL}/public/menu/${encodeURIComponent(venueSlug)}`);
-            if (!res.ok) throw new Error('Failed to load menu');
-            return res.json();
-        },
+        queryKey: [...queryKeys.publicMenu(venueSlug), lang ?? 'default'],
+        queryFn: () => api.get<any>(`/public/menu/${encodeURIComponent(venueSlug)}${lang ? `?lang=${lang}` : ''}`),
         staleTime: 15_000, // matches the backend's own 15s cache TTL on this endpoint
     });
 }

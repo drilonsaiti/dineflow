@@ -16,6 +16,7 @@ export interface MenuItem {
     lowStockThreshold: number | null;
     availableFrom?: string
     availableTo?: string;
+    translations: {};
 }
 
 export interface MenuCategory {

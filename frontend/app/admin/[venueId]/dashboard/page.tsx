@@ -4,7 +4,7 @@ import {use, useEffect, useState} from 'react';
 import {DragDropContext, Draggable, Droppable, DropResult,} from '@hello-pangea/dnd';
 import {isAdjacentTransition} from '@/lib/order-transitions';
 import {acquireSocket, joinVenueRoom} from '@/lib/socket';
-import {useAdvanceOrderStatus, useOrders, useOrderSocketSync,} from '@/hooks/useOrders';
+import {useAdvanceOrderStatus, useFireCourse, useOrders, useOrderSocketSync,} from '@/hooks/useOrders';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from '@/components/ui/Select';
 import {Checkbox} from '@/components/ui/Checkbox';
 import {TableRequestsPanel} from '@/components/TableRequestsPanel';
@@ -28,12 +28,14 @@ export interface StaffOrder {
     customerLongitude: number | null;
     locationFlagged: boolean;
     table: { label: string };
+    firedCourseNumbers: number[];
     items: {
         id: string;
         quantity: number;
         note: string | null;
         menuItem: { name: string };
         modifiers: { modifierOption?: { name: string } }[];
+        courseNumber: number;
     }[];
     statusEvents: {
         changedBy: { fullName: string | null; email: string } | null;
@@ -81,6 +83,7 @@ export default function StaffDashboardPage({
     const role = membership?.role ?? null;
     const {data: assignments = []} = useTableAssignments(venueId);
     const currentUserId = useCurrentUserId();
+    const fireCourseMutation = useFireCourse(venueId, station || undefined);
 
     useEffect(() => {
         const {socket, release} = acquireSocket();
@@ -286,6 +289,7 @@ export default function StaffDashboardPage({
                                                                             a.userId === currentUserId,
                                                                     )
                                                                 }
+                                                                onFireCourse={(course) => fireCourseMutation.mutate({ orderId: order.id, courseNumber: course })}
                                                             />
                                                         </div>
                                                     )}

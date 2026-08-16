@@ -5,6 +5,8 @@ import {SlidersHorizontal} from 'lucide-react';
 import {usePublicMenu} from '@/hooks/usePublicMenu';
 import {ItemDetailModal} from "@/components/ItemDetailModal";
 import {formatCents} from '@/lib/money';
+import {useVenueLanguagesPublic} from "@/app/r/[venueSlug]/t/[token]/layout";
+import {AVAILABLE_LANGUAGES} from "@/lib/languages";
 
 interface MenuPageProps {
     params: Promise<{ venueSlug: string; token: string }>;
@@ -28,15 +30,25 @@ export interface PublicMenuItem {
     }[];
 }
 
+
+
 export default function MenuPage({params}: MenuPageProps) {
     const {venueSlug} = use(params);
-    const {data: menu, error} = usePublicMenu(venueSlug);
+    const [lang, setLang] = useState<string>(() => (typeof window !== 'undefined' ? localStorage.getItem('qr-saas:lang') ?? '' : ''));
+
+    const { data: menu, error } = usePublicMenu(venueSlug, lang || undefined);
+    const supportedLanguages = useVenueLanguagesPublic();
 
     const [activeItem, setActiveItem] = useState<PublicMenuItem | null>(null);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [excludedAllergens, setExcludedAllergens] = useState<string[]>([]);
     const [requiredDietary, setRequiredDietary] = useState<string[]>([]);
     const [showFilters, setShowFilters] = useState(false);
+
+    function changeLang(l: string) {
+        setLang(l);
+        localStorage.setItem('qr-saas:lang', l);
+    }
 
     if (error) {
         return (
@@ -188,6 +200,29 @@ export default function MenuPage({params}: MenuPageProps) {
                     </section>
                 ))}
             </div>
+
+            {supportedLanguages.length > 0 && (
+                <div className="flex justify-end gap-1 px-4 pt-2">
+                    <button
+                        onClick={() => changeLang('')}
+                        className={`rounded-full px-2 py-1 text-xs font-medium ${lang === '' ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong text-muted dark:bg-gray-700'}`}
+                    >
+                        EN
+                    </button>
+                    {supportedLanguages.map((code) => {
+                        const label = AVAILABLE_LANGUAGES.find((l) => l.code === code)?.code.toUpperCase() ?? code.toUpperCase();
+                        return (
+                            <button
+                                key={code}
+                                onClick={() => changeLang(code)}
+                                className={`rounded-full px-2 py-1 text-xs font-medium ${lang === code ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong text-muted dark:bg-gray-700'}`}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {activeItem && (
                 <ItemDetailModal item={activeItem} currency={menu.venue.currency} onClose={() => setActiveItem(null)}/>

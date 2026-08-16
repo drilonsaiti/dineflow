@@ -1,9 +1,10 @@
-import {Controller, Get, Query, UseGuards} from '@nestjs/common';
+import {Controller, Get, Query, Res, UseGuards} from '@nestjs/common';
 import {AnalyticsService} from './analytics.service';
 import {VenueScopeGuard} from '../common/venue-scope.guard';
 import {Roles} from '../common/roles.decorator';
 import {CurrentVenue} from '../common/current-user.decorator';
 import {VenueRole} from '@prisma/client';
+import {Response} from 'express';
 
 @Controller('venues/:venueId/analytics')
 @UseGuards(VenueScopeGuard)
@@ -52,5 +53,29 @@ export class AnalyticsController {
     getZReport(@CurrentVenue() scope: { venueId: string }, @Query('date') date?: string) {
         const parsed = date ? new Date(date) : undefined;
         return this.analyticsService.getZReport(scope.venueId, parsed);
+    }
+
+    @Get('export.csv')
+    async exportCsv(
+        @CurrentVenue() scope: { venueId: string },
+        @Query('since') since: string | undefined,
+        @Query('until') until: string | undefined,
+        @Res() res: Response,
+    ) {
+        const csv = await this.analyticsService.exportOrdersCsv(
+            scope.venueId,
+            this.parseSince(since),
+            until ? new Date(until) : undefined,
+        );
+        res.set({
+            'Content-Type': 'text/csv',
+            'Content-Disposition': `attachment; filename="orders-export-${new Date().toISOString().slice(0, 10)}.csv"`,
+        });
+        res.send(csv);
+    }
+
+    @Get('table-turnover')
+    getTableTurnover(@CurrentVenue() scope: { venueId: string }, @Query('since') since?: string) {
+        return this.analyticsService.getAverageTableTurnover(scope.venueId, this.parseSince(since));
     }
 }

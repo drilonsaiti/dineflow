@@ -11,6 +11,7 @@ import {Checkbox} from '@/components/ui/Checkbox';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/Select';
 import {useToast} from '@/components/ui/Toast';
 import {RequireOwnerOrManager} from "@/components/RequireOwnerOrManager";
+import {AVAILABLE_LANGUAGES} from "@/lib/languages";
 
 export default function VenueSettingsPage({params}: { params: Promise<{ venueId: string }> }) {
     const {venueId} = use(params);
@@ -32,6 +33,9 @@ export default function VenueSettingsPage({params}: { params: Promise<{ venueId:
     const [autoPrintTickets, setAutoPrintTickets] = useState(false);
     const [printerBridgeUrl, setPrinterBridgeUrl] = useState('');
     const [uploadingLogo, setUploadingLogo] = useState(false);
+    const [latitude, setLatitude] = useState('');
+    const [longitude, setLongitude] = useState('');
+    const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
 
     // Seed local form state once the query resolves — a form needs editable
     // local state distinct from server cache, so this doesn't collapse into
@@ -49,6 +53,9 @@ export default function VenueSettingsPage({params}: { params: Promise<{ venueId:
         setTaxInclusive(venue.taxInclusive ?? true);
         setAutoPrintTickets(venue.autoPrintTickets ?? false);
         setPrinterBridgeUrl(venue.printerBridgeUrl ?? '');
+        setLatitude(venue.latitude?.toString() ?? '');
+        setLongitude(venue.longitude?.toString() ?? '');
+        setSupportedLanguages(venue.supportedLanguages ?? []);
     }, [venue]);
 
     async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -90,6 +97,9 @@ export default function VenueSettingsPage({params}: { params: Promise<{ venueId:
                 taxInclusive,
                 autoPrintTickets,
                 printerBridgeUrl: printerBridgeUrl || undefined,
+                latitude: latitude ? Number(latitude) : undefined,
+                longitude: longitude ? Number(longitude) : undefined,
+                supportedLanguages
             });
             showToast('Settings saved', 'success');
         } catch (err: any) {
@@ -185,6 +195,35 @@ export default function VenueSettingsPage({params}: { params: Promise<{ venueId:
                                     placeholder="Europe/Zurich"
                                 />
                             </div>
+
+                            <div>
+                                <label className="block text-sm font-medium">Menu languages</label>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    English (your default menu text) is always shown. Pick any additional languages you've
+                                    translated menu items into — translations are added per-item on the Menu page.
+                                </p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {AVAILABLE_LANGUAGES.map((lang) => {
+                                        const checked = supportedLanguages.includes(lang.code);
+                                        return (
+                                            <button
+                                                key={lang.code}
+                                                type="button"
+                                                onClick={() =>
+                                                    setSupportedLanguages((prev) =>
+                                                        checked ? prev.filter((c) => c !== lang.code) : [...prev, lang.code],
+                                                    )
+                                                }
+                                                className={`rounded-full px-3 py-1.5 text-sm font-medium ${
+                                                    checked ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong text-muted dark:bg-gray-700'
+                                                }`}
+                                            >
+                                                {lang.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                         <div className="flex gap-4">
                             <div>
@@ -208,6 +247,30 @@ export default function VenueSettingsPage({params}: { params: Promise<{ venueId:
                             </div>
                         </div>
                     </div>
+
+                    <div className="flex gap-4">
+                        <div>
+                            <label className="block text-sm font-medium">Latitude</label>
+                            <input className="mt-1 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm" value={latitude} onChange={(e) => setLatitude(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium">Longitude</label>
+                            <input className="mt-1 w-32 rounded-md border border-gray-300 px-3 py-2 text-sm" value={longitude} onChange={(e) => setLongitude(e.target.value)} />
+                        </div>
+                        <div className="flex items-end pb-1">
+                            <button
+                                type="button"
+                                onClick={() => navigator.geolocation.getCurrentPosition((p) => {
+                                    setLatitude(p.coords.latitude.toString());
+                                    setLongitude(p.coords.longitude.toString());
+                                })}
+                                className="text-sm text-brand underline"
+                            >
+                                Use my current location
+                            </button>
+                        </div>
+                    </div>
+                    <p className="text-xs text-gray-500">Used only as a soft signal flagging orders placed far from the venue — never blocks an order.</p>
                 </div>
 
                 <form onSubmit={save} className="space-y-5 border-t border-hairline pt-6 dark:border-gray-800">

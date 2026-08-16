@@ -6,7 +6,7 @@ import {elapsedMinutes, formatElapsed} from '@/lib/elapsed';
 import {StaffOrder} from "@/app/admin/[venueId]/dashboard/page";
 import {formatCents} from '@/lib/money';
 import {NEXT, PREV} from '@/lib/order-transitions';
-
+import {useFireCourse} from "@/hooks/useOrders";
 
 export function OrderCard({
                               order,
@@ -14,6 +14,7 @@ export function OrderCard({
                               lateThresholdMinutes,
                               onAdvance,
                               onCancel,
+                              onFireCourse,
                               canServe = true,
                           }: {
     order: StaffOrder;
@@ -21,11 +22,13 @@ export function OrderCard({
     lateThresholdMinutes: number;
     onAdvance: (toStatus: any) => void;
     onCancel: () => void;
+    onFireCourse?: (courseNumber: number) => void;
     canServe?: boolean;
 }) {
     // Re-render every 30s so elapsed time and the "late" flag stay accurate
     // without needing a new order event.
     const [, forceTick] = useState(0);
+
     useEffect(() => {
         const id = setInterval(() => forceTick((n) => n + 1), 30000);
         return () => clearInterval(id);
@@ -34,6 +37,17 @@ export function OrderCard({
     const isLate = elapsedMinutes(order.createdAt) >= lateThresholdMinutes;
     const next = NEXT[order.status];
     const prev = PREV[order.status];
+
+
+    const courseNumbers = Array.from(
+        new Set(
+            order.items.map(
+                (item) => item.courseNumber ?? 1,
+            ),
+        ),
+    ).sort((a, b) => a - b);
+
+    const fired = order.firedCourseNumbers ?? [];
 
     return (
         <div
@@ -45,25 +59,40 @@ export function OrderCard({
         >
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-ink dark:text-white">#{order.dailyNumber}</span>
+                    <span className="text-lg font-bold text-ink dark:text-white">
+                        #{order.dailyNumber}
+                    </span>
+
                     {order.locationFlagged && (
-                        <span className="text-xs text-amber-400">⚠ Off-site?</span>
+                        <span className="text-xs text-amber-400">
+                            ⚠ Off-site?
+                        </span>
                     )}
-                    <span className="text-xs font-medium text-muted">{formatCents(order.totalCents, currency)}</span>
+
+                    <span className="text-xs font-medium text-muted">
+                        {formatCents(order.totalCents, currency)}
+                    </span>
                 </div>
+
                 <div className="flex items-center gap-2">
-                    <span className={`text-sm font-medium ${isLate ? 'text-error' : 'text-muted'}`}>
+                    <span
+                        className={`text-sm font-medium ${
+                            isLate ? 'text-error' : 'text-muted'
+                        }`}
+                    >
                         {formatElapsed(order.createdAt)}
                     </span>
+
                     <button
                         onClick={onCancel}
                         className="text-muted-soft hover:text-error"
                         aria-label="Cancel order"
                     >
-                        <X className="h-4 w-4" aria-hidden/>
+                        <X className="h-4 w-4" aria-hidden />
                     </button>
                 </div>
             </div>
+
             <p className="text-sm text-body dark:text-gray-300">
                 {order.table.label}
                 {order.customerName ? ` · ${order.customerName}` : ''}
@@ -71,25 +100,77 @@ export function OrderCard({
 
             {order.statusEvents?.[0]?.changedBy && (
                 <p className="text-xs text-muted-soft">
-                    last updated by {order.statusEvents[0].changedBy.fullName ?? order.statusEvents[0].changedBy.email}
+                    last updated by{' '}
+                    {order.statusEvents[0].changedBy.fullName ??
+                        order.statusEvents[0].changedBy.email}
                 </p>
             )}
 
-            <ul className="mt-2 space-y-1 text-sm">
-                {order.items.map((item) => (
-                    <li key={item.id}>
-                        <span
-                            className="font-medium text-ink dark:text-white">{item.quantity}× {item?.menuItem?.name ?? ''}</span>
-                        {item.modifiers.length > 0 && (
-                            <span className="text-muted">
-                {' '}
-                                ({item.modifiers.map((m) => m.modifierOption?.name).filter(Boolean).join(', ')})
-              </span>
-                        )}
-                        {item.note && <div className="text-xs text-warning">Note: {item.note}</div>}
-                    </li>
-                ))}
-            </ul>
+            <div className="mt-2 space-y-3">
+                {courseNumbers.map((course) => {
+                    // Single-course orders don't need pacing controls.
+                    const isFired =
+                        fired.includes(course) ||
+                        courseNumbers.length === 1;
+
+                    const courseItems = order.items.filter(
+                        (item) =>
+                            (item.courseNumber ?? 1) === course,
+                    );
+
+                    return (
+                        <div
+                            key={course}
+                            className={!isFired ? 'opacity-50' : ''}
+                        >
+                            {courseNumbers.length > 1 && (
+                                <p className="mb-1 text-xs font-semibold text-gray-400">
+                                    Course {course}
+                                    {!isFired && ' · Held'}
+                                </p>
+                            )}
+
+                            <ul className="space-y-1 text-sm">
+                                {courseItems.map((item) => (
+                                    <li key={item.id}>
+                                        <span className="font-medium text-ink dark:text-white">
+                                            {item.quantity}×{' '}
+                                            {item.menuItem?.name ?? ''}
+                                        </span>
+
+                                        {item.modifiers.length > 0 && (
+                                            <span className="text-muted">
+                                                {' '}
+                                                (
+                                                {item.modifiers
+                                                    .map(
+                                                        (m) =>
+                                                            m.modifierOption?.name,
+                                                    )
+                                                    .filter(Boolean)
+                                                    .join(', ')}
+                                                )
+                                            </span>
+                                        )}
+
+                                        {item.note && (
+                                            <div className="text-xs text-warning">
+                                                Note: {item.note}
+                                            </div>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {!isFired && onFireCourse && (
+                                <button onClick={() => onFireCourse(course)} className="mt-1 min-h-[36px] rounded-md border border-amber-600 px-2 text-xs text-amber-400">
+                                    Fire course {course}
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
 
             <div className="mt-3 flex gap-2">
                 {prev && (
@@ -100,11 +181,16 @@ export function OrderCard({
                         ← Back
                     </button>
                 )}
+
                 {next && (
                     <button
                         onClick={() => onAdvance(next)}
                         disabled={next === 'SERVED' && !canServe}
-                        title={next === 'SERVED' && !canServe ? "Claim this table to mark it served" : undefined}
+                        title={
+                            next === 'SERVED' && !canServe
+                                ? 'Claim this table to mark it served'
+                                : undefined
+                        }
                         className="btn-primary min-h-[44px] flex-[2] text-sm"
                     >
                         {next === 'VIEWED' && 'Mark seen →'}

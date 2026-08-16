@@ -31,6 +31,12 @@ export function useAnalytics(venueId: string) {
                 queryKey: queryKeys.analyticsFeedback(venueId),
                 queryFn: () => api.get<any>(`/venues/${venueId}/analytics/feedback`)
             },
+            {
+                queryKey: ['analytics', 'turnover', venueId],
+                queryFn: () => api.get<any>(`/venues/${venueId}/analytics/table-turnover`)
+            },
+
+
         ],
     });
 
@@ -44,5 +50,6 @@ export function useAnalytics(venueId: string) {
         busiestTables: busiestTables.data ?? [],
         busiestHours: busiestHours.data ?? [],
         feedback: feedback.data,
+        turnover: results[6].data
     };
 }

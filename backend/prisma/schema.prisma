@@ -94,6 +94,7 @@ model Venue {
   printerBridgeUrl          String? // optional — see PrinterModule note; points at a local ESC/POS bridge on the venue's network, not this backend itself
   latitude                  Float?
   longitude                 Float?
+  supportedLanguages        String[]           @default([]) // ISO codes the venue has chosen to offer, e.g. ["es", "fr"] — English/default is always implicit, never stored here
   createdAt                 DateTime           @default(now())
   updatedAt                 DateTime           @updatedAt
 
@@ -119,6 +120,7 @@ model MenuCategory {
   description  String?
   station      String?
   displayOrder Int      @default(0)
+  translations Json?
   createdAt    DateTime @default(now())
 
   venue Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
@@ -158,6 +160,8 @@ model MenuItem {
   takeawayOnly      Boolean  @default(false)
   stockCount        Int? // null = not tracked (unlimited); set = decremented on each order, auto-86's at 0
   lowStockThreshold Int? // null = defaults to 5 in the UI warning
+  translations      Json?
+  courseNumber      Int      @default(1) // 1 = starters/first course, 2 = mains, etc — venue-defined ordering
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -263,18 +267,21 @@ enum OrderStatus {
 }
 
 model Order {
-  id              String      @id @default(uuid()) @db.Uuid
-  venueId         String      @db.Uuid
-  tableId         String      @db.Uuid
-  dailyNumber     Int
-  status          OrderStatus @default(RECEIVED)
-  customerName    String?
-  customerPhone   String? // optional at order time (section 15) — enables SMS-when-Ready later without a schema change
-  note            String?
-  totalCents      Int         @default(0)
-  locationFlagged Boolean     @default(false)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id                 String      @id @default(uuid()) @db.Uuid
+  venueId            String      @db.Uuid
+  tableId            String      @db.Uuid
+  dailyNumber        Int
+  status             OrderStatus @default(RECEIVED)
+  customerName       String?
+  customerPhone      String? // optional at order time (section 15) — enables SMS-when-Ready later without a schema change
+  note               String?
+  totalCents         Int         @default(0)
+  locationFlagged    Boolean     @default(false)
+  subtotalCents      Int         @default(0) // pre-tax
+  taxCents           Int         @default(0) // 0 if venue has no taxRatePercent set
+  firedCourseNumbers Int[]       @default([]) // which courses staff have released to the kitchen so far
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   venue        Venue              @relation(fields: [venueId], references: [id], onDelete: Cascade)
   table        Table              @relation(fields: [tableId], references: [id])
@@ -297,6 +304,7 @@ model OrderItem {
   unitPriceCents Int
   lineTotalCents Int
   addedByLabel   String?
+  courseNumber   Int     @default(1) // snapshot at order time
 
   order     Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
   menuItem  MenuItem            @relation(fields: [menuItemId], references: [id])

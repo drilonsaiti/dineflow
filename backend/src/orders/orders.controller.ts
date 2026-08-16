@@ -89,4 +89,10 @@ export class OrdersController {
     getItemizedBill(@Param('token') token: string, @Query('session') session: string) {
         return this.ordersService.getItemizedBill(token, session);
     }
+
+    @Patch('venues/:venueId/orders/:orderId/fire-course')
+    @UseGuards(VenueScopeGuard)
+    fireCourse(@CurrentVenue() scope: { venueId: string }, @Param('orderId') orderId: string, @Body('courseNumber') courseNumber: number) {
+        return this.ordersService.fireCourse(scope.venueId, orderId, courseNumber);
+    }
 }

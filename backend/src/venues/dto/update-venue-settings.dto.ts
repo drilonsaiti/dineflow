@@ -1,4 +1,16 @@
-import { IsBoolean, IsHexColor, IsIn, IsInt, IsOptional, IsString, IsUrl, Max, Min } from 'class-validator';
+import {
+    IsArray,
+    IsBoolean,
+    IsHexColor,
+    IsIn,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsString,
+    IsUrl,
+    Max,
+    Min
+} from 'class-validator';
 
 export class UpdateVenueSettingsDto {
     @IsOptional()
@@ -47,4 +59,17 @@ export class UpdateVenueSettingsDto {
     @IsOptional()
     @IsUrl({ require_tld: false }) // local network addresses like http://192.168.1.50:10100 have no TLD — a normal @IsUrl() would reject them
     printerBridgeUrl?: string;
+
+    @IsOptional()
+    @IsNumber()
+    latitude?: number;
+
+    @IsOptional()
+    @IsNumber()
+    longitude?: number;
+
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    supportedLanguages?: string[];
 }

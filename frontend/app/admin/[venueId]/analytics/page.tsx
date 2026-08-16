@@ -1,6 +1,6 @@
 'use client';
 
-import {use} from 'react';
+import {use, useState} from 'react';
 import {Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis,} from 'recharts';
 import {Star} from 'lucide-react';
 
@@ -8,6 +8,7 @@ import {useAnalytics} from '@/hooks/useAnalytics';
 import {useVenueCurrency} from '@/hooks/useVenueCurrency';
 import {formatCents} from '@/lib/money';
 import {RequireOwnerOrManager} from "@/components/RequireOwnerOrManager";
+import {useExportOrdersCsv} from "@/hooks/useExportOrdersCsv";
 
 export default function AnalyticsPage({
                                           params,
@@ -17,11 +18,15 @@ export default function AnalyticsPage({
     const {venueId} = use(params);
 
     const currency = useVenueCurrency(venueId);
+    const exportCsvMutation = useExportOrdersCsv(venueId);
+    const [exportSince, setExportSince] = useState('');
+    const [exportUntil, setExportUntil] = useState('');
 
     const {
         isLoading,
         summary,
         avgReady,
+        turnover,
         bestSellers,
         busiestTables,
         busiestHours,
@@ -43,12 +48,18 @@ export default function AnalyticsPage({
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl">Analytics</h1>
 
-                    <a
-                        href={`${process.env.NEXT_PUBLIC_API_URL}/venues/${venueId}/analytics/export.csv`}
-                        className="btn-secondary"
-                    >
-                        Export CSV
-                    </a>
+                    <div className="flex items-center gap-2">
+                        <input type="date" value={exportSince} onChange={(e) => setExportSince(e.target.value)} className="input text-sm" />
+                        <span className="text-sm text-gray-400">to</span>
+                        <input type="date" value={exportUntil} onChange={(e) => setExportUntil(e.target.value)} className="input text-sm" />
+                        <button
+                            onClick={() => exportCsvMutation.mutate({ since: exportSince || undefined, until: exportUntil || undefined })}
+                            disabled={exportCsvMutation.isPending}
+                            className="btn-secondary text-sm disabled:opacity-50"
+                        >
+                            {exportCsvMutation.isPending ? 'Exporting…' : 'Export CSV'}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Summary */}
@@ -95,6 +106,25 @@ export default function AnalyticsPage({
                     {avgReady && avgReady.sampleSize > 0 && (
                         <p className="text-xs text-muted-soft">
                             based on {avgReady.sampleSize} orders
+                        </p>
+                    )}
+                </div>
+
+                {/* Average table turnover */}
+                <div className="card">
+                    <h2 className="text-sm font-medium text-muted">
+                        Avg. table turnover
+                    </h2>
+
+                    <p className="mt-1 text-3xl font-semibold text-ink dark:text-white">
+                        {turnover?.avgMinutes != null
+                            ? `${turnover.avgMinutes} min`
+                            : '—'}
+                    </p>
+
+                    {turnover && turnover.sampleSize > 0 && (
+                        <p className="text-xs text-muted-soft">
+                            based on {turnover.sampleSize} completed visits
                         </p>
                     )}
                 </div>

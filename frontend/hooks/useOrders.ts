@@ -74,3 +74,12 @@ export function useOrder(venueId: string, orderId: string) {
         queryFn: () => api.get<StaffOrder>(`/venues/${venueId}/orders/${orderId}`),
     });
 }
+
+export function useFireCourse(venueId: string, station?: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ orderId, courseNumber }: { orderId: string; courseNumber: number }) =>
+            api.patch<StaffOrder>(`/venues/${venueId}/orders/${orderId}/fire-course`, { courseNumber }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.orders(venueId, station) }),
+    });
+}

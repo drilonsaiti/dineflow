@@ -2,11 +2,12 @@
 
 import {use, useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {usePlaceOrder} from '@/hooks/usePublicOrders';
+import {ApiError, usePlaceOrder} from '@/hooks/usePublicOrders';
 import {useBulkRemoveCartItems} from '@/hooks/useTableCart';
-import {useVenueCurrencyPublic} from '../layout';
+import {useVenueCurrencyPublic, useVenueTaxPublic} from '../layout';
 import {formatCents} from '@/lib/money';
 import {useCart} from "@/components/CartContext";
+
 
 export default function CartPage({params}: { params: Promise<{ venueSlug: string; token: string }> }) {
     const {token, venueSlug} = use(params);
@@ -14,6 +15,7 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
     const {lines, loading, guestName, setGuestName, updateQuantity, updateNote, removeLine, subtotalCents} = useCart();
     const placeOrderMutation = usePlaceOrder(token);
     const bulkRemoveMutation = useBulkRemoveCartItems(token);
+    const { taxRatePercent, taxInclusive } = useVenueTaxPublic();
 
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
@@ -51,14 +53,12 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
             });
 
             router.push(`/r/${venueSlug}/t/${token}/order/${order.id}`);
-        } catch (err: any) {
-            if (err.unavailableMenuItemIds) {
-                await bulkRemoveMutation.mutateAsync(err.unavailableMenuItemIds);
-                setError(
-                    'Some items are no longer available and were removed from the shared cart. Please review and try again.',
-                );
+        } catch (err: unknown) {
+            if (err instanceof ApiError && err.body?.unavailableMenuItemIds) {
+                await bulkRemoveMutation.mutateAsync(err.body.unavailableMenuItemIds);
+                setError('Some items are no longer available and were removed from the shared cart. Please review and try again.');
             } else {
-                setError(err.message ?? 'Something went wrong placing your order.');
+                setError(err instanceof Error ? err.message : 'Something went wrong placing your order.');
             }
         }
     }
@@ -79,6 +79,9 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
             </div>
         );
     }
+
+    const taxCents = taxRatePercent != null && !taxInclusive ? Math.round(subtotalCents * (taxRatePercent / 100)) : 0;
+    const grandTotalCents = subtotalCents + taxCents;
 
     return (
         <div className="px-4 py-4">
@@ -162,9 +165,21 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
                 </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between text-lg font-semibold text-ink dark:text-white">
+            {taxCents > 0 && (
+                <div className="mt-4 flex items-center justify-between text-sm text-gray-500 dark:text-white">
+                    <span>Subtotal</span>
+                    <span>{formatCents(subtotalCents, currency)}</span>
+                </div>
+            )}
+            {taxCents > 0 && (
+                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-white">
+                    <span>Tax ({taxRatePercent}%)</span>
+                    <span>{formatCents(taxCents, currency)}</span>
+                </div>
+            )}
+            <div className="mt-1 flex items-center justify-between text-lg font-semibold dark:text-white">
                 <span>Total</span>
-                <span>{formatCents(subtotalCents, currency)}</span>
+                <span>{formatCents(grandTotalCents, currency)}</span>
             </div>
 
             {error && <p className="mt-3 text-sm text-error">{error}</p>}

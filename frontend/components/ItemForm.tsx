@@ -7,6 +7,7 @@ import {ModifierGroup} from '@/types/modifier';
 import {useToast} from '@/components/ui/Toast';
 import {Checkbox} from '@/components/ui/Checkbox';
 import {useSaveItem} from '@/hooks/useMenu';
+import {useVenueBasics} from "@/hooks/useVenueBasics";
 
 type Props = {
     venueId: string;
@@ -33,6 +34,10 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
     const [lowStockThreshold, setLowStockThreshold] = useState(existing?.lowStockThreshold?.toString() ?? '');
     const [availableFrom, setAvailableFrom] = useState(existing?.availableFrom ?? '');
     const [availableTo, setAvailableTo] = useState(existing?.availableTo ?? '');
+    const [translations, setTranslations] = useState<Record<string, { name?: string; description?: string }>>(existing?.translations ?? {});
+    const [translationLang, setTranslationLang] = useState('es');
+    const { data: venueBasics } = useVenueBasics(venueId);
+    const configuredLanguages = venueBasics?.supportedLanguages ?? [];
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const showToast = useToast();
@@ -288,6 +293,36 @@ export function ItemForm({venueId, categoryId, existing, venueTags, onDone}: Pro
                     </div>
                 </div>
             )}
+
+            <div>
+                <p className="text-xs font-medium text-gray-500">Translations (optional)</p>
+                {configuredLanguages.length === 0 ? (
+                    <p className="text-xs text-gray-400">
+                        No additional languages configured yet — add some in venue Settings to enable translations.
+                    </p>
+                ) : (
+                <div className="mt-1 flex gap-2">
+                    {configuredLanguages.map((l) => (
+                        <button key={l} type="button" onClick={() => setTranslationLang(l)} className={`rounded-full px-3 py-1 text-xs ${translationLang === l ? 'bg-ink text-white dark:bg-white dark:text-ink' : 'bg-surface-strong'}`}>
+                            {l.toUpperCase()}
+                        </button>
+                    ))}
+                </div>
+                )}
+                <input
+                    className="input mt-2"
+                    placeholder={`Name in ${translationLang.toUpperCase()}`}
+                    value={translations[translationLang]?.name ?? ''}
+                    onChange={(e) => setTranslations((prev) => ({ ...prev, [translationLang]: { ...prev[translationLang], name: e.target.value } }))}
+                />
+                <textarea
+                    className="input mt-2"
+                    rows={2}
+                    placeholder={`Description in ${translationLang.toUpperCase()}`}
+                    value={translations[translationLang]?.description ?? ''}
+                    onChange={(e) => setTranslations((prev) => ({ ...prev, [translationLang]: { ...prev[translationLang], description: e.target.value } }))}
+                />
+            </div>
 
             <div className="flex gap-2">
                 <button type="submit" disabled={saveItemMutation.isPending} className="btn-primary">

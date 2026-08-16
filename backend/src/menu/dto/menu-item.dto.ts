@@ -127,6 +127,14 @@ export class CreateMenuItemDto {
     @IsOptional()
     @Matches(/^([01]\d|2[0-3]):[0-5]\d$/, {message: 'availableTo must be HH:MM'})
     availableTo?: string;
+
+    @IsOptional()
+    translations?: Record<string, { name?: string; description?: string }>;
+
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    courseNumber?: number;
 }
 
 export class UpdateMenuItemDto extends CreateMenuItemDto {

@@ -121,7 +121,11 @@ export class OrdersService {
                     if (!option) throw new BadRequestException('Invalid modifier selection.');
                     return option;
                 });
-                const modifierDelta = chosen.reduce((sum, o) => sum + o.priceDeltaCents, 0);
+
+                const modifierDelta = chosen.reduce(
+                    (sum, o) => sum + o.priceDeltaCents,
+                    0,
+                );
                 const unitPriceCents = menuItem.priceCents + modifierDelta;
                 const lineTotalCents = unitPriceCents * cartItem.quantity;
                 totalCents += lineTotalCents;
@@ -134,21 +138,58 @@ export class OrdersService {
                     unitPriceCents,
                     lineTotalCents,
                     modifiers: {
-                        create: chosen.map((o) => ({modifierOptionId: o.id, priceDeltaCents: o.priceDeltaCents})),
+                        create: chosen.map((o) => ({
+                            modifierOptionId: o.id,
+                            priceDeltaCents: o.priceDeltaCents,
+                        })),
                     },
                 };
             });
 
+            const venueTax = await tx.venue.findUniqueOrThrow({
+                where: { id: table.venueId },
+                select: { taxRatePercent: true, taxInclusive: true },
+            });
+
+            let subtotalCents = totalCents;
+            let taxCents = 0;
+
+            if (venueTax.taxRatePercent != null) {
+                if (venueTax.taxInclusive) {
+                    // Prices already include tax — extract it for reporting,
+                    // but the charged total doesn't change.
+                    taxCents = Math.round(
+                        totalCents -
+                        totalCents / (1 + venueTax.taxRatePercent / 100),
+                    );
+                    subtotalCents = totalCents - taxCents;
+                } else {
+                    // Prices are tax-exclusive — tax gets added on top of
+                    // the menu price.
+                    taxCents = Math.round(
+                        totalCents * (venueTax.taxRatePercent / 100),
+                    );
+                    totalCents = totalCents + taxCents;
+                }
+            }
+
             const startOfDay = new Date();
             startOfDay.setHours(0, 0, 0, 0);
+
             await tx.$executeRaw`
-        INSERT INTO "DailyOrderCounter" ("venueId", "day", "lastValue")
-        VALUES (${table.venueId}, ${startOfDay}, 1)
-        ON CONFLICT ("venueId", "day")
-        DO UPDATE SET "lastValue" = "DailyOrderCounter"."lastValue" + 1
-      `;
+                INSERT INTO "DailyOrderCounter" ("venueId", "day", "lastValue")
+                VALUES (${table.venueId}, ${startOfDay}, 1)
+                    ON CONFLICT ("venueId", "day")
+    DO UPDATE SET "lastValue" = "DailyOrderCounter"."lastValue" + 1
+            `;
+
             const counterRow = await tx.dailyOrderCounter.findUniqueOrThrow({
-                where: {venueId_day: {venueId: table.venueId, day: startOfDay}},
+                where: {
+                    venueId_day: {
+                        venueId: table.venueId,
+                        day: startOfDay,
+                    },
+                },
             });
 
             const order = await tx.order.create({
@@ -159,13 +200,17 @@ export class OrdersService {
                     customerName: dto.customerName,
                     customerPhone: dto.customerPhone,
                     note: dto.note,
+                    subtotalCents,
+                    taxCents,
                     totalCents,
                     locationFlagged,
                     status: OrderStatus.RECEIVED,
-                    items: {create: itemsData},
-                    statusEvents: {create: {status: OrderStatus.RECEIVED}},
+                    items: { create: itemsData },
+                    statusEvents: {
+                        create: { status: OrderStatus.RECEIVED },
+                    },
                 },
-                include: {items: true, table: true},
+                include: { items: true, table: true },
             });
 
             // Decrement stock for tracked items; auto-86 anything that just hit zero.
@@ -176,7 +221,7 @@ export class OrdersService {
                     const newStock = menuItem.stockCount - cartItem.quantity;
                     await tx.menuItem.update({
                         where: {id: menuItem.id},
-                        data: {stockCount: newStock, isAvailable: newStock > 0 ? menuItem.isAvailable : false},
+                        data: {stockCount: newStock, isAvailable: newStock > 0 ? menuItem.isAvailable : false,courseNumber: menuItem.courseNumber,},
                     });
                     stockChanged = true;
                 }
@@ -411,6 +456,27 @@ export class OrdersService {
             // knowing who actually ate them, which this app doesn't track.
             note: 'Items added without a name are grouped as "Shared" and are not automatically divided between guests.',
         };
+    }
+
+    async fireCourse(venueId: string, orderId: string, courseNumber: number) {
+        return this.prisma.withVenueScope(venueId, async (tx) => {
+            const order = await tx.order.findUnique({ where: { id: orderId } });
+            if (!order || order.venueId !== venueId) throw new NotFoundException('Order not found');
+
+            if (order.firedCourseNumbers.includes(courseNumber)) return order; // already fired — idempotent
+
+            const updated = await tx.order.update({
+                where: { id: orderId },
+                data: { firedCourseNumbers: [...order.firedCourseNumbers, courseNumber] },
+                include: {
+                    items: { include: { menuItem: true, modifiers: { include: { modifierOption: true } } } },
+                    table: true,
+                    statusEvents: { orderBy: { changedAt: 'desc' }, take: 1, include: { changedBy: true } },
+                },
+            });
+            this.gateway.emitOrderEvent(venueId, 'order_updated', updated);
+            return updated;
+        });
     }
 
     private distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
