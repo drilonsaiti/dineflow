@@ -307,8 +307,21 @@ export class MenuService {
 
 
     async invalidatePublicMenuCache(venueId: string) {
-        const venue = await this.prisma.venue.findUnique({where: {id: venueId}, select: {slug: true}});
-        if (venue) await this.cache.del(`public-menu:${venue.slug}`);
+        const venue = await this.prisma.venue.findUnique({
+            where: {id: venueId},
+            select: {
+                slug: true,
+                supportedLanguages: true,
+            },
+        });
+
+        if (!venue) return;
+
+        await this.cache.del(`public-menu:${venue.slug}:default`);
+
+        for (const lang of venue.supportedLanguages) {
+            await this.cache.del(`public-menu:${venue.slug}:${lang}`);
+        }
     }
 
     /** Overnight-safe window check — e.g. availableFrom "22:00", availableTo

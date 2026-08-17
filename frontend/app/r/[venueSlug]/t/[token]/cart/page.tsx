@@ -3,20 +3,41 @@
 import {use, useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {ChevronDown} from 'lucide-react';
+import {useTranslations} from 'next-intl';
 import {ApiError, usePlaceOrder} from '@/hooks/usePublicOrders';
 import {useBulkRemoveCartItems} from '@/hooks/useTableCart';
 import {useVenueCurrencyPublic, useVenueTaxPublic} from '../layout';
 import {formatCents} from '@/lib/money';
-import {useCart} from "@/components/CartContext";
+import {useCart} from '@/components/CartContext';
 
-
-export default function CartPage({params}: { params: Promise<{ venueSlug: string; token: string }> }) {
+export default function CartPage({
+                                     params,
+                                 }: {
+    params: Promise<{ venueSlug: string; token: string }>;
+}) {
     const {token, venueSlug} = use(params);
+
+    const t = useTranslations('cart');
+
     const currency = useVenueCurrencyPublic();
-    const {lines, loading, guestName, setGuestName, updateQuantity, updateNote, removeLine, subtotalCents} = useCart();
+
+    const {
+        lines,
+        loading,
+        guestName,
+        setGuestName,
+        updateQuantity,
+        updateNote,
+        removeLine,
+        subtotalCents,
+    } = useCart();
+
     const placeOrderMutation = usePlaceOrder(token);
-    const bulkRemoveMutation = useBulkRemoveCartItems(token);
-    const { taxRatePercent, taxInclusive } = useVenueTaxPublic();
+    const bulkRemoveMutation =
+        useBulkRemoveCartItems(token);
+
+    const {taxRatePercent, taxInclusive} =
+        useVenueTaxPublic();
 
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
@@ -24,127 +45,254 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
     const [showDetails, setShowDetails] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
     const router = useRouter();
 
     async function placeOrder() {
         setError(null);
         setSubmitting(true);
 
-        let coords: { lat?: number; lng?: number } = {};
+        let coords: {
+            lat?: number;
+            lng?: number;
+        } = {};
 
         try {
-            const position = await new Promise<GeolocationPosition>((resolve, reject) =>
-                navigator.geolocation.getCurrentPosition(resolve, reject, {
-                    timeout: 2000,
-                }),
-            );
+            const position =
+                await new Promise<GeolocationPosition>(
+                    (resolve, reject) =>
+                        navigator.geolocation.getCurrentPosition(
+                            resolve,
+                            reject,
+                            {
+                                timeout: 2000,
+                            },
+                        ),
+                );
 
             coords = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude,
             };
         } catch {
-            // Denied, unsupported, or timed out — order still proceeds without location.
+            // Denied, unsupported, or timed out —
+            // order still proceeds without location.
         }
 
         try {
-            const order = await placeOrderMutation.mutateAsync({
-                customerName: customerName || undefined,
-                customerPhone: customerPhone || undefined,
-                note: orderNote || undefined,
-                customerLatitude: coords.lat,
-                customerLongitude: coords.lng,
-            });
+            const order =
+                await placeOrderMutation.mutateAsync({
+                    customerName:
+                        customerName || undefined,
+                    customerPhone:
+                        customerPhone || undefined,
+                    note: orderNote || undefined,
+                    customerLatitude: coords.lat,
+                    customerLongitude: coords.lng,
+                });
 
-            router.push(`/r/${venueSlug}/t/${token}/order/${order.id}`);
+            router.push(
+                `/r/${venueSlug}/t/${token}/order/${order.id}`,
+            );
         } catch (err: unknown) {
-            if (err instanceof ApiError && err.body?.unavailableMenuItemIds) {
-                await bulkRemoveMutation.mutateAsync(err.body.unavailableMenuItemIds);
-                setError('Some items are no longer available and were removed from the shared cart. Please review and try again.');
+            if (
+                err instanceof ApiError &&
+                err.body?.unavailableMenuItemIds
+            ) {
+                await bulkRemoveMutation.mutateAsync(
+                    err.body.unavailableMenuItemIds,
+                );
+
+                setError(t('itemsRemoved'));
             } else {
-                setError(err instanceof Error ? err.message : 'Something went wrong placing your order.');
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : t('genericError'),
+                );
             }
         } finally {
             setSubmitting(false);
         }
     }
 
-    if (loading) return <div className="p-8 text-center text-muted-soft">Loading cart…</div>;
+    if (loading) {
+        return (
+            <div className="p-8 text-center text-muted-soft">
+                {t('loading')}
+            </div>
+        );
+    }
 
     if (lines.length === 0) {
         return (
             <div className="p-8 text-center text-muted">
-                The table's cart is empty.{' '}
+                {t('emptyCart')}{' '}
 
-                <a href={`/r/${venueSlug}/t/${token}`}
-                   className="font-medium underline"
-                   style={{color: 'var(--brand-color, #EA580C)'}}
+                <a
+                    href={`/r/${venueSlug}/t/${token}`}
+                    className="font-medium underline"
+                    style={{
+                        color: 'var(--brand-color, #EA580C)',
+                    }}
                 >
-                    Back to menu
+                    {t('backToMenu')}
                 </a>
             </div>
         );
     }
 
-    const taxCents = taxRatePercent != null && !taxInclusive ? Math.round(subtotalCents * (taxRatePercent / 100)) : 0;
-    const grandTotalCents = subtotalCents + taxCents;
+    const taxCents =
+        taxRatePercent != null && !taxInclusive
+            ? Math.round(
+                subtotalCents *
+                (taxRatePercent / 100),
+            )
+            : 0;
+
+    const grandTotalCents =
+        subtotalCents + taxCents;
 
     return (
         <div className="px-4 py-4">
-            <h1 className="text-xl">Your table's order</h1>
-            <p className="text-sm text-muted">Everyone at this table shares this cart — add, edit, or remove
-                anything.</p>
+            <h1 className="text-xl">
+                {t('title')}
+            </h1>
+
+            <p className="text-sm text-muted">
+                {t('sharedNote')}
+            </p>
 
             <div className="mt-3">
-                <label className="text-xs font-medium text-muted">Your name (optional — shows on items you add)</label>
+                <label className="text-xs font-medium text-muted">
+                    {t('yourNameLabel')}
+                </label>
+
                 <input
                     className="input mt-1"
-                    placeholder="Alex"
+                    placeholder={t(
+                        'yourNamePlaceholder',
+                    )}
                     value={guestName}
-                    onChange={(e) => setGuestName(e.target.value)}
+                    onChange={(e) =>
+                        setGuestName(e.target.value)
+                    }
                 />
             </div>
 
             <div
                 className="mt-4 divide-y divide-hairline-soft rounded-xl border border-hairline bg-canvas dark:divide-gray-800 dark:border-gray-800 dark:bg-surface-dark-elevated">
                 {lines.map((line) => (
-                    <div key={line.id} className="p-4">
+                    <div
+                        key={line.id}
+                        className="p-4"
+                    >
                         <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                                 <p className="font-medium text-ink dark:text-white">
                                     {line.name}
-                                    {!line.isAvailable &&
-                                        <span className="ml-2 text-xs text-error">No longer available</span>}
+
+                                    {!line.isAvailable && (
+                                        <span className="ml-2 text-xs text-error">
+                                            {t(
+                                                'noLongerAvailable',
+                                            )}
+                                        </span>
+                                    )}
                                 </p>
-                                {line.modifiers.length > 0 && (
-                                    <p className="text-sm text-muted">{line.modifiers.map((m) => m.name).join(', ')}</p>
+
+                                {line.modifiers.length >
+                                    0 && (
+                                        <p className="text-sm text-muted">
+                                            {line.modifiers
+                                                .map(
+                                                    (m) =>
+                                                        m.name,
+                                                )
+                                                .join(', ')}
+                                        </p>
+                                    )}
+
+                                {line.addedByLabel && (
+                                    <p className="text-xs text-muted-soft">
+                                        {t('addedBy', {
+                                            name: line.addedByLabel,
+                                        })}
+                                    </p>
                                 )}
-                                {line.addedByLabel &&
-                                    <p className="text-xs text-muted-soft">added by {line.addedByLabel}</p>}
                             </div>
-                            <p className="shrink-0 font-medium text-ink dark:text-white">{formatCents(line.lineTotalCents, currency)}</p>
+
+                            <p className="shrink-0 font-medium text-ink dark:text-white">
+                                {formatCents(
+                                    line.lineTotalCents,
+                                    currency,
+                                )}
+                            </p>
                         </div>
 
                         <input
                             className="input mt-2 py-1.5 text-sm"
-                            placeholder="Note, e.g. no onions"
-                            defaultValue={line.note ?? ''}
-                            onBlur={(e) => updateNote(line.id, e.target.value)}
+                            placeholder={t(
+                                'notePlaceholder',
+                            )}
+                            defaultValue={
+                                line.note ?? ''
+                            }
+                            onBlur={(e) =>
+                                updateNote(
+                                    line.id,
+                                    e.target.value,
+                                )
+                            }
                         />
 
                         <div className="mt-2 flex items-center justify-between">
                             <div className="flex items-center rounded-full border border-hairline dark:border-gray-700">
-                                <button onClick={() => updateQuantity(line.id, line.quantity - 1)}
-                                        className="flex h-11 w-11 items-center justify-center text-lg text-ink dark:text-white"
-                                        aria-label="Decrease quantity">−
+                                <button
+                                    onClick={() =>
+                                        updateQuantity(
+                                            line.id,
+                                            line.quantity -
+                                            1,
+                                        )
+                                    }
+                                    className="flex h-11 w-11 items-center justify-center text-lg text-ink dark:text-white"
+                                    aria-label={t(
+                                        'decreaseQuantity',
+                                    )}
+                                >
+                                    −
                                 </button>
-                                <span className="w-6 text-center text-ink dark:text-white">{line.quantity}</span>
-                                <button onClick={() => updateQuantity(line.id, line.quantity + 1)}
-                                        className="flex h-11 w-11 items-center justify-center text-lg text-ink dark:text-white"
-                                        aria-label="Increase quantity">+
+
+                                <span className="w-6 text-center text-ink dark:text-white">
+                                    {line.quantity}
+                                </span>
+
+                                <button
+                                    onClick={() =>
+                                        updateQuantity(
+                                            line.id,
+                                            line.quantity +
+                                            1,
+                                        )
+                                    }
+                                    className="flex h-11 w-11 items-center justify-center text-lg text-ink dark:text-white"
+                                    aria-label={t(
+                                        'increaseQuantity',
+                                    )}
+                                >
+                                    +
                                 </button>
                             </div>
-                            <button onClick={() => removeLine(line.id)} className="btn-ghost-danger">Remove</button>
+
+                            <button
+                                onClick={() =>
+                                    removeLine(line.id)
+                                }
+                                className="btn-ghost-danger"
+                            >
+                                {t('remove')}
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -152,62 +300,139 @@ export default function CartPage({params}: { params: Promise<{ venueSlug: string
 
             <button
                 type="button"
-                onClick={() => setShowDetails((s) => !s)}
+                onClick={() =>
+                    setShowDetails((s) => !s)
+                }
                 className="mt-4 flex min-h-[44px] w-full items-center justify-between text-sm font-medium text-ink dark:text-white"
             >
-                Add your name, phone, or a note (optional)
-                <ChevronDown className={`h-4 w-4 text-muted transition-transform ${showDetails ? 'rotate-180' : ''}`} aria-hidden />
+                {t('detailsToggle')}
+
+                <ChevronDown
+                    className={`h-4 w-4 text-muted transition-transform ${
+                        showDetails
+                            ? 'rotate-180'
+                            : ''
+                    }`}
+                    aria-hidden
+                />
             </button>
 
             {showDetails && (
                 <div className="space-y-3 pb-1">
                     <div>
-                        <label className="text-sm font-medium text-ink dark:text-white">Your name for the order
-                            (optional)</label>
-                        <input className="input mt-1" placeholder="So staff can call you by name" value={customerName}
-                               onChange={(e) => setCustomerName(e.target.value)}/>
+                        <label className="text-sm font-medium text-ink dark:text-white">
+                            {t('customerNameLabel')}
+                        </label>
+
+                        <input
+                            className="input mt-1"
+                            placeholder={t(
+                                'customerNamePlaceholder',
+                            )}
+                            value={customerName}
+                            onChange={(e) =>
+                                setCustomerName(
+                                    e.target.value,
+                                )
+                            }
+                        />
                     </div>
+
                     <div>
-                        <label className="text-sm font-medium text-ink dark:text-white">Phone <span
-                            className="text-muted-soft font-normal">(optional — get a text when it's ready)</span></label>
-                        <input type="tel" className="input mt-1" value={customerPhone}
-                               onChange={(e) => setCustomerPhone(e.target.value)}/>
+                        <label className="text-sm font-medium text-ink dark:text-white">
+                            {t('phoneLabel')}
+                        </label>
+
+                        <p className="text-xs text-muted-soft">
+                            {t('phoneHint')}
+                        </p>
+
+                        <input
+                            type="tel"
+                            className="input mt-1"
+                            value={customerPhone}
+                            onChange={(e) =>
+                                setCustomerPhone(
+                                    e.target.value,
+                                )
+                            }
+                        />
                     </div>
+
                     <div>
-                        <label className="text-sm font-medium text-ink dark:text-white">Note for the whole order
-                            (optional)</label>
-                        <textarea className="input mt-1" rows={2} value={orderNote}
-                                  onChange={(e) => setOrderNote(e.target.value)}/>
+                        <label className="text-sm font-medium text-ink dark:text-white">
+                            {t('orderNoteLabel')}
+                        </label>
+
+                        <textarea
+                            className="input mt-1"
+                            rows={2}
+                            value={orderNote}
+                            onChange={(e) =>
+                                setOrderNote(
+                                    e.target.value,
+                                )
+                            }
+                        />
                     </div>
                 </div>
             )}
 
             {taxCents > 0 && (
                 <div className="mt-4 flex items-center justify-between text-sm text-muted">
-                    <span>Subtotal</span>
-                    <span>{formatCents(subtotalCents, currency)}</span>
+                    <span>{t('subtotal')}</span>
+                    <span>
+                        {formatCents(
+                            subtotalCents,
+                            currency,
+                        )}
+                    </span>
                 </div>
             )}
-            {taxCents > 0 && (
+
+            {taxCents > 0 && taxRatePercent != null && (
                 <div className="flex items-center justify-between text-sm text-muted">
-                    <span>Tax ({taxRatePercent}%)</span>
-                    <span>{formatCents(taxCents, currency)}</span>
+        <span>
+            {t('tax', {
+                rate: taxRatePercent,
+            })}
+        </span>
+
+                    <span>
+            {formatCents(taxCents, currency)}
+        </span>
                 </div>
             )}
+
             <div className="mt-1 flex items-center justify-between text-lg font-semibold text-ink dark:text-white">
-                <span>Total</span>
-                <span>{formatCents(grandTotalCents, currency)}</span>
+                <span>{t('total')}</span>
+
+                <span>
+                    {formatCents(
+                        grandTotalCents,
+                        currency,
+                    )}
+                </span>
             </div>
 
-            {error && <p className="mt-3 text-sm text-error">{error}</p>}
+            {error && (
+                <p className="mt-3 text-sm text-error">
+                    {error}
+                </p>
+            )}
 
             <button
                 onClick={placeOrder}
                 disabled={submitting}
                 className="mt-4 flex min-h-[48px] w-full items-center justify-center rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
-                style={{backgroundColor: 'var(--brand-color, #EA580C)'}}
+                style={{
+                    backgroundColor:
+                        'var(--brand-color, #EA580C)',
+                }}
             >
-                {submitting ? 'Placing order…' : 'Place order for the table'}
+                {submitting
+                    ? t('placingOrder')
+                    : t('placeOrder')}
             </button>
         </div>
     );
