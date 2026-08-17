@@ -91,6 +91,10 @@ export default function TablesLivePage({params}: { params: Promise<{ venueId: st
                                         Claim
                                     </button>
                                 )}
+
+                                <a href={`/admin/${venueId}/take-order/${table.id}`} className="text-brand underline">
+                                    Take order
+                                </a>
                             </div>
                         </div>
                     );

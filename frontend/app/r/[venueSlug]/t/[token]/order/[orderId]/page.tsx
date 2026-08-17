@@ -159,7 +159,7 @@ export default function OrderTrackingPage({
 
                 <Link
                     href={`/r/${venueSlug}/t/${token}/tab`}
-                    className="col-span-2 mt-2 block text-center text-xs text-gray-500 underline"
+                    className="col-span-2 mt-2 block text-center text-xs text-muted underline"
                 >
                     See who ordered what (itemized)
                 </Link>

@@ -5,10 +5,12 @@ import {Public} from '../auth/public.decorator';
 import {VenueScopeGuard} from '../common/venue-scope.guard';
 import {CurrentUser, CurrentVenue} from '../common/current-user.decorator';
 import {AuthenticatedUser} from '../auth/supabase-jwt.strategy';
-import {OrderStatus} from '@prisma/client';
+import {OrderStatus, VenueRole} from '@prisma/client';
 import {IsIn} from 'class-validator';
 import {Throttle} from '@nestjs/throttler';
 import {SubmitFeedbackDto} from "./submit-feedback.dto";
+import {Roles} from "../common/roles.decorator";
+import {StaffPlaceOrderDto} from "./dto/staff-place-order.dto";
 
 class AdvanceStatusDto {
     @IsIn(Object.values(OrderStatus))
@@ -94,5 +96,16 @@ export class OrdersController {
     @UseGuards(VenueScopeGuard)
     fireCourse(@CurrentVenue() scope: { venueId: string }, @Param('orderId') orderId: string, @Body('courseNumber') courseNumber: number) {
         return this.ordersService.fireCourse(scope.venueId, orderId, courseNumber);
+    }
+
+    @Post('venues/:venueId/orders')
+    @UseGuards(VenueScopeGuard)
+    @Roles(VenueRole.OWNER, VenueRole.MANAGER, VenueRole.STAFF) // any front-of-house role can take an order this way, matching who's actually at the table
+    placeOrderAsStaff(
+        @CurrentVenue() scope: { venueId: string },
+        @Body() dto: StaffPlaceOrderDto,
+        @CurrentUser() user: AuthenticatedUser,
+    ) {
+        return this.ordersService.placeOrderAsStaff(scope.venueId, dto, user.id);
     }
 }

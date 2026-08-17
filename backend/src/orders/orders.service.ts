@@ -9,6 +9,7 @@ import {NotificationsService} from '../notifications/notifications.service';
 import {MenuService} from "../menu/menu.service";
 import {SubmitFeedbackDto} from "./submit-feedback.dto";
 import {PrinterService} from "../printer/printer.service";
+import { StaffPlaceOrderDto } from "./dto/staff-place-order.dto";
 
 @Injectable()
 export class OrdersService {
@@ -44,204 +45,52 @@ export class OrdersService {
         await this.tablesService.assertSessionValid(table.id, dto.sessionToken);
         this.tablesService.touchSession(dto.sessionToken).catch(() => {});
 
-        let locationFlagged = false;
-
-        const venue = await this.prisma.venue.findUnique({
-            where: {id: table.venueId},
-        });
-
-        if (
-            venue?.latitude != null &&
-            venue?.longitude != null &&
-            dto.customerLatitude != null &&
-            dto.customerLongitude != null
-        ) {
-            const distance = this.distanceMeters(
-                venue.latitude,
-                venue.longitude,
-                dto.customerLatitude,
-                dto.customerLongitude,
-            );
-
-            // Soft signal only — never block an order.
-            if (distance > 300) {
-                locationFlagged = true;
-            }
-        }
-
         const twoMinutesAgo = new Date(Date.now() - 2 * 60_000);
         const recentOrderCount = await this.prisma.order.count({
-            where: {tableId: table.id, createdAt: {gte: twoMinutesAgo}},
+            where: { tableId: table.id, createdAt: { gte: twoMinutesAgo } },
         });
-
         if (recentOrderCount >= 5) {
             throw new BadRequestException(
                 'Too many orders placed for this table recently. Please wait a moment or ask a staff member for help.',
             );
         }
 
+        let locationFlagged = false;
+        const venue = await this.prisma.venue.findUnique({ where: { id: table.venueId } });
+        if (venue?.latitude != null && venue?.longitude != null && dto.customerLatitude != null && dto.customerLongitude != null) {
+            const distance = this.distanceMeters(venue.latitude, venue.longitude, dto.customerLatitude, dto.customerLongitude);
+            if (distance > 300) locationFlagged = true;
+        }
+
         const result = await this.prisma.withVenueScope(table.venueId, async (tx) => {
-            const cartItems = await tx.tableCartItem.findMany({where: {tableId: table.id}});
-            if (cartItems.length === 0) {
-                throw new BadRequestException('Your cart is empty.');
-            }
+            const cartItems = await tx.tableCartItem.findMany({ where: { tableId: table.id } });
+            if (cartItems.length === 0) throw new BadRequestException('Your cart is empty.');
 
-            const menuItemIds = cartItems.map((i) => i.menuItemId);
-            const menuItems = await tx.menuItem.findMany({
-                where: {id: {in: menuItemIds}, venueId: table.venueId},
-                include: {modifierGroups: {include: {options: true}}},
-            });
-            const menuItemsById = new Map(menuItems.map((m) => [m.id, m]));
+            const itemsInput = cartItems.map((c) => ({
+                menuItemId: c.menuItemId,
+                quantity: c.quantity,
+                note: c.note ?? undefined,
+                modifiers: c.modifierOptionIds.map((id) => ({ modifierOptionId: id })),
+                addedByLabel: c.addedByLabel ?? undefined,
+            }));
 
-            // Availability AND stock checked at placement time (section 18's
-            // edge case, plus the new stock-tracking feature) — never trusted
-            // from when the item was added to the shared cart, which could have
-            // been minutes or an entire other round ago.
-            const unavailable = cartItems.filter((i) => {
-                const item = menuItemsById.get(i.menuItemId);
-                return (
-                    !item ||
-                    !item.isAvailable ||
-                    (item.stockCount != null && item.stockCount < i.quantity)
-                );
-            });
-            if (unavailable.length > 0) {
-                throw new BadRequestException({
-                    message: 'Some items in your cart are no longer available.',
-                    unavailableMenuItemIds: unavailable.map((i) => i.menuItemId),
-                });
-            }
-
-            let totalCents = 0;
-            const itemsData = cartItems.map((cartItem) => {
-                const menuItem = menuItemsById.get(cartItem.menuItemId)!;
-                const allOptions = menuItem.modifierGroups.flatMap((g) => g.options);
-                const chosen = cartItem.modifierOptionIds.map((id) => {
-                    const option = allOptions.find((o) => o.id === id);
-                    if (!option) throw new BadRequestException('Invalid modifier selection.');
-                    return option;
-                });
-
-                const modifierDelta = chosen.reduce(
-                    (sum, o) => sum + o.priceDeltaCents,
-                    0,
-                );
-                const unitPriceCents = menuItem.priceCents + modifierDelta;
-                const lineTotalCents = unitPriceCents * cartItem.quantity;
-                totalCents += lineTotalCents;
-
-                return {
-                    menuItemId: menuItem.id,
-                    quantity: cartItem.quantity,
-                    note: cartItem.note,
-                    addedByLabel: cartItem.addedByLabel,
-                    unitPriceCents,
-                    lineTotalCents,
-                    modifiers: {
-                        create: chosen.map((o) => ({
-                            modifierOptionId: o.id,
-                            priceDeltaCents: o.priceDeltaCents,
-                        })),
-                    },
-                };
+            const built = await this.buildAndCreateOrder(tx, table.venueId, table.id, itemsInput, {
+                customerName: dto.customerName,
+                customerPhone: dto.customerPhone,
+                note: dto.note,
+                locationFlagged,
             });
 
-            const venueTax = await tx.venue.findUniqueOrThrow({
-                where: { id: table.venueId },
-                select: { taxRatePercent: true, taxInclusive: true },
-            });
-
-            let subtotalCents = totalCents;
-            let taxCents = 0;
-
-            if (venueTax.taxRatePercent != null) {
-                if (venueTax.taxInclusive) {
-                    // Prices already include tax — extract it for reporting,
-                    // but the charged total doesn't change.
-                    taxCents = Math.round(
-                        totalCents -
-                        totalCents / (1 + venueTax.taxRatePercent / 100),
-                    );
-                    subtotalCents = totalCents - taxCents;
-                } else {
-                    // Prices are tax-exclusive — tax gets added on top of
-                    // the menu price.
-                    taxCents = Math.round(
-                        totalCents * (venueTax.taxRatePercent / 100),
-                    );
-                    totalCents = totalCents + taxCents;
-                }
-            }
-
-            const startOfDay = new Date();
-            startOfDay.setHours(0, 0, 0, 0);
-
-            await tx.$executeRaw`
-                INSERT INTO "DailyOrderCounter" ("venueId", "day", "lastValue")
-                VALUES (${table.venueId}, ${startOfDay}, 1)
-                    ON CONFLICT ("venueId", "day")
-    DO UPDATE SET "lastValue" = "DailyOrderCounter"."lastValue" + 1
-            `;
-
-            const counterRow = await tx.dailyOrderCounter.findUniqueOrThrow({
-                where: {
-                    venueId_day: {
-                        venueId: table.venueId,
-                        day: startOfDay,
-                    },
-                },
-            });
-
-            const order = await tx.order.create({
-                data: {
-                    venueId: table.venueId,
-                    tableId: table.id,
-                    dailyNumber: counterRow.lastValue,
-                    customerName: dto.customerName,
-                    customerPhone: dto.customerPhone,
-                    note: dto.note,
-                    subtotalCents,
-                    taxCents,
-                    totalCents,
-                    locationFlagged,
-                    status: OrderStatus.RECEIVED,
-                    items: { create: itemsData },
-                    statusEvents: {
-                        create: { status: OrderStatus.RECEIVED },
-                    },
-                },
-                include: { items: true, table: true },
-            });
-
-            // Decrement stock for tracked items; auto-86 anything that just hit zero.
-            let stockChanged = false;
-            for (const cartItem of cartItems) {
-                const menuItem = menuItemsById.get(cartItem.menuItemId)!;
-                if (menuItem.stockCount != null) {
-                    const newStock = menuItem.stockCount - cartItem.quantity;
-                    await tx.menuItem.update({
-                        where: {id: menuItem.id},
-                        data: {stockCount: newStock, isAvailable: newStock > 0 ? menuItem.isAvailable : false,courseNumber: menuItem.courseNumber,},
-                    });
-                    stockChanged = true;
-                }
-            }
-
-            // The shared cart's job is done — clear it for the next round.
-            await tx.tableCartItem.deleteMany({where: {tableId: table.id}});
-
-            return {order, stockChanged};
+            await tx.tableCartItem.deleteMany({ where: { tableId: table.id } });
+            return built;
         });
 
         this.gateway.emitOrderEvent(table.venueId, 'order_created', result.order);
-        if (result.stockChanged) {
-            await this.menuService.invalidatePublicMenuCache(table.venueId);
-        }
-
-        this.printer.printOrderTicket(table.venueId, result.order.id).catch(() => {
-        }); // fire-and-forget, see PrinterService
+        if (result.stockChanged) await this.menuService.invalidatePublicMenuCache(table.venueId);
+        this.printer.printOrderTicket(table.venueId, result.order.id).catch(() => {});
         return result.order;
     }
+
 
     /** Polled by the customer's tracking screen every few seconds (section 11). */
     async getForCustomer(orderId: string, tableToken: string) {
@@ -477,6 +326,147 @@ export class OrdersService {
             this.gateway.emitOrderEvent(venueId, 'order_updated', updated);
             return updated;
         });
+    }
+    /** Staff-initiated order — a waiter taking a table's order verbally,
+     * without the customer's phone/QR flow at all. Shares all pricing/stock/
+     * availability/tax logic with the customer path via
+     * buildOrderFromItems() below, so the two entry points can never
+     * silently diverge on how a total gets calculated. Unlike placeOrder,
+     * there's no shared cart to clear and no session to validate — the
+     * table is picked directly, and the acting staff member is attributed
+     * on the order for accountability. */
+    async placeOrderAsStaff(venueId: string, dto: StaffPlaceOrderDto, staffUserId: string) {
+        return this.prisma.withVenueScope(venueId, async (tx) => {
+            const table = await tx.table.findUnique({ where: { id: dto.tableId } });
+            if (!table || table.venueId !== venueId) throw new NotFoundException('Table not found');
+            if (!table.isActive) throw new BadRequestException('This table is not active.');
+
+            const { order, stockChanged } = await this.buildAndCreateOrder(tx, venueId, table.id, dto.items, {
+                customerName: dto.customerName,
+                note: dto.note,
+                placedByUserId: staffUserId,
+            });
+
+            this.gateway.emitOrderEvent(venueId, 'order_created', order);
+            if (stockChanged) await this.menuService.invalidatePublicMenuCache(venueId);
+            return order;
+        });
+    }
+
+    /** The single place order pricing/availability/stock/tax logic lives —
+     * called by both the customer QR flow (placeOrder) and the staff-taken
+     * flow (placeOrderAsStaff) so neither can drift from the other. */
+
+    private async buildAndCreateOrder(
+        tx: any,
+        venueId: string,
+        tableId: string,
+        itemsInput: { menuItemId: string; quantity: number; note?: string; modifiers: { modifierOptionId: string }[]; addedByLabel?: string }[],
+        extras: {
+            customerName?: string;
+            customerPhone?: string;
+            note?: string;
+            placedByUserId?: string;
+            locationFlagged?: boolean;
+        },
+    ) {
+        const menuItemIds = itemsInput.map((i) => i.menuItemId);
+        const menuItems = await tx.menuItem.findMany({
+            where: { id: { in: menuItemIds }, venueId },
+            include: { modifierGroups: { include: { options: true } } },
+        });
+        const menuItemsById = new Map(menuItems.map((m: any) => [m.id, m]));
+
+        const unavailable = itemsInput.filter((i) => {
+            const item: any = menuItemsById.get(i.menuItemId);
+            return !item || !item.isAvailable || (item.stockCount != null && item.stockCount < i.quantity);
+        });
+        if (unavailable.length > 0) {
+            throw new BadRequestException({
+                message: 'Some items are no longer available.',
+                unavailableMenuItemIds: unavailable.map((i) => i.menuItemId),
+            });
+        }
+
+        let totalCents = 0;
+        const itemsData = itemsInput.map((input) => {
+            const menuItem: any = menuItemsById.get(input.menuItemId);
+            const allOptions = menuItem.modifierGroups.flatMap((g: any) => g.options);
+            const chosen = input.modifiers.map((m) => {
+                const option = allOptions.find((o: any) => o.id === m.modifierOptionId);
+                if (!option) throw new BadRequestException('Invalid modifier selection.');
+                return option;
+            });
+            const modifierDelta = chosen.reduce((sum: number, o: any) => sum + o.priceDeltaCents, 0);
+            const unitPriceCents = menuItem.priceCents + modifierDelta;
+            const lineTotalCents = unitPriceCents * input.quantity;
+            totalCents += lineTotalCents;
+
+            return {
+                menuItemId: menuItem.id,
+                quantity: input.quantity,
+                note: input.note,
+                addedByLabel: input.addedByLabel,
+                unitPriceCents,
+                lineTotalCents,
+                modifiers: { create: chosen.map((o: any) => ({ modifierOptionId: o.id, priceDeltaCents: o.priceDeltaCents })) },
+            };
+        });
+
+        const venueTax = await tx.venue.findUniqueOrThrow({ where: { id: venueId }, select: { taxRatePercent: true, taxInclusive: true } });
+        let subtotalCents = totalCents;
+        let taxCents = 0;
+        if (venueTax.taxRatePercent != null) {
+            if (venueTax.taxInclusive) {
+                taxCents = Math.round(totalCents - totalCents / (1 + venueTax.taxRatePercent / 100));
+                subtotalCents = totalCents - taxCents;
+            } else {
+                taxCents = Math.round(totalCents * (venueTax.taxRatePercent / 100));
+                totalCents = totalCents + taxCents;
+            }
+        }
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        await tx.$executeRaw`
+      INSERT INTO "DailyOrderCounter" ("venueId", "day", "lastValue")
+      VALUES (${venueId}, ${startOfDay}, 1)
+      ON CONFLICT ("venueId", "day")
+      DO UPDATE SET "lastValue" = "DailyOrderCounter"."lastValue" + 1
+    `;
+        const counterRow = await tx.dailyOrderCounter.findUniqueOrThrow({ where: { venueId_day: { venueId, day: startOfDay } } });
+
+        const order = await tx.order.create({
+            data: {
+                venueId,
+                tableId,
+                dailyNumber: counterRow.lastValue,
+                customerName: extras.customerName,
+                customerPhone: extras.customerPhone,
+                note: extras.note,
+                placedByUserId: extras.placedByUserId, // null for customer-placed orders
+                locationFlagged: extras.locationFlagged ?? false,
+                subtotalCents,
+                taxCents,
+                totalCents,
+                status: OrderStatus.RECEIVED,
+                items: { create: itemsData },
+                statusEvents: { create: { status: OrderStatus.RECEIVED, changedByUserId: extras.placedByUserId } },
+            },
+            include: { items: true, table: true },
+        });
+
+        let stockChanged = false;
+        for (const input of itemsInput) {
+            const menuItem: any = menuItemsById.get(input.menuItemId);
+            if (menuItem.stockCount != null) {
+                const newStock = menuItem.stockCount - input.quantity;
+                await tx.menuItem.update({ where: { id: menuItem.id }, data: { stockCount: newStock, isAvailable: newStock > 0 ? menuItem.isAvailable : false } });
+                stockChanged = true;
+            }
+        }
+
+        return { order, stockChanged };
     }
 
     private distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
